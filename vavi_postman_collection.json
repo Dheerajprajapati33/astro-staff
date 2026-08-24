@@ -1,0 +1,3724 @@
+{
+  "info": {
+    "name": "VAVI Astrology API Collection",
+    "description": "Complete Postman collection for VAVI Astrology backend. Organized by routers with query parameters, request bodies, and token authentication.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth Router",
+      "description": "Authentication endpoints for users and astrologers (Register, Login, OTP verification, Logout).",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "John Doe",
+                  "type": "text"
+                },
+                {
+                  "key": "username",
+                  "value": "johndoe",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "john@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "phone",
+                  "value": "9876543210",
+                  "type": "text"
+                },
+                {
+                  "key": "dob",
+                  "value": "1995-05-15",
+                  "type": "text"
+                },
+                {
+                  "key": "birthTime",
+                  "value": "14:30",
+                  "type": "text"
+                },
+                {
+                  "key": "birthPlace",
+                  "value": "Mumbai, Maharashtra",
+                  "type": "text"
+                },
+                {
+                  "key": "role",
+                  "value": "user",
+                  "description": "user or astrologer",
+                  "type": "text"
+                },
+                {
+                  "key": "profilePic",
+                  "type": "file",
+                  "description": "Optional JPG/PNG"
+                },
+                {
+                  "key": "referredByCode",
+                  "value": "",
+                  "type": "text",
+                  "description": "Optional referral code"
+                },
+                {
+                  "key": "about",
+                  "value": "Astrology details (required for astrologer)",
+                  "type": "text"
+                },
+                {
+                  "key": "experience",
+                  "value": "5",
+                  "type": "text",
+                  "description": "Required for astrologer"
+                },
+                {
+                  "key": "chatPrice",
+                  "value": "20",
+                  "type": "text"
+                },
+                {
+                  "key": "callPrice",
+                  "value": "30",
+                  "type": "text"
+                },
+                {
+                  "key": "internetCallPrice",
+                  "value": "35",
+                  "type": "text"
+                },
+                {
+                  "key": "aadhaarNumber",
+                  "value": "123456789012",
+                  "type": "text"
+                },
+                {
+                  "key": "panNumber",
+                  "value": "ABCDE1234F",
+                  "type": "text"
+                },
+                {
+                  "key": "aadhaarFront",
+                  "type": "file",
+                  "description": "Required for astrologer"
+                },
+                {
+                  "key": "aadhaarBack",
+                  "type": "file",
+                  "description": "Required for astrologer"
+                },
+                {
+                  "key": "panFront",
+                  "type": "file",
+                  "description": "Required for astrologer"
+                },
+                {
+                  "key": "expertiseIds",
+                  "value": "[1,2]",
+                  "type": "text",
+                  "description": "JSON Array string"
+                },
+                {
+                  "key": "languageIds",
+                  "value": "[1,2]",
+                  "type": "text",
+                  "description": "JSON Array string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login / Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"9876543210\",\n  \"otp\": \"1234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users Router",
+      "description": "User profiles, home screens, prices, verification, and referrals.",
+      "item": [
+        {
+          "name": "Get Users list (Astrologers)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/get-users?page=1&limit=10&role=astrologer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "get-users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "role",
+                  "value": "astrologer"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "expertise",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/get-profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "get-profile"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "3",
+                  "description": "Optional user id",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "John Doe Updated",
+                  "type": "text"
+                },
+                {
+                  "key": "email",
+                  "value": "johnnew@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "dob",
+                  "value": "1995-05-15",
+                  "type": "text"
+                },
+                {
+                  "key": "birthTime",
+                  "value": "14:30",
+                  "type": "text"
+                },
+                {
+                  "key": "birthPlace",
+                  "value": "Pune, India",
+                  "type": "text"
+                },
+                {
+                  "key": "profilePic",
+                  "type": "file"
+                },
+                {
+                  "key": "about",
+                  "value": "About astrologer (astrologer only)",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "toolsUsed",
+                  "value": "[\"Tarot Deck\"]",
+                  "type": "text",
+                  "disabled": true
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/update-profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "update-profile"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "3",
+                  "description": "Optional user id for admin/override",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Online Status (Astrologer)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isChatOnline\": true,\n  \"isCallOnline\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/update-online-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "update-online-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Price Change Request (Astrologer)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"chat\",\n  \"requestedPrice\": 50\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/consultation-price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "consultation-price"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify/Approve User (Admin)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"3\",\n  \"verified\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Referral Details",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/referral",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "referral"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Home Screen layout",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/home",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "home"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Adjust User Wallet (Admin)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/users/3/wallet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "3",
+                "wallet"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500,\n  \"mode\": \"add\",\n  \"description\": \"Bonus credit by admin\"\n}"
+            }
+          },
+          "description": "Admin manually adds or deducts wallet funds for a specified user."
+        }
+      ]
+    },
+    {
+      "name": "3. Banners Router",
+      "item": [
+        {
+          "name": "Get Active Banners",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/banners/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "banners",
+                "get"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Banner (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/banners/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "banners",
+                "create"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Notices Router",
+      "item": [
+        {
+          "name": "Get Notices",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notices/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notices",
+                "get"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Notice (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"System Maintenance\",\n  \"description\": \"Maintenance on Sunday 2 AM IST.\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notices/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notices",
+                "create"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Consultation Router",
+      "item": [
+        {
+          "name": "Create Consultation Request (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"astrologerId\": \"5\",\n  \"type\": \"chat\",\n  \"problem\": \"Need career growth solutions.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consultation/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Consultation History (Astrologer)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/consultation/history?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "type",
+                  "value": "chat",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "completed",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Call Token (Agora RTC)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/consultation/token/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "token",
+                "1"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Get a fresh Agora RTC token for an active consultation call channel."
+        },
+        {
+          "name": "Start Consultation Call",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/consultation/1/start-call",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "1",
+                "start-call"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Start consultation call when accepted and initiate auto-disconnect timer."
+        },
+        {
+          "name": "End Consultation Call",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/consultation/1/end-call",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "1",
+                "end-call"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"user_disconnected\"\n}"
+            }
+          },
+          "description": "End consultation call, process payment/earnings deduction, and record reason."
+        },
+        {
+          "name": "Cancel Consultation Request",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/consultation/1/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "consultation",
+                "1",
+                "cancel"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"user_cancelled\"\n}"
+            }
+          },
+          "description": "Cancel consultation request during waiting/ringing phase with 0 charges."
+        }
+      ]
+    },
+    {
+      "name": "6. Warnings Router",
+      "item": [
+        {
+          "name": "Get Warnings List",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/warnings/get-warnings?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings",
+                "get-warnings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "level",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Warning (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"3\",\n  \"consultationId\": \"12\",\n  \"title\": \"Policy Violation\",\n  \"reason\": \"Attempted external payment deal.\",\n  \"level\": \"medium\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/warnings/create-warning",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "warnings",
+                "create-warning"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Follower Router",
+      "item": [
+        {
+          "name": "Follow/Unfollow Astrologer (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/follower/follow/5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "follower",
+                "follow",
+                "5"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Followers List (Astrologer)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/follower/get-followers?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "follower",
+                "get-followers"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Following List (User)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/follower/get-following?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "follower",
+                "get-following"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Review Router",
+      "item": [
+        {
+          "name": "Create Review (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"astrologerId\": \"5\",\n  \"rating\": 5,\n  \"review\": \"Very accurate predictions! Recommended.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/create-review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "review",
+                "create-review"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Reviews",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/get-reviews?astrologerId=5&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "review",
+                "get-reviews"
+              ],
+              "query": [
+                {
+                  "key": "astrologerId",
+                  "value": "5"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reply to Review (Astrologer)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reply\": \"Thank you for your feedback!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/4/reply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "review",
+                "4",
+                "reply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Review (User)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"review\": \"Decent analysis overall.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/4/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "review",
+                "4",
+                "update"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Review (User/Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/review/4/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "review",
+                "4",
+                "delete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Gallery Router",
+      "item": [
+        {
+          "name": "Upload Gallery Photos (Astrologer)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "images",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gallery/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gallery",
+                "upload"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Gallery images",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gallery/get-gallery?astrologerId=5&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gallery",
+                "get-gallery"
+              ],
+              "query": [
+                {
+                  "key": "astrologerId",
+                  "value": "5"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reorder Gallery Images (Astrologer)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images\": [\n    12,\n    14,\n    15,\n    13\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gallery/reorder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gallery",
+                "reorder"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Gallery Photo",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/gallery/15/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "gallery",
+                "15",
+                "delete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Offer Router",
+      "item": [
+        {
+          "name": "Create Offer Campaign (Astrologer)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"chat\",\n  \"discountType\": \"percentage\",\n  \"discountValue\": 20,\n  \"validFrom\": \"2026-07-15\",\n  \"validTill\": \"2026-08-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/offer/create-offer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offer",
+                "create-offer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Offers",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/offer/get-offers?astrologerId=5&page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offer",
+                "get-offers"
+              ],
+              "query": [
+                {
+                  "key": "astrologerId",
+                  "value": "5"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Apply Promo Offer (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"astrologerId\": \"5\",\n  \"offerId\": \"3\",\n  \"type\": \"chat\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/offer/apply",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offer",
+                "apply"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Offer (Astrologer/Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/offer/3/delete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offer",
+                "3",
+                "delete"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. AppContent Router",
+      "item": [
+        {
+          "name": "Get App Content details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/content/get/privacy_policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "content",
+                "get",
+                "privacy_policy"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save App Content page (Admin)",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"privacy_policy\",\n  \"title\": \"Updated Policy\",\n  \"content\": \"<p>New Policy details...</p>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/content/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "content",
+                "save"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create FAQ (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"Is Kundli accurate?\",\n  \"answer\": \"Yes, calculations are precise.\",\n  \"sortOrder\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/content/create-faq",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "content",
+                "create-faq"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get FAQs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/content/get-faq?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "content",
+                "get-faq"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete FAQ (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/content/5/delete-faq",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "content",
+                "5",
+                "delete-faq"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "12. Live Router",
+      "item": [
+        {
+          "name": "Start Live Session (Astrologer)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Live Tarot Reading & Predictions\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/live/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live",
+                "start"
+              ]
+            }
+          }
+        },
+        {
+          "name": "End Live Session (Astrologer)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/live/end",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live",
+                "end"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Live Sessions",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/live/get?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Join Live (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/live/3/join",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live",
+                "3",
+                "join"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Leave Live Session",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/live/3/leave",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "live",
+                "3",
+                "leave"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "User leaves an active live streaming session."
+        }
+      ]
+    },
+    {
+      "name": "13. Wallet Router",
+      "item": [
+        {
+          "name": "Get Wallet Balance",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "balance"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Transactions History",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/transactions?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Recharge Wallet (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/recharge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "recharge"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Request Payout Withdrawal (Astrologer)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2000\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/withdraw",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "withdraw"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Withdrawals List (Astrologer)",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/withdrawals?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "withdrawals"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Pay for Consultation Service (User)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consultationId\": \"12\",\n  \"astrologerId\": \"3\",\n  \"amount\": 150,\n  \"duration\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/pay-service",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "pay-service"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Get Payouts list",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/admin/withdrawals?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "admin",
+                "withdrawals"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "disabled": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Admin Process Withdrawal",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/wallet/admin/withdrawals/8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet",
+                "admin",
+                "withdrawals",
+                "8"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Expertise Router",
+      "item": [
+        {
+          "name": "Get expertises",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/expertise/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expertise",
+                "get"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Expertise (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Vedic Astrology\",\n  \"icon\": \"vedic_icon\",\n  \"sortOrder\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/expertise/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expertise",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Expertise (Admin)",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Vedic\",\n  \"icon\": \"vedic_new\",\n  \"sortOrder\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/expertise/update/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expertise",
+                "update",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Expertise (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/expertise/delete/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "expertise",
+                "delete",
+                "2"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "15. Language Router",
+      "item": [
+        {
+          "name": "Get languages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/language/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "language",
+                "get"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Language (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hindi\",\n  \"sortOrder\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/language/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "language",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Language (Admin)",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hindi-regional\",\n  \"sortOrder\": 1,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/language/update/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "language",
+                "update",
+                "3"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Language (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/language/delete/3",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "language",
+                "delete",
+                "3"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "16. Services Router",
+      "item": [
+        {
+          "name": "Get active services list",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/get",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "get"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get service details by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/get/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "get",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Service (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tarot Reading\",\n  \"icon\": \"tarot_icon\",\n  \"description\": \"Get tarot deck solutions.\",\n  \"sortOrder\": 2,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Service (Admin)",
+          "request": {
+            "method": "PUT",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tarot deck reading\",\n  \"icon\": \"tarot_icon_new\",\n  \"description\": \"Crystals and Tarot cards reading.\",\n  \"sortOrder\": 2,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services/update/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "update",
+                "2"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Service (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/services/delete/2",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "services",
+                "delete",
+                "2"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "17. Notifications Router",
+      "item": [
+        {
+          "name": "Get Notifications List",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/get?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "get"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Notification (Admin)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"3\",\n  \"title\": \"Maintenance\",\n  \"message\": \"We are running backend tests.\",\n  \"type\": \"system\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/create",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Notification (Admin)",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/delete/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "delete",
+                "4"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "18. Kundli Router",
+      "item": [
+        {
+          "name": "Generate Mock Kundli",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"gender\": \"MALE\",\n  \"dob\": \"1995-05-15\",\n  \"tob\": \"14:30\",\n  \"birthPlace\": \"Mumbai, India\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kundli/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kundli",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Save Kundli Profile",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Self Profile\",\n  \"relation\": \"Self\",\n  \"gender\": \"MALE\",\n  \"dob\": \"1995-05-15\",\n  \"tob\": \"14:30\",\n  \"birthPlace\": \"Mumbai, India\",\n  \"latitude\": \"19.0760\",\n  \"longitude\": \"72.8777\",\n  \"timezone\": \"5.5\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kundli/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kundli",
+                "save"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Saved Kundli profiles",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kundli/saved",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kundli",
+                "saved"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Saved Kundli",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kundli/saved/4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kundli",
+                "saved",
+                "4"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Kundli Match compatibility (Gun Milan)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"boyName\": \"Rahul\",\n  \"boyDob\": \"1993-08-20\",\n  \"boyTob\": \"08:15\",\n  \"boyUnknownTob\": false,\n  \"boyBirthPlace\": \"Delhi, India\",\n  \"girlName\": \"Anjali\",\n  \"girlDob\": \"1995-12-10\",\n  \"girlTob\": \"18:45\",\n  \"girlUnknownTob\": false,\n  \"girlBirthPlace\": \"Mumbai, India\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/kundli/match",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kundli",
+                "match"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "19. Astrology Tools Router",
+      "item": [
+        {
+          "name": "Draw 3 Tarot Cards",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tools/tarot/draw",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tools",
+                "tarot",
+                "draw"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Daily Panchang",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-07-15\",\n  \"place\": \"New Delhi, India\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tools/panchang",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tools",
+                "panchang"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Numerology profile",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"dob\": \"1995-05-15\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tools/numerology",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tools",
+                "numerology"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Scan Palm (Multipart file)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "palmImage",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tools/palm/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tools",
+                "palm",
+                "scan"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "20. Chat Router",
+      "item": [
+        {
+          "name": "Create or Retrieve Chat Room",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"astrologerId\": \"5\",\n  \"userId\": \"3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Rooms list",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Hello Acharya!\",\n  \"messageType\": \"TEXT\",\n  \"metadata\": {}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms/8/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms",
+                "8",
+                "messages"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Messages List",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms/8/messages?page=1&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms",
+                "8",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark messages as read",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms/8/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms",
+                "8",
+                "read"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Chat Room",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat/rooms/8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chat",
+                "rooms",
+                "8"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "21. Config Router",
+      "description": "Third-party integration configurations and CMS adapters (Privacy Policy, Terms of Service, FAQs).",
+      "item": [
+        {
+          "name": "Get Integration Config (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/config/integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "integrations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch all 3rd-party integration configurations (Kundali API, Agora Live SDK, Razorpay)."
+        },
+        {
+          "name": "Save Integration Config (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/config/integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "integrations"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kundali\": {\n    \"provider\": \"VedicAstroAPI\",\n    \"apiKey\": \"sample_key\",\n    \"enabled\": true\n  },\n  \"liveSdk\": {\n    \"provider\": \"Agora\",\n    \"appId\": \"sample_app_id\",\n    \"enabled\": true\n  },\n  \"payment\": {\n    \"provider\": \"Razorpay\",\n    \"keyId\": \"sample_key_id\",\n    \"keySecret\": \"sample_secret\",\n    \"enabled\": true\n  }\n}"
+            }
+          },
+          "description": "Update 3rd-party integration credentials and toggle settings."
+        },
+        {
+          "name": "Test Integration Connection (Admin)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/config/integrations/test/kundali",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "integrations",
+                "test",
+                "kundali"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Test integration connection for kundali, liveSdk, or payment."
+        },
+        {
+          "name": "Get Privacy Policy",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/config/privacy-policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "privacy-policy"
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch current Privacy Policy content."
+        },
+        {
+          "name": "Update Privacy Policy (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/config/privacy-policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "privacy-policy"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"privacy_policy\": \"Updated privacy policy content here...\"\n}"
+            }
+          },
+          "description": "Update Privacy Policy text content."
+        },
+        {
+          "name": "Get Terms of Service",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/config/terms-of-service",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "terms-of-service"
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch current Terms of Service content."
+        },
+        {
+          "name": "Update Terms of Service (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/config/terms-of-service",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "terms-of-service"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"terms_of_service\": \"Updated terms of service content here...\"\n}"
+            }
+          },
+          "description": "Update Terms of Service text content."
+        },
+        {
+          "name": "Get Config FAQs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/config/faqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "faqs"
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch current Terms of Service content."
+        },
+        {
+          "name": "Update / Bulk Save FAQs (Admin)",
+          "request": {
+            "method": "PUT",
+            "url": {
+              "raw": "{{baseUrl}}/config/faqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config",
+                "faqs"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"faqs\": [\n    {\n      \"question\": \"How to recharge wallet?\",\n      \"answer\": \"Go to wallet section and select amount.\"\n    }\n  ]\n}"
+            }
+          },
+          "description": "Add or update FAQs list."
+        }
+      ]
+    },
+    {
+      "name": "22. Dashboard Router",
+      "description": "Admin dashboard statistics and system metrics.",
+      "item": [
+        {
+          "name": "Get Admin Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "stats"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch admin overview stats including total users, astrologers, earnings, and active sessions."
+        }
+      ]
+    },
+    {
+      "name": "23. Payment Router",
+      "description": "Razorpay payment gateway integration (Create Order, Signature Verification, Webhooks).",
+      "item": [
+        {
+          "name": "Create Razorpay Order (User)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/payment/create-order",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payment",
+                "create-order"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500\n}"
+            }
+          },
+          "description": "Create Razorpay Order ID for wallet recharge."
+        },
+        {
+          "name": "Verify Razorpay Payment Signature (User)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/payment/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payment",
+                "verify"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayOrderId\": \"order_xyz123\",\n  \"razorpayPaymentId\": \"pay_abc456\",\n  \"razorpaySignature\": \"sig_789\",\n  \"amount\": 500\n}"
+            }
+          },
+          "description": "Verify Razorpay payment signature and credit user wallet balance."
+        },
+        {
+          "name": "Razorpay Webhook Callback (Public)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/payment/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payment",
+                "webhook"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_abc456\",\n        \"amount\": 50000,\n        \"notes\": {\n          \"userId\": \"3\"\n        }\n      }\n    }\n  }\n}"
+            }
+          },
+          "description": "Public server-to-server webhook endpoint for Razorpay payment events."
+        }
+      ]
+    },
+    {
+      "name": "24. Price Requests Router",
+      "description": "Admin management of astrologer price change requests.",
+      "item": [
+        {
+          "name": "Get Price Change Requests (Admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/price-requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "price-requests"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Fetch all pending and historical price change requests from astrologers."
+        },
+        {
+          "name": "Approve Price Change Request (Admin)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/price-requests/1/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "price-requests",
+                "1",
+                "approve"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Approve a pending price request and update the astrologer's rate."
+        },
+        {
+          "name": "Reject Price Change Request (Admin)",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/price-requests/1/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "price-requests",
+                "1",
+                "reject"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": []
+          },
+          "description": "Reject a pending price change request."
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://noncompulsory-augustine-unbewilderingly.ngrok-free.dev/api",
+      "type": "string",
+      "description": "Root endpoint URL for VAVI Backend."
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_TOKEN",
+      "type": "string",
+      "description": "JWT Token returned in Verify OTP response."
+    }
+  ]
+}
