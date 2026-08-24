@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git mv *)",
+      "Bash(xargs sed -i '' 's#assets/images/icon\\\\.jpeg#assets/images/placeholder.jpeg#g')"
+    ],
+    "additionalDirectories": [
+      "/Users/arshnoorsingh/Documents/astro-stuff/vavi/VAVI/assets/images"
+    ]
+  },
+  "enabledPlugins": {
+    "expo@claude-plugins-official": true
+  }
+}

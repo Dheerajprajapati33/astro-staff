@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Vavi",
+    "slug": "Vavi",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "vavi",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sandeepkumar90.Vavi",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Vavi uses your microphone to convert your voice into text for chat messages.",
+        "NSSpeechRecognitionUsageDescription": "Vavi uses speech recognition to convert your voice into text for chat messages."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sandeepkumar90.Vavi",
+      "permissions": [
+        "CAMERA",
+        "android.permission.CAMERA",
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "android.permission.INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-build-properties",
+      "expo-speech-recognition"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ef7e5a9b-ef14-4412-b2a7-420acadf1d1f"
+      }
+    },
+    "owner": "dheerajprajapati12"
+  }
+}

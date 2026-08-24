@@ -1,0 +1,1 @@
+//adb logcat AndroidRuntime:E ReactNativeJS:E *:S

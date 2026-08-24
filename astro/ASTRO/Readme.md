@@ -1,0 +1,1 @@
+npx expo install react-native-keyboard-aware-scroll-view

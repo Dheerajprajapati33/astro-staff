@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C d:/reactnative-apps/Vavi log --oneline -15)",
+      "PowerShell(npm install socket.io-client)",
+      "Bash(node \"C:\\\\Users\\\\ASK\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\d--reactnative-apps-Vavi\\\\8151ccc5-661e-4c1f-80ca-71a5f6161c7e\\\\scratchpad\\\\remove-typography.js\")",
+      "Bash(ls \"G:/vavi-backend\" 2>&1 | head -5)",
+      "Read(//g//**)",
+      "Bash(magick -version)",
+      "Bash(python3 -c \"import PIL; print\\('PIL ok'\\)\")",
+      "Bash(node -e \"console.log\\(process.version\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(pip --version)",
+      "Bash(python -m pip --version)",
+      "Bash(python -m pip install --quiet Pillow)",
+      "Bash(python -c \"from PIL import Image; print\\(Image.__version__ if hasattr\\(Image,'__version__'\\) else 'PIL ok'\\)\")",
+      "Bash(python -c ' *)"
+    ]
+  }
+}
