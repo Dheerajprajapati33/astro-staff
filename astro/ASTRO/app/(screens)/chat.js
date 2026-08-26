@@ -443,12 +443,22 @@ export default function Chat() {
         // { consultationId, reason, consultation: { amount, duration, ... }, userMessage }.
         // There is no astrologerEarnings/netEarnings field from the backend.
         const amount = data?.consultation?.amount;
+        const endReason = data?.reason;
+
+        let alertTitle = "Chat Ended";
+        let alertMsg = "This chat session has ended.";
+
+        if (endReason === "time_expired") {
+          alertTitle = "Time Expired";
+          alertMsg = "Consultation time limit reached.";
+        } else {
+          alertTitle = "Chat Ended by Client";
+          alertMsg = `Client has ended this chat consultation session.${amount != null ? ` Total Earnings: ₹${amount}` : ""}`;
+        }
 
         Alert.alert(
-          "Chat Ended",
-          amount != null
-            ? `Consultation Amount: ₹${amount}`
-            : (data?.userMessage ?? "This chat session has ended."),
+          alertTitle,
+          alertMsg,
           [
             {
               text: "OK",
@@ -874,7 +884,7 @@ export default function Chat() {
                 ) : (
                   <Text style={styles.city}>
                     {chatEnded
-                      ? "Chat ended"
+                      ? "Client ended chat"
                       : !socketConnected
                         ? "Reconnecting..."
                         : chatActive

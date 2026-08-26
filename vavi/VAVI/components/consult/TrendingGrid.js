@@ -8,13 +8,26 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
+import { router } from "expo-router";
+
 import Colors from "../../constants/Colors";
 import TrendingConsultations from "../../constants/TrendingConsultations";
 import { hp, RF, wp } from "../../utils/responsive";
 
 export default function TrendingGrid() {
+  const handleCategoryPress = (item) => {
+    router.push({
+      pathname: "/(tabs)",
+      params: { category: item.title },
+    });
+  };
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity activeOpacity={0.85} style={styles.card}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      style={styles.card}
+      onPress={() => handleCategoryPress(item)}
+    >
       {/* Icon */}
 
       <View style={styles.iconContainer}>

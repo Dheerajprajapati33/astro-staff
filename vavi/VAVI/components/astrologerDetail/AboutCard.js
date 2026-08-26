@@ -7,22 +7,22 @@ import {
   View,
 } from "react-native";
 
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
 
 export default function AboutCard({ astrologer = {} }) {
   const [expanded, setExpanded] = useState(false);
 
- const aboutText =
-  astrologer?.about?.trim() ||
-  astrologer?.shortBio?.trim() ||
-  (Array.isArray(astrologer?.expertises) && astrologer.expertises.length > 0
-    ? `Expert in ${astrologer.expertises.map((e) => e.name).join(", ")}` 
-    : astrologer?.experience 
-      ? `Experience: ${astrologer.experience} years` 
-      : "No additional information available.");
+  const aboutText =
+    astrologer?.about?.trim() ||
+    astrologer?.shortBio?.trim() ||
+    (Array.isArray(astrologer?.expertises) && astrologer.expertises.length > 0
+      ? `Expert in ${astrologer.expertises.map((e) => (typeof e === "object" && e !== null ? e?.name || e?.title || e?.label : String(e))).filter(Boolean).join(", ")}` 
+      : astrologer?.experience 
+        ? `Experience: ${astrologer.experience} years` 
+        : "No additional information available.");
 
   const toolsUsed = Array.isArray(astrologer?.toolsUsed)
-    ? astrologer.toolsUsed.filter(Boolean)
+    ? astrologer.toolsUsed.map((t) => (typeof t === "object" && t !== null ? t?.name || t?.title || t?.label : String(t))).filter(Boolean)
     : [];
 
   return (

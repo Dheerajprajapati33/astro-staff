@@ -24,8 +24,10 @@ import TypingIndicator from "../../components/chat/TypingIndicator";
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 import {
+  useCreateReviewMutation,
   useGetConsultationHistoryQuery,
 } from "../../redux/consultationApi";
+import PostConsultationReviewModal from "../../components/review/PostConsultationReviewModal";
 import {
   connectChatSocket,
   disconnectChatSocket,
@@ -54,6 +56,10 @@ export default function ChatConsultation() {
     ? params.consultationId[0]
     : params?.consultationId;
 
+  const astrologerId = Array.isArray(params?.astrologerId)
+    ? params.astrologerId[0]
+    : params?.astrologerId;
+
   const astrologerName = Array.isArray(params?.astrologerName)
     ? params.astrologerName[0]
     : params?.astrologerName;
@@ -69,7 +75,10 @@ export default function ChatConsultation() {
   const [messages, setMessages] = useState([]);
   const [isAstrologerTyping, setIsAstrologerTyping] = useState(false);
   const [chatEnded, setChatEnded] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("connecting");
+
+  const [createReviewMutation] = useCreateReviewMutation();
 
   const listRef = useRef(null);
   const hasLoadedHistoryRef = useRef(false);
@@ -284,11 +293,7 @@ export default function ChatConsultation() {
 
         if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-        Alert.alert(
-          "Chat Ended",
-          "Your chat consultation has ended.",
-          [{ text: "OK", onPress: () => router.back() }],
-        );
+        setShowReviewModal(true);
       });
     };
 
@@ -702,6 +707,26 @@ export default function ChatConsultation() {
           onTyping={handleTyping}
         />
       </KeyboardAvoidingView>
+
+      {/* Post Consultation Rating & Review Modal */}
+      <PostConsultationReviewModal
+        visible={showReviewModal}
+        onClose={() => router.back()}
+        astrologer={{
+          id: astrologerId || params?.astrologerId,
+          name: astrologerName,
+          profilePic: params?.astrologerImage,
+        }}
+        consultationId={consultationId}
+        onSubmitReview={async (payload) => {
+          try {
+            await createReviewMutation(payload).unwrap();
+          } catch (e) {
+            console.log("[ChatConsultation] createReview error:", e);
+          }
+          router.back();
+        }}
+      />
     </SafeAreaView>
   );
 }

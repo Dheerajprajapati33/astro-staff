@@ -18,14 +18,23 @@ export default function ProfileCard({ astrologer = {} }) {
   }, [astrologer.following]);
 
   const expertises = Array.isArray(astrologer?.expertises)
-    ? astrologer.expertises.map((e) => e?.name).filter(Boolean)
+    ? astrologer.expertises
+        .map((e) => (typeof e === "object" && e !== null ? e?.name || e?.title || e?.label : String(e)))
+        .filter(Boolean)
     : Array.isArray(astrologer?.skills)
-      ? astrologer.skills.filter(Boolean)
+      ? astrologer.skills
+          .map((s) => (typeof s === "object" && s !== null ? s?.name || s?.title || s?.label : String(s)))
+          .filter(Boolean)
       : [];
 
   const languages = Array.isArray(astrologer?.languages)
-    ? astrologer.languages.join(", ")
-    : astrologer?.languages || "Language not available";
+    ? astrologer.languages
+        .map((l) => (typeof l === "object" && l !== null ? l?.name || l?.language || l?.title || l?.label : String(l)))
+        .filter((l) => Boolean(l) && typeof l === "string" && !l.includes("[object Object]"))
+        .join(", ")
+    : typeof astrologer?.languages === "string" && !astrologer.languages.includes("[object Object]")
+      ? astrologer.languages
+      : "";
 
   const profileImage = resolveImageUri(astrologer?.profilePic)
     || (astrologer?.image ? astrologer.image : require("../../assets/images/placeholder.jpeg"));
@@ -99,7 +108,7 @@ export default function ProfileCard({ astrologer = {} }) {
           )}
         </View>
 
-        <Text style={styles.language}>{languages}</Text>
+        {Boolean(languages) && <Text style={styles.language}>{languages}</Text>}
 
         <View style={styles.bottomRow}>
           <Text style={styles.exp}>Exp: {experienceText}</Text>

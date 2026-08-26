@@ -8,8 +8,11 @@ const categories = [
   "All",
   "Love & Relationship",
   "Career",
+  "Finance",
   "Business",
   "Health",
+  "Education",
+  "Family",
 ];
 
 export default function CategoryTabs({ selected = "All", onSelect }) {

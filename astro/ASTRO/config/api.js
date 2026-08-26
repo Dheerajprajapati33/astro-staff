@@ -14,6 +14,3 @@ export const resolveImageUri = (uri) => {
 
 // Socket.io connects to the same host as the REST API (no "/api" suffix).
 export const SOCKET_URL = BASE_URL;
-
-export const TOKEN =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImZiYTUwMTgzLTM5YWQtNDhkZS1hNGI1LTRjMzQzZjM4MWIxZCIsInJvbGUiOiJhc3Ryb2xvZ2VyIiwiaWF0IjoxNzgzNTgxMTE4fQ.D8VMGerMKMgPiyW3iiWYackFJKe7ZN_FbNMeXVkQqcQ";

@@ -45,6 +45,22 @@ export default function BottomButtons({ astrologer = {} }) {
       false,
   );
 
+  const isBusy = normalizeBoolean(
+    astrologer?.isBusy ??
+      astrologer?.busy ??
+      (astrologer?.status === "busy" ||
+        astrologer?.status === "on_call" ||
+        astrologer?.status === "in_consultation"),
+  );
+
+  const showBusyAlert = () => {
+    Alert.alert(
+      "Astrologer Busy",
+      "Astrologer is currently busy on another call/consultation. Please try again in a few minutes.",
+      [{ text: "OK" }],
+    );
+  };
+
   const showUnavailableAlert = (feature) => {
     Alert.alert(
       "Astrologer Not Available",
@@ -60,6 +76,11 @@ export default function BottomButtons({ astrologer = {} }) {
   const [isStartingCall, setIsStartingCall] = useState(false);
 
   const handleCall = async () => {
+    if (isBusy) {
+      showBusyAlert();
+      return;
+    }
+
     if (!isCallOnline) {
       showUnavailableAlert("call");
       return;
@@ -98,6 +119,7 @@ export default function BottomButtons({ astrologer = {} }) {
         pathname: "/CallConsultation",
         params: {
           consultationId,
+          astrologerId: astrologer?.id || "",
           maxDuration: String(maxDuration),
           astrologerName: astrologer?.name || "",
           astrologerImage: astrologer?.profilePic || "",
@@ -116,6 +138,11 @@ export default function BottomButtons({ astrologer = {} }) {
   };
 
   const handleChat = async () => {
+    if (isBusy) {
+      showBusyAlert();
+      return;
+    }
+
     if (!isChatOnline) {
       showUnavailableAlert("chat");
 
@@ -162,8 +189,10 @@ export default function BottomButtons({ astrologer = {} }) {
         pathname: "/ChatConsultation",
         params: {
           consultationId,
+          astrologerId: astrologer?.id || "",
           maxDuration: String(maxDuration),
           astrologerName: astrologer?.name || "",
+          astrologerImage: astrologer?.profilePic || "",
         },
       });
     } catch (error) {

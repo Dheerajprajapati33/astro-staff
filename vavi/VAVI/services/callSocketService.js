@@ -109,10 +109,20 @@ export const joinCallConsultation = ({ consultationId, userId, role = "user" }) 
 /**
  * Hangs up the call consultation per backend specification (Section A, Step 4)
  */
-export const endCallConsultation = ({ consultationId, reason = "completed" }) => {
+export const endCallConsultation = (params, defaultReason = "completed") => {
   if (!socket) {
     console.log(LOG_TAG, "endCallConsultation skipped (socket not connected)");
     return;
+  }
+
+  let consultationId;
+  let reason = defaultReason;
+
+  if (typeof params === "object" && params !== null) {
+    consultationId = params.consultationId;
+    reason = params.reason || defaultReason;
+  } else {
+    consultationId = params;
   }
 
   console.log(LOG_TAG, "Emitting client_end_call:", { consultationId, reason });

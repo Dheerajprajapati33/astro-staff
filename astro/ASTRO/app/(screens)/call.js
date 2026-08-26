@@ -62,6 +62,7 @@ export default function CallScreen() {
   const [isSpeaker, setIsSpeaker] = useState(true);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
+  const [endedReason, setEndedReason] = useState("");
 
   // Video Feeds (Web & Native)
   const [clientVideoFrame, setClientVideoFrame] = useState(null);
@@ -318,21 +319,55 @@ export default function CallScreen() {
 
         if (agoraData && createAgoraRtcEngine) {
           const { token, channelName, uid, appId } = agoraData;
-          console.log(LOG_TAG, "Joining Agora 2-Way Video Call as Host:", channelName, "uid:", uid || 1);
+          const targetUid = Number(uid) && Number(uid) > 0 ? Number(uid) : 1;
+          console.log(LOG_TAG, "Joining Agora 2-Way Video Call as Host:", channelName, "uid:", targetUid);
 
           const engine = createAgoraRtcEngine();
           agoraEngineRef.current = engine;
 
           engine.initialize({
             appId: appId || agoraData.app_id || AGORA_APP_ID,
-            channelProfile: 0, // ChannelProfileCommunication (0: 1:1 call)
+            channelProfile: 1, // ChannelProfileLiveBroadcasting (1: 2-way call)
           });
 
+          if (engine.setClientRole) engine.setClientRole(1); // ClientRoleBroadcaster
           engine.enableAudio();
+          if (engine.enableLocalAudio) engine.enableLocalAudio(true);
+          if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
           engine.enableVideo();
+
+          if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
+          if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
+          if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
+          if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+
+          if (engine.registerEventHandler) {
+            engine.registerEventHandler({
+              onJoinChannelSuccess: (connection, elapsed) => {
+                console.log(LOG_TAG, "Agora Host onJoinChannelSuccess:", connection.channelId);
+                if (engine.enableLocalAudio) engine.enableLocalAudio(true);
+                if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+                if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+                if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
+                if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+              },
+              onUserJoined: (connection, remoteUid, elapsed) => {
+                console.log(LOG_TAG, "Agora Host onUserJoined remoteUid:", remoteUid);
+                if (engine.muteRemoteAudioStream) engine.muteRemoteAudioStream(remoteUid, false);
+              },
+              onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) => {
+                console.log(LOG_TAG, "Agora Host onRemoteAudioStateChanged:", remoteUid, state, reason);
+              },
+              onError: (err, msg) => {
+                console.log(LOG_TAG, "Agora Host RTC Error:", err, msg);
+              },
+            });
+          }
+
           engine.startPreview();
 
-          engine.joinChannel(token, channelName, Number(uid) || 1, {
+          engine.joinChannel(token, channelName, targetUid, {
             clientRoleType: 1,
             publishMicrophoneTrack: true,
             publishCameraTrack: true,
@@ -355,6 +390,7 @@ export default function CallScreen() {
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       cleanupAgora();
       setCallStatus("ended");
+      setEndedReason(data?.reason || "client_ended");
 
       const mins = Math.max(1, Math.ceil(callDurationSeconds / 60));
       const rate = Number(ratePerMinute) || 25;
@@ -449,8 +485,10 @@ export default function CallScreen() {
     }
 
     emitEvent("client_end_call", { consultationId, reason });
+    emitEvent("end_call_session", { consultationId, reason });
     cleanupAgora();
     setCallStatus("ended");
+    setEndedReason(reason || "astrologer_hung_up");
 
     const mins = Math.max(1, Math.ceil(callDurationSeconds / 60));
     const rate = Number(ratePerMinute) || 25;
@@ -538,56 +576,10 @@ export default function CallScreen() {
       )}
 
       {/* =========================================================================
-          2. CONNECTED 2-WAY ZOOM VIDEO CALL STATE
+          2. CONNECTED WHATSAPP-STYLE VOICE CALL STATE
           ========================================================================= */}
       {callStatus === "connected" && (
         <View style={styles.connectedContainer}>
-          {/* Main Full-Screen View: Remote Client Video */}
-          <View style={styles.remoteVideoSurface}>
-            {clientVideoFrame ? (
-              <Image source={{ uri: clientVideoFrame }} resizeMode="cover" style={StyleSheet.absoluteFillObject} />
-            ) : (
-              <View style={styles.remotePlaceholder}>
-                <View style={styles.placeholderAvatarCircle}>
-                  <Ionicons name="person" size={RF(45)} color="#fff" />
-                </View>
-                <Text style={styles.remotePlaceholderName}>{userName}</Text>
-                <Text style={styles.remotePlaceholderSub}>Live 2-Way Video Consultation</Text>
-              </View>
-            )}
-            <View style={styles.videoOverlayGradient} />
-          </View>
-
-          {/* Picture-in-Picture (PiP): Floating Local Astrologer Camera Preview */}
-          <View style={styles.pipContainer}>
-            {Platform.OS === "web" && !isCameraOff ? (
-              <video
-                ref={localVideoRefCallback}
-                autoPlay
-                playsInline
-                muted
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  transform: isFrontCamera ? "scaleX(-1)" : "none",
-                }}
-              />
-            ) : isCameraOff ? (
-              <View style={styles.cameraOffPip}>
-                <Ionicons name="videocam-off" size={RF(20)} color="#fff" />
-                <Text style={styles.cameraOffText}>Cam Off</Text>
-              </View>
-            ) : (
-              <View style={styles.cameraOffPip}>
-                <Ionicons name="person" size={RF(24)} color="#fff" />
-              </View>
-            )}
-            <View style={styles.pipLabelBadge}>
-              <Text style={styles.pipLabelText}>You (Host)</Text>
-            </View>
-          </View>
-
           {/* Top Bar: Timer, Client Info & Consultation Topic */}
           <SafeAreaView style={styles.topOverlayBar} edges={["top"]}>
             <View style={styles.hostHeaderBadge}>
@@ -596,7 +588,7 @@ export default function CallScreen() {
               </View>
               <View>
                 <Text style={styles.headerHostName} numberOfLines={1}>{userName}</Text>
-                <Text style={styles.headerRateText}>{problem}</Text>
+                <Text style={styles.headerRateText}>{problem} • Voice Call</Text>
               </View>
             </View>
 
@@ -606,7 +598,23 @@ export default function CallScreen() {
             </View>
           </SafeAreaView>
 
-          {/* Bottom Zoom-Style Control Bar */}
+          {/* Centered WhatsApp-Style Voice Avatar with Pulse Animation */}
+          <View style={styles.voiceAvatarCenterWrap}>
+            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <View style={styles.voiceAvatarCircle}>
+              <Ionicons name="person" size={RF(50)} color="#fff" />
+            </View>
+            <Text style={styles.voiceAstrologerName}>{currentUser?.name || "Astrologer Host"}</Text>
+            <Text style={styles.voiceSubStatus}>Voice Consultation Connected</Text>
+
+            {/* Client Icon Badge */}
+            <View style={styles.clientBadgeBox}>
+              <Ionicons name="person-circle" size={RF(22)} color="#ff6a00" />
+              <Text style={styles.clientBadgeText}>Client ({userName})</Text>
+            </View>
+          </View>
+
+          {/* Bottom WhatsApp-Style Audio Control Bar */}
           <View style={styles.bottomControlBar}>
             {/* Mute Button */}
             <TouchableOpacity
@@ -614,28 +622,8 @@ export default function CallScreen() {
               onPress={handleToggleMute}
               activeOpacity={0.8}
             >
-              <Ionicons name={isMuted ? "mic-off" : "mic"} size={RF(22)} color="#fff" />
+              <Ionicons name={isMuted ? "mic-off" : "mic"} size={RF(24)} color="#fff" />
               <Text style={styles.controlBtnLabel}>{isMuted ? "Unmute" : "Mute"}</Text>
-            </TouchableOpacity>
-
-            {/* Camera On/Off */}
-            <TouchableOpacity
-              style={[styles.controlBtn, isCameraOff && styles.controlBtnActive]}
-              onPress={handleToggleCamera}
-              activeOpacity={0.8}
-            >
-              <Ionicons name={isCameraOff ? "videocam-off" : "videocam"} size={RF(22)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>{isCameraOff ? "Start Cam" : "Stop Cam"}</Text>
-            </TouchableOpacity>
-
-            {/* Flip Camera */}
-            <TouchableOpacity
-              style={styles.controlBtn}
-              onPress={handleSwitchCamera}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="camera-reverse" size={RF(22)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>Flip</Text>
             </TouchableOpacity>
 
             {/* Speaker Toggle */}
@@ -644,7 +632,7 @@ export default function CallScreen() {
               onPress={handleToggleSpeaker}
               activeOpacity={0.8}
             >
-              <Ionicons name={isSpeaker ? "volume-high" : "volume-mute"} size={RF(22)} color="#fff" />
+              <Ionicons name={isSpeaker ? "volume-high" : "volume-mute"} size={RF(24)} color="#fff" />
               <Text style={styles.controlBtnLabel}>{isSpeaker ? "Speaker" : "Ear-piece"}</Text>
             </TouchableOpacity>
 
@@ -654,7 +642,7 @@ export default function CallScreen() {
               onPress={() => handleEndCall("astrologer_hung_up")}
               activeOpacity={0.85}
             >
-              <Ionicons name="call" size={RF(24)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
+              <Ionicons name="call" size={RF(26)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
               <Text style={styles.endBtnLabel}>End</Text>
             </TouchableOpacity>
           </View>
@@ -671,8 +659,18 @@ export default function CallScreen() {
               <Ionicons name="checkmark-circle" size={RF(48)} color="#4CAF50" />
             </View>
 
-            <Text style={styles.summaryTitle}>Consultation Completed</Text>
-            <Text style={styles.summarySub}>Your video consultation with {userName} has concluded.</Text>
+            <Text style={styles.summaryTitle}>
+              {endedReason === "client_ended"
+                ? "Client Ended Call"
+                : "Consultation Completed"}
+            </Text>
+            <Text style={styles.summarySub}>
+              {endedReason === "astrologer_hung_up"
+                ? `You have ended the call consultation with ${userName}.`
+                : endedReason === "time_expired"
+                  ? `Consultation time limit reached for call with ${userName}.`
+                  : `${userName || "Client"} has ended the call consultation.`}
+            </Text>
 
             <View style={styles.summaryStatsGrid}>
               <View style={styles.summaryBox}>
@@ -1057,5 +1055,54 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: RF(13),
     fontWeight: "700",
+  },
+  voiceAvatarCenterWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  voiceAvatarCircle: {
+    width: wp(36),
+    height: wp(36),
+    borderRadius: wp(18),
+    borderWidth: 3,
+    borderColor: "#34C759",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1c1830",
+    marginBottom: hp(2),
+  },
+  voiceAvatarImg: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  voiceAstrologerName: {
+    fontSize: RF(22),
+    fontWeight: "800",
+    color: "#fff",
+    textAlign: "center",
+  },
+  voiceSubStatus: {
+    fontSize: RF(12),
+    color: "#34C759",
+    marginTop: hp(0.5),
+    fontWeight: "600",
+  },
+  clientBadgeBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(1.5),
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.6),
+    borderRadius: wp(5),
+    marginTop: hp(2),
+  },
+  clientBadgeText: {
+    color: "#ddd",
+    fontSize: RF(12),
+    fontWeight: "600",
   },
 });

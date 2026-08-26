@@ -56,15 +56,12 @@ export const connectSocket = async (initialToken) => {
   setConnectionStatus("connecting");
 
   socket = io(SOCKET_URL, {
-    transports: ["polling", "websocket"],
+    transports: ["websocket", "polling"],
     auth: {
       token: cleanToken,
       authorization: bearerToken,
     },
-    query: {
-      token: cleanToken,
-    },
-    extraHeaders: bearerToken ? { Authorization: bearerToken } : {},
+    autoConnect: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
     reconnectionDelay: 1000,
@@ -193,13 +190,33 @@ export const endChatSession = ({ consultationId, reason = "completed" }) => {
   socket.emit("end_chat_session", { consultationId, reason });
 };
 
+export const acceptChatSession = ({ consultationId }) => {
+  if (!socket) {
+    console.log(LOG_TAG, "acceptChatSession called before socket connected");
+    return;
+  }
+  console.log(LOG_TAG, "Emitting accept_chat_session:", { consultationId });
+  socket.emit("accept_chat_session", { consultationId });
+};
+
+export const leaveChatSession = ({ consultationId, userId }) => {
+  if (!socket) {
+    console.log(LOG_TAG, "leaveChatSession called before socket connected");
+    return;
+  }
+  console.log(LOG_TAG, "Emitting leave_chat_session:", { consultationId, userId });
+  socket.emit("leave_chat_session", { consultationId, userId });
+};
+
 export const removeChatListeners = () => {
   if (!socket) return;
   console.log(LOG_TAG, "Removing chat event listeners");
+  socket.off("chat_session_joined");
   socket.off("chat_started");
   socket.off("new_chat_message");
   socket.off("user_typing");
   socket.off("chat_ended");
+  socket.off("chat_error");
 };
 
 // Compatible legacy thin wrappers

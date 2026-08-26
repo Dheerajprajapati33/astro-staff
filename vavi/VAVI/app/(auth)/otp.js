@@ -1,12 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   ImageBackground,
   Keyboard,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +17,8 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "../../constants/Colors";import { useVerifyOtpMutation } from "../../redux/authApi";
+import Colors from "../../constants/Colors";
+import { useLoginMutation, useVerifyOtpMutation } from "../../redux/authApi";
 import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Otp() {
@@ -31,48 +33,118 @@ export default function Otp() {
     : params?.role || "user";
 
   const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
+  const [timer, setTimer] = useState(30);
 
   const inputRefs = useRef([]);
 
   const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
+  const [resendOtp, { isLoading: isResending }] = useLoginMutation();
+
+  useEffect(() => {
+    let interval = null;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [timer]);
+
+  const handleResendOtp = async () => {
+    if (timer > 0 || isResending) return;
+
+    if (!phone) {
+      Alert.alert(
+        "Phone Number Missing",
+        "Phone number was not received. Please login again.",
+      );
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    try {
+      const response = await resendOtp({
+        phone,
+        role: role || "user",
+      }).unwrap();
+
+      if (response?.success) {
+        Alert.alert("OTP Sent", "A new OTP code has been sent to your phone number.");
+        setTimer(30);
+        const emptyOtp = ["", "", "", "", "", ""];
+        setOtpValues(emptyOtp);
+        emptyOtp.forEach((_, i) => {
+          inputRefs.current[i]?.setNativeProps({ text: "" });
+        });
+        inputRefs.current[0]?.focus();
+      } else {
+        Alert.alert(
+          "Resend Failed",
+          response?.message || "Unable to resend OTP. Please try again.",
+        );
+      }
+    } catch (error) {
+      console.log("Resend OTP API Error:", error);
+      const errorMessage =
+        error?.data?.message ||
+        error?.data?.error ||
+        error?.error ||
+        "Failed to resend OTP. Please try again.";
+      Alert.alert("Resend Failed", errorMessage);
+    }
+  };
 
   const handleOtpChange = (value, index) => {
     const numericValue = value.replace(/[^0-9]/g, "");
 
-    // Paste ya autofill me poora 6-digit OTP aa jaye
+    // Handle Autofill or Paste with multiple digits (> 1)
     if (numericValue.length > 1) {
       const pastedOtp = numericValue.slice(0, 6).split("");
-
       const updatedOtp = ["", "", "", "", "", ""];
 
       pastedOtp.forEach((digit, otpIndex) => {
         updatedOtp[otpIndex] = digit;
+        if (inputRefs.current[otpIndex]) {
+          inputRefs.current[otpIndex].setNativeProps({ text: digit });
+        }
       });
 
       setOtpValues(updatedOtp);
 
-      const nextIndex = Math.min(pastedOtp.length, 5);
+      setTimeout(() => {
+        pastedOtp.forEach((digit, otpIndex) => {
+          if (inputRefs.current[otpIndex]) {
+            inputRefs.current[otpIndex].setNativeProps({ text: digit });
+          }
+        });
+        const nextIndex = Math.min(pastedOtp.length - 1, 5);
+        inputRefs.current[nextIndex]?.focus();
 
-      inputRefs.current[nextIndex]?.focus();
-
-      if (pastedOtp.length === 6) {
-        Keyboard.dismiss();
-      }
+        if (pastedOtp.length === 6) {
+          Keyboard.dismiss();
+        }
+      }, 50);
 
       return;
     }
 
-    const updatedOtp = [...otpValues];
+    const singleDigit = numericValue.slice(-1);
 
-    updatedOtp[index] = numericValue;
+    setOtpValues((prevOtp) => {
+      const updated = [...prevOtp];
+      updated[index] = singleDigit;
+      return updated;
+    });
 
-    setOtpValues(updatedOtp);
-
-    if (numericValue && index < 5) {
+    if (singleDigit && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
 
-    if (numericValue && index === 5) {
+    if (singleDigit && index === 5) {
       Keyboard.dismiss();
     }
   };
@@ -83,12 +155,12 @@ export default function Otp() {
       !otpValues[index] &&
       index > 0
     ) {
-      const updatedOtp = [...otpValues];
-
-      updatedOtp[index - 1] = "";
-
-      setOtpValues(updatedOtp);
-
+      setOtpValues((prevOtp) => {
+        const updated = [...prevOtp];
+        updated[index - 1] = "";
+        return updated;
+      });
+      inputRefs.current[index - 1]?.setNativeProps({ text: "" });
       inputRefs.current[index - 1]?.focus();
     }
   };
@@ -217,9 +289,12 @@ export default function Otp() {
                   style={[styles.otpBox, digit ? styles.filledOtpBox : null]}
                   keyboardType="number-pad"
                   maxLength={index === 0 ? 6 : 1}
+                  textContentType={index === 0 ? "oneTimeCode" : "none"}
+                  autoComplete={index === 0 ? "sms-otp" : "off"}
                   textAlign="center"
                   selectTextOnFocus
-                  editable={!isLoading}
+                  autoFocus={index === 0}
+                  editable={!isLoading && !isResending}
                   onChangeText={(value) => handleOtpChange(value, index)}
                   onKeyPress={(event) => handleKeyPress(event, index)}
                 />
@@ -227,9 +302,12 @@ export default function Otp() {
             </View>
 
             <TouchableOpacity
-              style={[styles.verifyButton, isLoading && styles.disabledButton]}
+              style={[
+                styles.verifyButton,
+                (isLoading || isResending) && styles.disabledButton,
+              ]}
               onPress={handleVerifyOtp}
-              disabled={isLoading}
+              disabled={isLoading || isResending}
               activeOpacity={0.8}
             >
               {isLoading ? (
@@ -243,15 +321,31 @@ export default function Otp() {
               )}
             </TouchableOpacity>
 
-            <Text style={styles.timerText}>
-              If you didn't receive a code!{" "}
-              <Text style={styles.timer}>00:28</Text>
-            </Text>
+            <View style={styles.timerContainer}>
+              <Text style={styles.timerText}>
+                If you didn't receive a code!{" "}
+              </Text>
+              {timer > 0 ? (
+                <Text style={styles.timer}>
+                  00:{timer < 10 ? `0${timer}` : timer}
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleResendOtp}
+                  disabled={isResending}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.timer, styles.resendText]}>
+                    {isResending ? "Resending..." : "Resend OTP"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             <TouchableOpacity
               style={styles.changeButton}
               onPress={handleChangeNumber}
-              disabled={isLoading}
+              disabled={isLoading || isResending}
               activeOpacity={0.8}
             >
               <Ionicons
@@ -335,13 +429,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     textAlign: "center",
     fontSize: RF(22),
-    color: Colors.darkBrown,
-    fontWeight: "600",
+    color: "#000000",
+    fontWeight: "700",
     paddingVertical: 0,
   },
 
   filledOtpBox: {
+    borderColor: Colors.primary,
     borderWidth: 2,
+  },
+
+  otpText: {
+    fontSize: RF(22),
+    color: Colors.darkBrown,
+    fontWeight: "600",
   },
 
   verifyButton: {
@@ -376,9 +477,15 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+  timerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: hp(3),
+  },
+
   timerText: {
     textAlign: "center",
-    marginTop: hp(3),
     color: Colors.textGray,
     fontSize: RF(13),
     fontWeight: "400",
@@ -387,6 +494,11 @@ const styles = StyleSheet.create({
   timer: {
     color: Colors.primary,
     fontWeight: "600",
+    fontSize: RF(13),
+  },
+
+  resendText: {
+    textDecorationLine: "underline",
   },
 
   changeButton: {

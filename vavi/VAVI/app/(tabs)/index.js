@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -22,9 +23,16 @@ import { useGetAstrologersQuery } from "../../redux/AstroApi";
 import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Discover() {
+  const { category } = useLocalSearchParams();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  useEffect(() => {
+    if (category) {
+      setSelectedCategory(category);
+    }
+  }, [category]);
   const limit = 10;
 
   const { data, isLoading, isFetching, isError, error, refetch } =

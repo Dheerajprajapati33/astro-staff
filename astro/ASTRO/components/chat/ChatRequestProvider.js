@@ -168,11 +168,25 @@ export default function ChatRequestProvider({ children }) {
   const handleDecline = () => {
     console.log(
       LOG_TAG,
-      "REQUEST DECLINED (local dismiss only, no backend decline event confirmed):",
+      "REQUEST DECLINED:",
       JSON.stringify(incomingRequest),
     );
 
     if (incomingRequest?.consultationId) {
+      try {
+        emitEvent("reject_chat_session", {
+          consultationId: incomingRequest.consultationId,
+          reason: "declined_by_astrologer",
+        });
+
+        emitEvent("end_chat_session", {
+          consultationId: incomingRequest.consultationId,
+          reason: "declined",
+        });
+      } catch (e) {
+        console.log(LOG_TAG, "Error emitting decline events:", e);
+      }
+
       dismissedIdsRef.current.add(incomingRequest.consultationId);
     }
 

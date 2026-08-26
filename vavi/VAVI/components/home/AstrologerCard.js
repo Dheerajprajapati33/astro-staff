@@ -30,6 +30,23 @@ export default function AstrologerCard({ item = {} }) {
     ? item.expertises.map((expertise) => expertise?.name).filter(Boolean)
     : [];
 
+  const normalizeBoolean = (value) => {
+    return (
+      value === true ||
+      value === 1 ||
+      value === "1" ||
+      String(value).toLowerCase() === "true"
+    );
+  };
+
+  const isBusy = normalizeBoolean(
+    item?.isBusy ??
+      item?.busy ??
+      (item?.status === "busy" ||
+        item?.status === "on_call" ||
+        item?.status === "in_consultation"),
+  );
+
   const isOnline = Boolean(
     item?.isOnline || item?.isCallOnline || item?.isChatOnline,
   );
@@ -60,6 +77,15 @@ export default function AstrologerCard({ item = {} }) {
 
   const handleInternetCall = async (event) => {
     event?.stopPropagation?.();
+
+    if (isBusy) {
+      Alert.alert(
+        "Astrologer Busy",
+        "Astrologer is currently busy on another call. Please try again in a few minutes.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
 
     if (!item?.isCallOnline) {
       Alert.alert(
@@ -103,6 +129,7 @@ export default function AstrologerCard({ item = {} }) {
         pathname: "/CallConsultation",
         params: {
           consultationId,
+          astrologerId: item?.id || "",
           maxDuration: String(maxDuration),
           astrologerName: item?.name || "",
           astrologerImage: item?.profilePic || "",
@@ -121,6 +148,15 @@ export default function AstrologerCard({ item = {} }) {
 
   const handleChat = async (event) => {
     event?.stopPropagation?.();
+
+    if (isBusy) {
+      Alert.alert(
+        "Astrologer Busy",
+        "Astrologer is currently busy on another consultation. Please try again in a few minutes.",
+        [{ text: "OK" }],
+      );
+      return;
+    }
 
     if (!item?.isChatOnline) {
       Alert.alert(
@@ -176,8 +212,10 @@ export default function AstrologerCard({ item = {} }) {
         pathname: "/ChatConsultation",
         params: {
           consultationId,
+          astrologerId: item?.id || "",
           maxDuration: String(maxDuration),
           astrologerName: item?.name || "",
+          astrologerImage: item?.profilePic || "",
         },
       });
     } catch (error) {
@@ -198,13 +236,18 @@ export default function AstrologerCard({ item = {} }) {
         {/* Top Section */}
         <View style={styles.topRow}>
           <View style={styles.imageContainer}>
-            {isOnline && (
+            {isBusy ? (
+              <View style={[styles.onlineBadge, { borderColor: "#FF9800", backgroundColor: "#FFF3E0" }]}>
+                <View style={[styles.onlineDot, { backgroundColor: "#FF9800" }]} />
+                <Text style={[styles.onlineText, { color: "#FF9800" }]}>Busy</Text>
+              </View>
+            ) : isOnline ? (
               <View style={styles.onlineBadge}>
                 <View style={styles.onlineDot} />
 
                 <Text style={styles.onlineText}>Online</Text>
               </View>
-            )}
+            ) : null}
 
             <Image
               source={profileImage}

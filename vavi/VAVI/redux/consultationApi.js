@@ -83,6 +83,24 @@ export const consultationApi = createApi({
         method: "POST",
       }),
     }),
+
+    // ==========================
+    // CREATE / SUBMIT CONSULTATION REVIEW
+    // ==========================
+
+    createReview: builder.mutation({
+      query: ({ astrologerId, consultationId, rating, review }) => ({
+        url: "/review/create-review",
+        method: "POST",
+        body: {
+          astrologerId,
+          consultationId,
+          rating,
+          review,
+        },
+      }),
+      invalidatesTags: ["ChatMessages"],
+    }),
   }),
 });
 
@@ -91,4 +109,6 @@ export const {
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useGetCallTokenMutation,
+  useCreateReviewMutation,
 } = consultationApi;
+

@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -33,11 +33,17 @@ export default function Reviews() {
 
   const {
     data,
-
     isLoading,
-
     refetch,
-  } = useGetReviewsQuery();
+  } = useGetReviewsQuery(undefined, {
+    pollingInterval: 10000,
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   const [addReply, { isLoading: replyLoading }] = useAddReviewReplyMutation();
 

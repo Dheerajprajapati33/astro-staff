@@ -14,7 +14,7 @@ import { hp, RF, wp } from "../../utils/responsive";
 
 const routeMap = {
   1: "/kundli",
-  2: "/index",
+  2: "/(tabs)",
   3: "/Tarotreading",
   4: "/love",
   5: "/DiscoverNumbar",
