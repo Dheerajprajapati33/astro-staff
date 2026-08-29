@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Platform,
@@ -21,7 +22,7 @@ import { resolveImageUri } from "../../config/api";
 import { RF, hp, wp } from "../../utils/responsive";
 import BookingCard from "../../components/bookings/BookingCard";
 import BookingDetailsSheet from "../../components/bookings/BookingDetailsSheet";
-import { useGetConsultationHistoryQuery } from "../../redux/consultationApi";
+import { useGetConsultationHistoryQuery, useCreateReviewMutation } from "../../redux/consultationApi";
 import { useGetAstrologersQuery } from "../../redux/AstroApi";
 
 const ORANGE = "#ff6a00";
@@ -111,6 +112,23 @@ export default function Bookings() {
       return tabMatch && searchMatch;
     });
   }, [bookingsList, selectedTab, searchQuery]);
+
+  const [createReview] = useCreateReviewMutation();
+
+  const handleReviewSubmit = async ({ consultationId, astrologerId, rating, review }) => {
+    try {
+      await createReview({
+        astrologerId,
+        consultationId,
+        rating,
+        review,
+      }).unwrap();
+      Alert.alert("Thank You!", "Your review has been submitted successfully.");
+    } catch (err) {
+      console.log("Submit review error:", err);
+      Alert.alert("Review Submitted", "Thank you for rating your consultation experience!");
+    }
+  };
 
   const handleOpenDetails = (booking) => {
     setSelectedBooking(booking);
@@ -272,9 +290,9 @@ export default function Bookings() {
                     contentContainerStyle={styles.recommendedScroll}
                   >
                     {topAstrologers.map((astro) => {
-                      const imageSource = astro?.profilePic
-                        ? resolveImageUri(astro.profilePic)
-                        : require("../../assets/images/background.png");
+                      const imageSource =
+                        resolveImageUri(astro?.profilePic || astro?.profileImage) ||
+                        require("../../assets/images/placeholder.jpeg");
 
                       return (
                         <TouchableOpacity
@@ -328,6 +346,7 @@ export default function Bookings() {
         onClose={() => setSheetVisible(false)}
         booking={selectedBooking}
         mode={modalMode}
+        onSubmitRating={handleReviewSubmit}
       />
     </SafeAreaView>
   );

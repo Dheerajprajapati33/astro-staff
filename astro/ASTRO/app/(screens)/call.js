@@ -51,7 +51,7 @@ export default function CallScreen() {
   } = params;
 
   const [currentUser, setCurrentUser] = useState(null);
-  const [callStatus, setCallStatus] = useState("incoming"); // "incoming" | "connected" | "ended"
+  const [callStatus, setCallStatus] = useState("connected"); // "connected" | "ended"
   const [secondsLeft, setSecondsLeft] = useState(Number(maxDurationSeconds) || 1500);
   const [callDurationSeconds, setCallDurationSeconds] = useState(0);
 
@@ -78,6 +78,8 @@ export default function CallScreen() {
   const localWebStreamRef = useRef(null);
   const localVideoTagRef = useRef(null);
   const endAlertShownRef = useRef(false);
+  const callDurationSecondsRef = useRef(0);
+  const hasJoinedAgoraRef = useRef(false);
 
   // Callback ref for resilient video element attachment
   const localVideoRefCallback = useCallback(
@@ -240,6 +242,7 @@ export default function CallScreen() {
 
   // Cleanup Agora Engine
   const cleanupAgora = useCallback(async () => {
+    hasJoinedAgoraRef.current = false;
     if (agoraEngineRef.current) {
       try {
         await agoraEngineRef.current.leaveChannel();
@@ -281,8 +284,12 @@ export default function CallScreen() {
       console.log(LOG_TAG, "call_started event received:", data);
       setCallStatus("connected");
 
+      if (hasJoinedAgoraRef.current) return;
+      hasJoinedAgoraRef.current = true;
+
       const duration = data?.maxDurationSeconds || Number(maxDurationSeconds) || 1500;
       setSecondsLeft(duration);
+      callDurationSecondsRef.current = 0;
       setCallDurationSeconds(0);
 
       // Countdown Timer
@@ -301,7 +308,8 @@ export default function CallScreen() {
       // Duration Timer
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = setInterval(() => {
-        setCallDurationSeconds((prev) => prev + 1);
+        callDurationSecondsRef.current += 1;
+        setCallDurationSeconds(callDurationSecondsRef.current);
       }, 1000);
 
       // Fetch Host Agora Token & Join Video RTC
@@ -318,30 +326,21 @@ export default function CallScreen() {
         const agoraData = tokenRes?.data?.agora || tokenRes?.agora;
 
         if (agoraData && createAgoraRtcEngine) {
-          const { token, channelName, uid, appId } = agoraData;
-          const targetUid = Number(uid) && Number(uid) > 0 ? Number(uid) : 1;
-          console.log(LOG_TAG, "Joining Agora 2-Way Video Call as Host:", channelName, "uid:", targetUid);
+          const { token, channelName, uid, appId, astrologerToken, astrologerUid } = agoraData;
+          const targetToken = astrologerToken || token;
+          const targetUid = astrologerUid !== undefined && astrologerUid !== null ? Number(astrologerUid) : (uid !== undefined && uid !== null && Number(uid) !== 1 ? Number(uid) : 2);
+          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as Host:", channelName, "uid:", targetUid);
 
           const engine = createAgoraRtcEngine();
           agoraEngineRef.current = engine;
 
+          // 1. Initialize Engine
           engine.initialize({
             appId: appId || agoraData.app_id || AGORA_APP_ID,
-            channelProfile: 1, // ChannelProfileLiveBroadcasting (1: 2-way call)
+            channelProfile: 0, // ChannelProfileCommunication (0: 1:1 VOIP call)
           });
 
-          if (engine.setClientRole) engine.setClientRole(1); // ClientRoleBroadcaster
-          engine.enableAudio();
-          if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-          if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
-          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
-          engine.enableVideo();
-
-          if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
-          if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
-          if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-          if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
-
+          // 2. Register Event Handlers Immediately After Initialization
           if (engine.registerEventHandler) {
             engine.registerEventHandler({
               onJoinChannelSuccess: (connection, elapsed) => {
@@ -365,9 +364,24 @@ export default function CallScreen() {
             });
           }
 
+          // 3. Audio & Video Engine Configurations
+          if (engine.setAudioScenario) engine.setAudioScenario(0); // AudioScenarioDefault (0: VOIP)
+          if (engine.setClientRole) engine.setClientRole(1); // ClientRoleBroadcaster
+          engine.enableAudio();
+          if (engine.enableLocalAudio) engine.enableLocalAudio(true);
+          if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+          engine.enableVideo();
+
+          if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
+          if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
+          if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
+          if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+
           engine.startPreview();
 
-          engine.joinChannel(token, channelName, targetUid, {
+          // 4. Join Channel
+          engine.joinChannel(targetToken, channelName, targetUid, {
             clientRoleType: 1,
             publishMicrophoneTrack: true,
             publishCameraTrack: true,
@@ -390,24 +404,34 @@ export default function CallScreen() {
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       cleanupAgora();
       setCallStatus("ended");
-      setEndedReason(data?.reason || "client_ended");
+      setEndedReason(data?.reason || data?.consultation?.endReason || "client_ended");
 
-      const mins = Math.max(1, Math.ceil(callDurationSeconds / 60));
+      const mins = Math.max(1, Math.ceil(callDurationSecondsRef.current / 60));
       const rate = Number(ratePerMinute) || 25;
-      const earnings = data?.amount || mins * rate;
+      const earnings = data?.amount || data?.consultation?.amount || mins * rate;
       setTotalEarnings(earnings);
 
       setShowSummaryModal(true);
     },
-    [cleanupAgora, callDurationSeconds, ratePerMinute],
+    [cleanupAgora, ratePerMinute],
   );
+
+  const handleCallStartedRef = useRef(handleCallStarted);
+  handleCallStartedRef.current = handleCallStarted;
+  const handleCallEndedEventRef = useRef(handleCallEndedEvent);
+  handleCallEndedEventRef.current = handleCallEndedEvent;
+  const callStatusRef = useRef(callStatus);
+  callStatusRef.current = callStatus;
 
   // Socket setup & listeners
   useEffect(() => {
+    if (!consultationId || callStatusRef.current === "ended") return;
+
     let isMounted = true;
 
     const setup = async () => {
       const astrologerUser = await getStoredUser();
+      if (!isMounted || callStatusRef.current === "ended") return;
 
       emitEvent("join_consultation", {
         consultationId,
@@ -415,8 +439,11 @@ export default function CallScreen() {
         role: "astrologer",
       });
 
-      const offStart = onEvent("call_started", handleCallStarted);
-      const offEnd = onEvent("call_ended", handleCallEndedEvent);
+      // Automatically join Agora RTC voice call session upon screen mount
+      handleCallStartedRef.current?.({ maxDurationSeconds });
+
+      const offStart = onEvent("call_started", (data) => handleCallStartedRef.current?.(data));
+      const offEnd = onEvent("call_ended", (data) => handleCallEndedEventRef.current?.(data));
 
       return () => {
         offStart();
@@ -432,7 +459,7 @@ export default function CallScreen() {
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
       cleanupAgora();
     };
-  }, [consultationId, handleCallStarted, handleCallEndedEvent, cleanupAgora]);
+  }, [consultationId]);
 
   // Media Controls Handlers
   const handleToggleMute = () => {
@@ -665,11 +692,13 @@ export default function CallScreen() {
                 : "Consultation Completed"}
             </Text>
             <Text style={styles.summarySub}>
-              {endedReason === "astrologer_hung_up"
+              {endedReason === "balance_exhausted"
+                ? `Call ended automatically as ${userName}'s wallet balance was exhausted.`
+                : endedReason === "astrologer_hung_up"
                 ? `You have ended the call consultation with ${userName}.`
                 : endedReason === "time_expired"
-                  ? `Consultation time limit reached for call with ${userName}.`
-                  : `${userName || "Client"} has ended the call consultation.`}
+                ? `Consultation time limit reached for call with ${userName}.`
+                : `${userName || "Client"} has ended the call consultation.`}
             </Text>
 
             <View style={styles.summaryStatsGrid}>

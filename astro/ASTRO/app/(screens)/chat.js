@@ -489,8 +489,12 @@ export default function Chat() {
         console.log(LOG_TAG, "reconciling chat state:", source);
 
         joinChatSession();
-        refetchMessagesRef.current?.();
-        refetchConsultationHistoryRef.current?.();
+        if (!isConsultationMode && roomId) {
+          refetchMessagesRef.current?.();
+        }
+        if (isConsultationMode) {
+          refetchConsultationHistoryRef.current?.();
+        }
       };
 
       let hasConnectedBefore = socket.connected;

@@ -46,9 +46,8 @@ export default function BookingDetailsSheet({
     return `${m} mins ${s > 0 ? `${s} secs` : ""}`;
   };
 
-  const imageSource = imageUri
-    ? resolveImageUri(imageUri)
-    : require("../../assets/images/background.png");
+  const imageSource =
+    resolveImageUri(imageUri) || require("../../assets/images/placeholder.jpeg");
 
   const handleSubmitReview = async () => {
     setIsSubmitting(true);

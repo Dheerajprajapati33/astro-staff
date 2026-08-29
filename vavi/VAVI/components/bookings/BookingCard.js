@@ -45,13 +45,15 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
     }
   };
 
-  // Format Duration MM:SS
-  const formatDuration = (secs) => {
-    if (!secs || isNaN(secs)) return "00:00 mins";
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    if (m === 0) return `${s}s`;
-    return `${m}m ${s > 0 ? `${s}s` : ""}`;
+  // Format Duration (e.g. 15m)
+  const formatDuration = (val) => {
+    if (!val || isNaN(val)) return "0m";
+    const num = Number(val);
+    if (num >= 60) {
+      const m = Math.ceil(num / 60);
+      return `${m}m`;
+    }
+    return `${num}m`;
   };
 
   // Status Styling
@@ -85,9 +87,8 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
     }
   };
 
-  const imageSource = imageUri
-    ? resolveImageUri(imageUri)
-    : require("../../assets/images/background.png");
+  const imageSource =
+    resolveImageUri(imageUri) || require("../../assets/images/placeholder.jpeg");
 
   return (
     <View style={styles.card}>
