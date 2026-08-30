@@ -22,6 +22,7 @@ import { router, useSegments } from "expo-router";
 
 import IncomingChatModal from "./IncomingChatModal";
 import { getStoredUser } from "../../utils/auth";
+import { emitEvent } from "../../utils/socket";
 import { useGetConsultationHistoryQuery } from "../../redux/ChatApi";
 
 const LOG_TAG = "[ChatRequestProvider]";
@@ -102,6 +103,8 @@ export default function ChatRequestProvider({ children }) {
     } = incomingRequest;
 
     console.log(LOG_TAG, "REQUEST ACCEPTED:", JSON.stringify(incomingRequest));
+
+    emitEvent("accept_chat_session", { consultationId });
 
     dismissedIdsRef.current.add(consultationId);
     setIncomingRequest(null);

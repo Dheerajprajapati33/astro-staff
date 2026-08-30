@@ -281,14 +281,108 @@ export default function CallConsultation() {
     }
   }, []);
 
+  // Setup Agora RTC immediately on screen mount
+  const setupAgora = useCallback(async () => {
+    if (!consultationId || callStatusRef.current === "ended" || hasJoinedAgoraRef.current) return;
+    hasJoinedAgoraRef.current = true;
+
+    try {
+      if (Platform.OS === "android") {
+        await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+        ]);
+      }
+
+      let targetToken = Array.isArray(params?.agoraToken) ? params.agoraToken[0] : params?.agoraToken;
+      let targetChannelName = Array.isArray(params?.channelName) ? params.channelName[0] : params?.channelName;
+      let targetUid = Number(Array.isArray(params?.userUid) ? params.userUid[0] : params?.userUid) || 1;
+
+      if (!targetToken) {
+        console.log(LOG_TAG, "No initial params token, fetching User Agora token for:", consultationId);
+        try {
+          const tokenRes = await getCallToken({ consultationId, uid: 1, role: "user" }).unwrap();
+          const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
+          targetToken = agoraData?.userToken || agoraData?.token || "";
+          targetChannelName = agoraData?.channelName || targetChannelName || `call_${consultationId}`;
+          targetUid = Number(agoraData?.userUid || agoraData?.uid) || 1;
+        } catch (tokenErr) {
+          console.log(LOG_TAG, "Token fetch notice:", tokenErr?.message || tokenErr);
+        }
+      }
+
+      const targetAppId = AGORA_APP_ID;
+      targetChannelName = targetChannelName || `call_${consultationId}`;
+
+      if (createAgoraRtcEngine) {
+        console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as User on mount:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
+
+        const engine = createAgoraRtcEngine();
+        agoraEngineRef.current = engine;
+
+        engine.initialize({
+          appId: targetAppId,
+          channelProfile: 0,
+        });
+
+        if (engine.registerEventHandler) {
+          engine.registerEventHandler({
+            onJoinChannelSuccess: (connection, elapsed) => {
+              console.log(LOG_TAG, "Agora User onJoinChannelSuccess:", connection.channelId);
+              if (engine.enableLocalAudio) engine.enableLocalAudio(true);
+              if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+              if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+              if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
+              if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+            },
+            onUserJoined: (connection, remoteUid, elapsed) => {
+              console.log(LOG_TAG, "Agora User onUserJoined remoteUid:", remoteUid);
+              setCallStatus("connected");
+              setPeerConnected(true);
+              if (engine.muteRemoteAudioStream) engine.muteRemoteAudioStream(remoteUid, false);
+            },
+            onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) => {
+              console.log(LOG_TAG, "Agora User onRemoteAudioStateChanged:", remoteUid, state, reason);
+            },
+            onError: (err, msg) => {
+              console.log(LOG_TAG, "Agora User RTC Error:", err, msg);
+            },
+          });
+        }
+
+        if (engine.setAudioScenario) engine.setAudioScenario(0);
+        if (engine.setClientRole) engine.setClientRole(1);
+        engine.enableAudio();
+        if (engine.enableLocalAudio) engine.enableLocalAudio(true);
+        if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+        if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+        engine.enableVideo();
+
+        if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
+        if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
+        if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
+        if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+
+        engine.startPreview();
+
+        engine.joinChannel(targetToken, targetChannelName, targetUid, {
+          clientRoleType: 1,
+          publishMicrophoneTrack: true,
+          publishCameraTrack: true,
+          autoSubscribeAudio: true,
+          autoSubscribeVideo: true,
+        });
+      }
+    } catch (err) {
+      console.log(LOG_TAG, "Agora User RTC setup notice:", err?.message || err);
+    }
+  }, [consultationId, getCallToken, maxDuration, params]);
+
   // Step 3: Handle Call Accept (`call_started` event)
   const handleCallStarted = useCallback(
     async (data) => {
       console.log(LOG_TAG, "call_started event received:", data);
       setCallStatus("connected");
-
-      if (hasJoinedAgoraRef.current) return;
-      hasJoinedAgoraRef.current = true;
 
       const duration = data?.maxDurationSeconds || Number(maxDuration) || 1500;
       setSecondsLeft(duration);
@@ -314,91 +408,8 @@ export default function CallConsultation() {
         callDurationSecondsRef.current += 1;
         setCallDurationSeconds(callDurationSecondsRef.current);
       }, 1000);
-
-      // Fetch Agora Token & Join Video RTC
-      try {
-        if (Platform.OS === "android") {
-          await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-            PermissionsAndroid.PERMISSIONS.CAMERA,
-          ]);
-        }
-
-        console.log(LOG_TAG, "Fetching Agora token for:", consultationId);
-        const tokenRes = await getCallToken(consultationId).unwrap();
-        const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
-
-        if (agoraData && createAgoraRtcEngine) {
-          const targetToken = agoraData.userToken || agoraData.token;
-          const targetChannelName = agoraData.channelName || `call_${consultationId}`;
-          const rawUid = agoraData.userUid !== undefined ? agoraData.userUid : agoraData.uid;
-          const targetUid = rawUid !== undefined && rawUid !== null && Number(rawUid) !== 2 ? Number(rawUid) : 1;
-          const targetAppId = agoraData.appId || agoraData.app_id || AGORA_APP_ID;
-          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as User:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
-
-          const engine = createAgoraRtcEngine();
-          agoraEngineRef.current = engine;
-
-          // 1. Initialize Engine
-          engine.initialize({
-            appId: targetAppId,
-            channelProfile: 0, // ChannelProfileCommunication (0: 1:1 VOIP call)
-          });
-
-          // 2. Register Event Handlers Immediately After Initialization
-          if (engine.registerEventHandler) {
-            engine.registerEventHandler({
-              onJoinChannelSuccess: (connection, elapsed) => {
-                console.log(LOG_TAG, "Agora User onJoinChannelSuccess:", connection.channelId);
-                if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-                if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
-                if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
-                if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-                if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
-              },
-              onUserJoined: (connection, remoteUid, elapsed) => {
-                console.log(LOG_TAG, "Agora User onUserJoined remoteUid:", remoteUid);
-                if (engine.muteRemoteAudioStream) engine.muteRemoteAudioStream(remoteUid, false);
-              },
-              onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) => {
-                console.log(LOG_TAG, "Agora User onRemoteAudioStateChanged:", remoteUid, state, reason);
-              },
-              onError: (err, msg) => {
-                console.log(LOG_TAG, "Agora User RTC Error:", err, msg);
-              },
-            });
-          }
-
-          // 3. Audio & Video Engine Configurations
-          if (engine.setAudioScenario) engine.setAudioScenario(0); // AudioScenarioDefault (0: VOIP)
-          if (engine.setClientRole) engine.setClientRole(1); // ClientRoleBroadcaster
-          engine.enableAudio();
-          if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-          if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
-          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
-          engine.enableVideo();
-
-          if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
-          if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
-          if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-          if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
-
-          engine.startPreview();
-
-          // 4. Join Channel
-          engine.joinChannel(targetToken, targetChannelName, targetUid, {
-            clientRoleType: 1,
-            publishMicrophoneTrack: true,
-            publishCameraTrack: true,
-            autoSubscribeAudio: true,
-            autoSubscribeVideo: true,
-          });
-        }
-      } catch (err) {
-        console.log(LOG_TAG, "Agora User RTC setup notice:", err?.message || err);
-      }
     },
-    [consultationId, getCallToken, maxDuration],
+    [maxDuration],
   );
 
   // Step 4: Handle Call Ended Event
@@ -461,6 +472,11 @@ export default function CallConsultation() {
       handleCallEndedEventRef.current?.({ message: `Call was ${match.status}.` });
     }
   }, [consultationHistoryData, consultationId, callStatus]);
+
+  // Run Agora RTC setup immediately on mount
+  useEffect(() => {
+    setupAgora();
+  }, [setupAgora]);
 
   // Step 2: Setup Socket
   useEffect(() => {

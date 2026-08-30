@@ -213,10 +213,15 @@ export const chatApi = createApi({
     // GET CALL TOKEN (Agora RTC Host Token)
     // ==========================
     getCallToken: builder.mutation({
-      query: (consultationId) => ({
-        url: `/consultation/token/${consultationId}`,
-        method: "POST",
-      }),
+      query: (params) => {
+        const consultationId = typeof params === "object" ? params.consultationId : params;
+        const body = typeof params === "object" ? { uid: params.uid, role: params.role } : undefined;
+        return {
+          url: `/consultation/token/${consultationId}`,
+          method: "POST",
+          body,
+        };
+      },
     }),
   }),
 });

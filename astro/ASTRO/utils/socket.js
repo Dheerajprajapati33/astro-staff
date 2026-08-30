@@ -56,7 +56,7 @@ export const connectSocket = async (initialToken) => {
   setConnectionStatus("connecting");
 
   const instance = io(SOCKET_URL, {
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     auth: {
       token: cleanToken,
       authorization: bearerToken,
@@ -75,9 +75,11 @@ export const connectSocket = async (initialToken) => {
     console.log(LOG_TAG, "Connected. Socket id:", instance?.id);
     setConnectionStatus("connected");
 
-    if (lastJoinParams && !emittedConnectJoin) {
-      emittedConnectJoin = true;
-      console.log(LOG_TAG, "Emitting join_consultation on connect:", lastJoinParams);
+    if (lastJoinParams) {
+      console.log(LOG_TAG, "Emitting room join on connect:", lastJoinParams);
+      if (lastJoinParams.isChat) {
+        instance.emit("join_chat_session", lastJoinParams);
+      }
       instance.emit("join_consultation", lastJoinParams);
     }
   });
@@ -179,8 +181,19 @@ export const onEvent = (eventName, handler) => {
 };
 
 export const joinChatSession = (params) => {
-  if (socket?.connected) {
-    socket.emit("join_chat_session", params);
+  const payload = { ...params, isChat: true };
+  lastJoinParams = payload;
+  if (!socket) return;
+  if (socket.connected) {
+    console.log(LOG_TAG, "Emitting join_chat_session on active socket:", payload);
+    socket.emit("join_chat_session", payload);
+    socket.emit("join_consultation", payload);
+  } else {
+    socket.once("connect", () => {
+      console.log(LOG_TAG, "Connected, emitting delayed join_chat_session:", payload);
+      socket.emit("join_chat_session", payload);
+      socket.emit("join_consultation", payload);
+    });
   }
 };
 

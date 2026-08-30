@@ -1,138 +1,85 @@
 // services/chatSocketService.js
-// Singleton socket service for 1:1 chat consultation in Vavi.
+// Unified Socket Service for VAVI Chat Consultations.
+// Reuses the single active socket connection from callSocketService.js
+// to enforce 1 User = 1 Socket rule per backend specifications.
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { io } from "socket.io-client";
-import { SOCKET_URL } from "../constants/SocketConfig";
+import {
+  connectCallSocket,
+  getCallSocket,
+  getCallConnectionStatus,
+  onCallConnectionStatusChange,
+  setLastJoinParams,
+} from "./callSocketService";
 
 const LOG_TAG = "[ChatSocket]";
 
-let socket = null;
-let lastJoinParams = null;
-let connectionStatus = "disconnected";
-const statusListeners = new Set();
-
-const setConnectionStatus = (status) => {
-  if (status === connectionStatus) return;
-  connectionStatus = status;
-  console.log(LOG_TAG, "Connection status:", status);
-  statusListeners.forEach((listener) => listener(status));
-};
-
-export const getConnectionStatus = () => connectionStatus;
+export const getConnectionStatus = () => getCallConnectionStatus();
 
 export const onConnectionStatusChange = (listener) => {
-  statusListeners.add(listener);
-  listener(connectionStatus);
-  return () => {
-    statusListeners.delete(listener);
-  };
+  return onCallConnectionStatusChange(listener);
 };
 
+/**
+ * Reuses the single active socket connection for 1:1 chat consultation.
+ */
 export const connectChatSocket = async () => {
-  if (socket) {
-    if (socket.connected) {
-      console.log(LOG_TAG, "Reusing existing connected chat socket:", socket.id);
-      return socket;
-    }
-    if (connectionStatus === "connecting") {
-      console.log(LOG_TAG, "Chat socket connection in progress, reusing instance...");
-      return socket;
-    }
-  }
-
-  const userData = await AsyncStorage.getItem("userData");
-  const token = userData ? JSON.parse(userData)?.token : null;
-  const cleanToken = token ? (token.startsWith("Bearer ") ? token.slice(7) : token) : null;
-  const bearerToken = token ? (token.startsWith("Bearer ") ? token : `Bearer ${token}`) : null;
-
-  console.log(LOG_TAG, "Connecting chat socket to", SOCKET_URL, "tokenPresent:", !!cleanToken);
-  setConnectionStatus("connecting");
-
-  const instance = io(SOCKET_URL, {
-    transports: ["websocket", "polling"],
-    auth: {
-      token: cleanToken,
-      authorization: bearerToken,
-    },
-    autoConnect: true,
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 2000,
-    timeout: 10000,
-  });
-
-  socket = instance;
-  let emittedConnectJoin = false;
-
-  instance.on("connect", () => {
-    console.log(LOG_TAG, "Connected. Socket id:", instance?.id);
-    setConnectionStatus("connected");
-
-    if (lastJoinParams && !emittedConnectJoin) {
-      emittedConnectJoin = true;
-      console.log(LOG_TAG, "Emitting join_chat_session on connect:", lastJoinParams);
-      instance.emit("join_chat_session", lastJoinParams);
-    }
-  });
-
-  instance.on("force_disconnect", (data) => {
-    console.warn(LOG_TAG, "⚠️ Disconnected by server:", data?.reason);
-    if (socket === instance) socket = null;
-    instance.removeAllListeners();
-    instance.disconnect();
-    lastJoinParams = null;
-    setConnectionStatus("disconnected");
-  });
-
-  instance.on("disconnect", (reason) => {
-    console.log(LOG_TAG, "Disconnected. Reason:", reason);
-    emittedConnectJoin = false;
-    if (reason === "io server disconnect") {
-      if (socket === instance) socket = null;
-      lastJoinParams = null;
-      setConnectionStatus("disconnected");
-    } else {
-      setConnectionStatus(instance?.active ? "reconnecting" : "disconnected");
-    }
-  });
-
-  instance.on("connect_error", (error) => {
-    console.log(LOG_TAG, "Connect error:", error?.message || error);
-    setConnectionStatus(instance?.active ? "reconnecting" : "disconnected");
-  });
-
-  return instance;
+  console.log(LOG_TAG, "Reusing single unified socket connection for chat...");
+  return await connectCallSocket();
 };
 
-export const getChatSocket = () => socket;
+export const getChatSocket = () => getCallSocket();
 
-export const joinChatSession = ({ consultationId, userId, role }) => {
-  lastJoinParams = { consultationId, userId, role };
-  if (!socket) return;
+export const joinChatSession = ({ consultationId, userId, role = "user" }) => {
+  const socket = getCallSocket();
+  const payload = { consultationId, userId, role, isChat: true };
+  setLastJoinParams(payload);
+
+  if (!socket) {
+    console.log(LOG_TAG, "joinChatSession saved params (socket not initialized yet)");
+    return;
+  }
   if (socket.connected) {
-    socket.emit("join_chat_session", lastJoinParams);
+    console.log(LOG_TAG, "Emitting room join on unified socket:", payload);
+    socket.emit("join_chat_session", payload);
+    socket.emit("join_consultation", payload);
+  } else {
+    console.log(LOG_TAG, "Socket connecting, attaching connect listener to join chat room:", payload);
+    socket.once("connect", () => {
+      console.log(LOG_TAG, "Connected, emitting delayed room join on unified socket:", payload);
+      socket.emit("join_chat_session", payload);
+      socket.emit("join_consultation", payload);
+    });
   }
 };
 
 export const sendChatMessage = (payload) => {
-  if (!socket) return false;
+  const socket = getCallSocket();
+  if (!socket || !socket.connected) {
+    console.log(LOG_TAG, "sendChatMessage called before unified socket connected");
+    return false;
+  }
+  console.log(LOG_TAG, "Emitting send_chat_message on unified socket:", payload);
   socket.emit("send_chat_message", payload);
   return true;
 };
 
 export const emitTypingIndicator = (payload) => {
-  if (!socket) return;
+  const socket = getCallSocket();
+  if (!socket || !socket.connected) return;
   socket.emit("typing_indicator", payload);
 };
 
 export const endChatSession = (payload) => {
-  if (!socket) return;
+  const socket = getCallSocket();
+  if (!socket || !socket.connected) return;
+  console.log(LOG_TAG, "Emitting end_chat_session on unified socket:", payload);
   socket.emit("end_chat_session", payload);
 };
 
 export const removeChatListeners = () => {
+  const socket = getCallSocket();
   if (!socket) return;
+  console.log(LOG_TAG, "Removing chat event listeners");
   socket.off("chat_session_joined");
   socket.off("chat_started");
   socket.off("new_chat_message");
@@ -142,11 +89,7 @@ export const removeChatListeners = () => {
 };
 
 export const disconnectChatSocket = () => {
-  if (socket) {
-    removeChatListeners();
-    socket.disconnect();
-    socket = null;
-    lastJoinParams = null;
-    setConnectionStatus("disconnected");
-  }
+  removeChatListeners();
+  // Do NOT disconnect the transport if user is still active in app;
+  // listeners are cleaned up safely.
 };

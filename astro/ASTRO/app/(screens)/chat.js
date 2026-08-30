@@ -353,7 +353,10 @@ export default function Chat() {
 
       if (!isMounted) return;
 
-      const socket = getSocket();
+      let socket = getSocket();
+      if (!socket?.connected && currentUser?.token) {
+        socket = await connectSocket(currentUser.token);
+      }
 
       console.log(LOG_TAG, "socket setup:", {
         hasSocket: !!socket,
@@ -788,7 +791,13 @@ export default function Chat() {
       {
         text: "End Chat",
         style: "destructive",
-        onPress: endChatSession,
+        onPress: () => {
+          console.log(LOG_TAG, "Astrologer ending chat session");
+          endChatSession("completed");
+          setChatActive(false);
+          setChatEnded(true);
+          router.replace("/(home)");
+        },
       },
     ]);
   };

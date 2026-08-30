@@ -125,6 +125,11 @@ export default function AstrologerCard({ item = {} }) {
         return;
       }
 
+      const agora = response?.data?.agora || response?.agora;
+      const agoraToken = agora?.userToken || agora?.token || "";
+      const channelName = agora?.channelName || `call_${consultationId}`;
+      const userUid = String(agora?.userUid || agora?.uid || 1);
+
       router.push({
         pathname: "/CallConsultation",
         params: {
@@ -133,6 +138,9 @@ export default function AstrologerCard({ item = {} }) {
           maxDuration: String(maxDuration),
           astrologerName: item?.name || "",
           astrologerImage: item?.profilePic || "",
+          agoraToken,
+          channelName,
+          userUid,
         },
       });
     } catch (error) {
@@ -346,12 +354,17 @@ export default function AstrologerCard({ item = {} }) {
               !item?.isCallOnline && styles.offlineButton,
             ]}
             onPress={handleInternetCall}
+            disabled={isStartingCall}
           >
-            <Ionicons
-              name="wifi"
-              size={RF(18)}
-              color={item?.isCallOnline ? "#2E7D32" : "#999999"}
-            />
+            {isStartingCall ? (
+              <ActivityIndicator size="small" color="#2E7D32" />
+            ) : (
+              <Ionicons
+                name="wifi"
+                size={RF(18)}
+                color={item?.isCallOnline ? "#2E7D32" : "#999999"}
+              />
+            )}
 
             <View style={styles.buttonContent}>
               <Text
@@ -360,7 +373,7 @@ export default function AstrologerCard({ item = {} }) {
                   !item?.isCallOnline && styles.offlineText,
                 ]}
               >
-                Call
+                {isStartingCall ? "Connecting..." : "Call"}
               </Text>
 
               <Text style={styles.price}>

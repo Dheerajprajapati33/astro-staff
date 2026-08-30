@@ -568,8 +568,10 @@ export default function ChatConsultation() {
         style: "destructive",
         onPress: () => {
           console.log(LOG_TAG, "User manually ending chat session");
-
           endChatSession({ consultationId, reason: "completed" });
+          setIsChatActive(false);
+          setChatEnded(true);
+          setShowReviewModal(true);
         },
       },
     ]);

@@ -56,7 +56,7 @@ export const connectCallSocket = async () => {
   setConnectionStatus("connecting");
 
   const instance = io(SOCKET_URL, {
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
     auth: { token },
     query: { token },
     reconnection: true,
@@ -72,9 +72,11 @@ export const connectCallSocket = async () => {
     console.log(LOG_TAG, "Connected. Socket id:", instance?.id);
     setConnectionStatus("connected");
 
-    if (lastJoinParams && !emittedConnectJoin) {
-      emittedConnectJoin = true;
-      console.log(LOG_TAG, "Emitting join_consultation on connect:", lastJoinParams);
+    if (lastJoinParams) {
+      console.log(LOG_TAG, "Emitting room join on connect:", lastJoinParams);
+      if (lastJoinParams.isChat) {
+        instance.emit("join_chat_session", lastJoinParams);
+      }
       instance.emit("join_consultation", lastJoinParams);
     }
   });
@@ -124,6 +126,10 @@ export const getCallSocket = () => socket;
 /**
  * Emits join_consultation per backend specification (Section A, Step 2)
  */
+export const setLastJoinParams = (params) => {
+  lastJoinParams = params;
+};
+
 export const joinCallConsultation = ({ consultationId, userId, role = "user" }) => {
   if (currentJoinedConsultationId === consultationId && socket?.connected) {
     console.log(LOG_TAG, "Already joined consultation room:", consultationId);

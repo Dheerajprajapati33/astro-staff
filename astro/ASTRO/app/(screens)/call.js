@@ -322,7 +322,7 @@ export default function CallScreen() {
         }
 
         console.log(LOG_TAG, "Fetching Host Agora token for:", consultationId);
-        const tokenRes = await getCallToken(consultationId).unwrap();
+        const tokenRes = await getCallToken({ consultationId, uid: 2, role: "astrologer" }).unwrap();
         const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
 
         if (agoraData && createAgoraRtcEngine) {
