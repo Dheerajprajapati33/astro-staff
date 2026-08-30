@@ -323,20 +323,22 @@ export default function CallScreen() {
 
         console.log(LOG_TAG, "Fetching Host Agora token for:", consultationId);
         const tokenRes = await getCallToken(consultationId).unwrap();
-        const agoraData = tokenRes?.data?.agora || tokenRes?.agora;
+        const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
 
         if (agoraData && createAgoraRtcEngine) {
-          const { token, channelName, uid, appId, astrologerToken, astrologerUid } = agoraData;
-          const targetToken = astrologerToken || token;
-          const targetUid = astrologerUid !== undefined && astrologerUid !== null ? Number(astrologerUid) : (uid !== undefined && uid !== null && Number(uid) !== 1 ? Number(uid) : 2);
-          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as Host:", channelName, "uid:", targetUid);
+          const targetToken = agoraData.astrologerToken || agoraData.token;
+          const targetChannelName = agoraData.channelName || `call_${consultationId}`;
+          const rawUid = agoraData.astrologerUid !== undefined ? agoraData.astrologerUid : agoraData.uid;
+          const targetUid = rawUid !== undefined && rawUid !== null && Number(rawUid) !== 1 ? Number(rawUid) : 2;
+          const targetAppId = agoraData.appId || agoraData.app_id || AGORA_APP_ID;
+          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as Host:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
 
           const engine = createAgoraRtcEngine();
           agoraEngineRef.current = engine;
 
           // 1. Initialize Engine
           engine.initialize({
-            appId: appId || agoraData.app_id || AGORA_APP_ID,
+            appId: targetAppId,
             channelProfile: 0, // ChannelProfileCommunication (0: 1:1 VOIP call)
           });
 
@@ -381,7 +383,7 @@ export default function CallScreen() {
           engine.startPreview();
 
           // 4. Join Channel
-          engine.joinChannel(targetToken, channelName, targetUid, {
+          engine.joinChannel(targetToken, targetChannelName, targetUid, {
             clientRoleType: 1,
             publishMicrophoneTrack: true,
             publishCameraTrack: true,

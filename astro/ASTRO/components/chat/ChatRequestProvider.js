@@ -22,7 +22,6 @@ import { router, useSegments } from "expo-router";
 
 import IncomingChatModal from "./IncomingChatModal";
 import { getStoredUser } from "../../utils/auth";
-import { connectSocket, emitEvent, getSocket } from "../../utils/socket";
 import { useGetConsultationHistoryQuery } from "../../redux/ChatApi";
 
 const LOG_TAG = "[ChatRequestProvider]";
@@ -32,58 +31,17 @@ export default function ChatRequestProvider({ children }) {
   const segments = useSegments();
   const [incomingRequest, setIncomingRequest] = useState(null);
   const [hasToken, setHasToken] = useState(false);
-  const listenerAttachedRef = useRef(false);
   const dismissedIdsRef = useRef(new Set());
 
   useEffect(() => {
     let isMounted = true;
 
-    const setupChatSocket = async () => {
+    const checkToken = async () => {
       const user = await getStoredUser();
-
       if (isMounted) setHasToken(!!user?.token);
-
-      if (!user?.token) {
-        console.log(LOG_TAG, "NO TOKEN YET, SKIPPING SOCKET SETUP");
-        return;
-      }
-
-      let socket = getSocket();
-
-      if (!socket?.connected) {
-        socket = await connectSocket(user.token);
-      }
-
-      if (listenerAttachedRef.current) return;
-      listenerAttachedRef.current = true;
-
-      // Debug tap: logs every event the socket ever receives, tagged so it's
-      // easy to grep. Use this to confirm the real event name live if the
-      // backend starts pushing incoming-request notifications.
-      socket.onAny((eventName, ...args) => {
-        console.log(LOG_TAG, "onAny ->", eventName, JSON.stringify(args));
-      });
-
-      // Kept as a passive safety net - not confirmed to ever fire, see note above.
-      socket.on("incoming_chat_request", (data) => {
-        console.log(LOG_TAG, "incoming_chat_request RECEIVED:", JSON.stringify(data));
-
-        if (isMounted) {
-          setIncomingRequest({
-            consultationId: data?.consultationId,
-            roomId: data?.roomId,
-            userId: data?.userId,
-            userName: data?.userName,
-            problem: data?.problem,
-            maxDurationSeconds: data?.maxDurationSeconds,
-          });
-        }
-      });
-
-      console.log(LOG_TAG, "socket listeners attached (onAny + incoming_chat_request)");
     };
 
-    setupChatSocket();
+    checkToken();
 
     return () => {
       isMounted = false;
@@ -145,8 +103,6 @@ export default function ChatRequestProvider({ children }) {
 
     console.log(LOG_TAG, "REQUEST ACCEPTED:", JSON.stringify(incomingRequest));
 
-    emitEvent("accept_chat_session", { consultationId });
-
     dismissedIdsRef.current.add(consultationId);
     setIncomingRequest(null);
 
@@ -154,8 +110,6 @@ export default function ChatRequestProvider({ children }) {
       pathname: "/chat",
       params: {
         consultationId,
-        // No distinct chat-room id has ever been observed from the backend
-        // for this flow (confirmed live) - roomId falls back to consultationId.
         roomId: roomId || consultationId,
         userId,
         name: userName,
@@ -173,20 +127,6 @@ export default function ChatRequestProvider({ children }) {
     );
 
     if (incomingRequest?.consultationId) {
-      try {
-        emitEvent("reject_chat_session", {
-          consultationId: incomingRequest.consultationId,
-          reason: "declined_by_astrologer",
-        });
-
-        emitEvent("end_chat_session", {
-          consultationId: incomingRequest.consultationId,
-          reason: "declined",
-        });
-      } catch (e) {
-        console.log(LOG_TAG, "Error emitting decline events:", e);
-      }
-
       dismissedIdsRef.current.add(incomingRequest.consultationId);
     }
 

@@ -28,7 +28,7 @@ export const consultationApi = createApi({
     },
   }),
 
-  tagTypes: ["ChatMessages"],
+  tagTypes: ["ChatMessages", "ConsultationHistory", "Reviews"],
 
   endpoints: (builder) => ({
     // ==========================
@@ -60,8 +60,7 @@ export const consultationApi = createApi({
     }),
 
     // ==========================
-    // GET CONSULTATION HISTORY (wall-clock truth for the chat timer —
-    // see ChatConsultation.js for why this is needed alongside chat_started)
+    // GET CONSULTATION HISTORY
     // ==========================
 
     getConsultationHistory: builder.query({
@@ -70,6 +69,7 @@ export const consultationApi = createApi({
 
         method: "GET",
       }),
+      providesTags: ["ConsultationHistory"],
     }),
 
     // ==========================
@@ -99,7 +99,7 @@ export const consultationApi = createApi({
           review,
         },
       }),
-      invalidatesTags: ["ChatMessages"],
+      invalidatesTags: ["ConsultationHistory", "Reviews", "ChatMessages"],
     }),
   }),
 });

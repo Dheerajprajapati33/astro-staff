@@ -32,13 +32,21 @@ export const onCallConnectionStatusChange = (listener) => {
   };
 };
 
+let currentJoinedConsultationId = null;
+
 /**
  * Creates (or reuses) the socket connection for call consultations.
  */
 export const connectCallSocket = async () => {
-  if (socket?.connected) {
-    console.log(LOG_TAG, "Reusing existing connected socket:", socket.id);
-    return socket;
+  if (socket) {
+    if (socket.connected) {
+      console.log(LOG_TAG, "Reusing existing connected socket:", socket.id);
+      return socket;
+    }
+    if (connectionStatus === "connecting") {
+      console.log(LOG_TAG, "Socket connection already in progress, reusing instance...");
+      return socket;
+    }
   }
 
   const userData = await AsyncStorage.getItem("userData");
@@ -48,28 +56,52 @@ export const connectCallSocket = async () => {
   setConnectionStatus("connecting");
 
   socket = io(SOCKET_URL, {
-    transports: ["polling", "websocket"],
+    transports: ["websocket", "polling"],
     auth: { token },
     query: { token },
     reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 2000,
+    timeout: 10000,
   });
+
+  let emittedConnectJoin = false;
 
   socket.on("connect", () => {
     console.log(LOG_TAG, "Connected. Socket id:", socket.id);
     setConnectionStatus("connected");
 
-    if (lastJoinParams) {
+    if (lastJoinParams && !emittedConnectJoin) {
+      emittedConnectJoin = true;
       console.log(LOG_TAG, "Emitting join_consultation on connect:", lastJoinParams);
       socket.emit("join_consultation", lastJoinParams);
-      socket.emit("join_call_session", lastJoinParams);
+    }
+  });
+
+  // Handle server force-disconnect (prevents infinite reconnect loop when single session active)
+  socket.on("force_disconnect", (data) => {
+    console.warn(LOG_TAG, "⚠️ Disconnected by server:", data?.reason);
+    if (socket) {
+      socket.removeAllListeners();
+      socket.disconnect();
+      socket = null;
+      lastJoinParams = null;
+      currentJoinedConsultationId = null;
+      setConnectionStatus("disconnected");
     }
   });
 
   socket.on("disconnect", (reason) => {
     console.log(LOG_TAG, "Disconnected. Reason:", reason);
-    setConnectionStatus(socket?.active ? "reconnecting" : "disconnected");
+    emittedConnectJoin = false;
+    if (reason === "io server disconnect") {
+      socket = null;
+      lastJoinParams = null;
+      currentJoinedConsultationId = null;
+      setConnectionStatus("disconnected");
+    } else {
+      setConnectionStatus(socket?.active ? "reconnecting" : "disconnected");
+    }
   });
 
   socket.on("connect_error", (error) => {
@@ -90,6 +122,12 @@ export const getCallSocket = () => socket;
  * Emits join_consultation per backend specification (Section A, Step 2)
  */
 export const joinCallConsultation = ({ consultationId, userId, role = "user" }) => {
+  if (currentJoinedConsultationId === consultationId && socket?.connected) {
+    console.log(LOG_TAG, "Already joined consultation room:", consultationId);
+    return;
+  }
+
+  currentJoinedConsultationId = consultationId;
   lastJoinParams = { consultationId, userId, role };
 
   if (!socket) {
@@ -100,7 +138,6 @@ export const joinCallConsultation = ({ consultationId, userId, role = "user" }) 
   if (socket.connected) {
     console.log(LOG_TAG, "Emitting join_consultation immediately:", lastJoinParams);
     socket.emit("join_consultation", lastJoinParams);
-    socket.emit("join_call_session", lastJoinParams);
   } else {
     console.log(LOG_TAG, "Saved join_consultation params (will emit on connect):", lastJoinParams);
   }
@@ -152,6 +189,7 @@ export const disconnectCallSocket = () => {
     socket.disconnect();
     socket = null;
     lastJoinParams = null;
+    currentJoinedConsultationId = null;
     setConnectionStatus("disconnected");
   }
 };

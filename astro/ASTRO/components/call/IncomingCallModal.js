@@ -19,9 +19,11 @@ const RED = "#dc2626";
 export default function IncomingCallModal({ request, onAccept, onDecline }) {
   const visible = !!request;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [isAccepting, setIsAccepting] = React.useState(false);
 
   useEffect(() => {
     if (visible) {
+      setIsAccepting(false);
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
@@ -40,6 +42,12 @@ export default function IncomingCallModal({ request, onAccept, onDecline }) {
       return () => pulse.stop();
     }
   }, [visible, pulseAnim]);
+
+  const handleAcceptPress = () => {
+    if (isAccepting) return;
+    setIsAccepting(true);
+    onAccept?.();
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade">
@@ -81,12 +89,13 @@ export default function IncomingCallModal({ request, onAccept, onDecline }) {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionBtn, styles.acceptBtn]}
+              style={[styles.actionBtn, styles.acceptBtn, isAccepting && { opacity: 0.6 }]}
               activeOpacity={0.85}
-              onPress={onAccept}
+              disabled={isAccepting}
+              onPress={handleAcceptPress}
             >
               <Ionicons name="call" size={RF(20)} color="#fff" />
-              <Text style={styles.acceptText}>Accept Call</Text>
+              <Text style={styles.acceptText}>{isAccepting ? "Accepting..." : "Accept Call"}</Text>
             </TouchableOpacity>
           </View>
         </View>

@@ -37,13 +37,6 @@ import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
 import { getStoredUser } from "../../utils/auth";
 import {
-  emitEvent,
-  getSocket,
-  onConnectionStatusChange,
-  getConnectionStatus,
-  forceReconnectChatSocket,
-} from "../../utils/socket";
-import {
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useMarkRoomReadMutation,

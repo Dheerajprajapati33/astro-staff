@@ -90,6 +90,9 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
   const imageSource =
     resolveImageUri(imageUri) || require("../../assets/images/placeholder.jpeg");
 
+  const userRating = item?.rating || item?.review?.rating || item?.userRating || item?.reviewData?.rating;
+  const userReviewText = item?.review?.review || item?.review?.comment || item?.reviewText || item?.userReview;
+
   return (
     <View style={styles.card}>
       {/* Top Row: Astrologer Info & Status */}
@@ -165,6 +168,19 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
         <Text style={styles.dateText}>{formatDate(createdAt)}</Text>
       </View>
 
+      {/* Submitted Review Badge */}
+      {!!userRating && (
+        <View style={styles.reviewBanner}>
+          <Ionicons name="star" size={RF(11)} color="#FFB300" />
+          <Text style={styles.reviewRatingText}>{userRating}/5 ⭐</Text>
+          {!!userReviewText && (
+            <Text style={styles.reviewCommentText} numberOfLines={1}>
+              "{userReviewText}"
+            </Text>
+          )}
+        </View>
+      )}
+
       {/* Bottom Actions Row */}
       <View style={styles.actionsRow}>
         <TouchableOpacity
@@ -177,12 +193,18 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.rateBtn}
+          style={[styles.rateBtn, !!userRating && styles.ratedBtn]}
           onPress={() => onRate?.(item)}
           activeOpacity={0.8}
         >
-          <Ionicons name="star-outline" size={RF(13)} color="#F57C00" />
-          <Text style={styles.rateBtnText}>Rate</Text>
+          <Ionicons
+            name={userRating ? "star" : "star-outline"}
+            size={RF(13)}
+            color={userRating ? "#2E7D32" : "#F57C00"}
+          />
+          <Text style={[styles.rateBtnText, !!userRating && styles.ratedBtnText]}>
+            {userRating ? `${userRating}★ Rated` : "Rate"}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -339,10 +361,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF8E1",
     gap: wp(1),
   },
+  ratedBtn: {
+    backgroundColor: "#E8F8EE",
+  },
   rateBtnText: {
     fontSize: RF(11),
     color: "#E65100",
     fontWeight: "600",
+  },
+  ratedBtnText: {
+    color: "#2E7D32",
+  },
+  reviewBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBF0",
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.6),
+    borderRadius: wp(2),
+    marginTop: hp(1),
+    gap: wp(1.5),
+    borderWidth: 1,
+    borderColor: "#FFE082",
+  },
+  reviewRatingText: {
+    fontSize: RF(10.5),
+    fontWeight: "700",
+    color: "#E65100",
+  },
+  reviewCommentText: {
+    fontSize: RF(10),
+    color: "#666",
+    fontStyle: "italic",
+    flex: 1,
   },
   consultAgainBtn: {
     flex: 1.5,

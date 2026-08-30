@@ -326,20 +326,22 @@ export default function CallConsultation() {
 
         console.log(LOG_TAG, "Fetching Agora token for:", consultationId);
         const tokenRes = await getCallToken(consultationId).unwrap();
-        const agoraData = tokenRes?.data?.agora || tokenRes?.agora;
+        const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
 
         if (agoraData && createAgoraRtcEngine) {
-          const { token, channelName, uid, appId, userToken, userUid } = agoraData;
-          const targetToken = userToken || token;
-          const targetUid = userUid !== undefined && userUid !== null ? Number(userUid) : (uid !== undefined && uid !== null && Number(uid) !== 2 ? Number(uid) : 1);
-          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as User:", channelName, "uid:", targetUid);
+          const targetToken = agoraData.userToken || agoraData.token;
+          const targetChannelName = agoraData.channelName || `call_${consultationId}`;
+          const rawUid = agoraData.userUid !== undefined ? agoraData.userUid : agoraData.uid;
+          const targetUid = rawUid !== undefined && rawUid !== null && Number(rawUid) !== 2 ? Number(rawUid) : 1;
+          const targetAppId = agoraData.appId || agoraData.app_id || AGORA_APP_ID;
+          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as User:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
 
           const engine = createAgoraRtcEngine();
           agoraEngineRef.current = engine;
 
           // 1. Initialize Engine
           engine.initialize({
-            appId: appId || agoraData.app_id || AGORA_APP_ID,
+            appId: targetAppId,
             channelProfile: 0, // ChannelProfileCommunication (0: 1:1 VOIP call)
           });
 
@@ -384,7 +386,7 @@ export default function CallConsultation() {
           engine.startPreview();
 
           // 4. Join Channel
-          engine.joinChannel(targetToken, channelName, targetUid, {
+          engine.joinChannel(targetToken, targetChannelName, targetUid, {
             clientRoleType: 1,
             publishMicrophoneTrack: true,
             publishCameraTrack: true,

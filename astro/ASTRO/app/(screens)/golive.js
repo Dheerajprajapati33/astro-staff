@@ -26,7 +26,6 @@ import Typography from "../../constants/Typography";
 import { AGORA_APP_ID } from "../../constants/AgoraConfig";
 import { RF, hp, wp } from "../../utils/responsive";
 import { getStoredUser } from "../../utils/auth";
-import { connectSocket, getSocket } from "../../utils/socket";
 import {
   useEndLiveSessionMutation,
   useStartLiveSessionMutation,

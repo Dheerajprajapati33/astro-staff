@@ -18,7 +18,6 @@ import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
 
 import { useVerifyOtpMutation } from "../../redux/LoginApi";
-import { connectSocket } from "../../utils/socket";
 
 const ORANGE = "#ff6a00";
 
@@ -88,10 +87,6 @@ const Otp = () => {
           await AsyncStorage.setItem("userData", JSON.stringify(userData));
 
           console.log("STORAGE SAVED");
-
-          if (userData?.token) {
-            connectSocket(userData.token);
-          }
 
           setTimeout(() => {
             router.replace("/(home)");
