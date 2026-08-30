@@ -158,10 +158,11 @@ export const joinCallConsultation = ({ consultationId, userId, role = "astrologe
 export const emitEvent = (eventName, payload) => {
   if (!socket) {
     console.log(LOG_TAG, "SOCKET EMIT SKIPPED (NOT CONNECTED):", eventName, payload);
-    return;
+    return false;
   }
   console.log(LOG_TAG, "SOCKET EMIT:", eventName, payload);
   socket.emit(eventName, payload);
+  return true;
 };
 
 export const onEvent = (eventName, handler) => {
@@ -175,4 +176,34 @@ export const onEvent = (eventName, handler) => {
   };
   socket.on(eventName, wrapped);
   return () => socket.off(eventName, wrapped);
+};
+
+export const joinChatSession = (params) => {
+  if (socket?.connected) {
+    socket.emit("join_chat_session", params);
+  }
+};
+
+export const sendChatMessage = (payload) => {
+  if (!socket) return false;
+  socket.emit("send_chat_message", payload);
+  return true;
+};
+
+export const emitTypingIndicator = (payload) => {
+  if (!socket) return;
+  socket.emit("typing_indicator", payload);
+};
+
+export const endChatSession = (payload) => {
+  if (!socket) return;
+  socket.emit("end_chat_session", payload);
+};
+
+export const forceReconnectChatSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    setConnectionStatus("connecting");
+    socket.connect();
+  }
 };

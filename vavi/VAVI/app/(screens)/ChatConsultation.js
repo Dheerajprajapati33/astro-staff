@@ -219,7 +219,7 @@ export default function ChatConsultation() {
 
       const socket = await connectChatSocket();
 
-      if (!isMounted) return;
+      if (!isMounted || !socket) return;
 
       joinChatSession({
         consultationId,
