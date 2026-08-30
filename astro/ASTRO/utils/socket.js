@@ -55,7 +55,7 @@ export const connectSocket = async (initialToken) => {
   console.log(LOG_TAG, "Connecting call socket to", SOCKET_URL, "tokenPresent:", !!cleanToken);
   setConnectionStatus("connecting");
 
-  socket = io(SOCKET_URL, {
+  const instance = io(SOCKET_URL, {
     transports: ["websocket", "polling"],
     auth: {
       token: cleanToken,
@@ -68,55 +68,58 @@ export const connectSocket = async (initialToken) => {
     timeout: 10000,
   });
 
+  socket = instance;
   let emittedConnectJoin = false;
 
-  socket.on("connect", () => {
-    console.log(LOG_TAG, "Connected. Socket id:", socket.id);
+  instance.on("connect", () => {
+    console.log(LOG_TAG, "Connected. Socket id:", instance?.id);
     setConnectionStatus("connected");
 
     if (lastJoinParams && !emittedConnectJoin) {
       emittedConnectJoin = true;
       console.log(LOG_TAG, "Emitting join_consultation on connect:", lastJoinParams);
-      socket.emit("join_consultation", lastJoinParams);
+      instance.emit("join_consultation", lastJoinParams);
     }
   });
 
   // Handle server force-disconnect (prevents infinite reconnect loop when single session active)
-  socket.on("force_disconnect", (data) => {
+  instance.on("force_disconnect", (data) => {
     console.warn(LOG_TAG, "⚠️ Disconnected by server:", data?.reason);
-    if (socket) {
-      socket.removeAllListeners();
-      socket.disconnect();
+    if (socket === instance) {
       socket = null;
-      lastJoinParams = null;
-      currentJoinedConsultationId = null;
-      setConnectionStatus("disconnected");
     }
+    instance.removeAllListeners();
+    instance.disconnect();
+    lastJoinParams = null;
+    currentJoinedConsultationId = null;
+    setConnectionStatus("disconnected");
   });
 
-  socket.on("disconnect", (reason) => {
+  instance.on("disconnect", (reason) => {
     console.log(LOG_TAG, "Disconnected. Reason:", reason);
     emittedConnectJoin = false;
     if (reason === "io server disconnect") {
-      socket = null;
+      if (socket === instance) {
+        socket = null;
+      }
       lastJoinParams = null;
       currentJoinedConsultationId = null;
       setConnectionStatus("disconnected");
     } else {
-      setConnectionStatus(socket?.active ? "reconnecting" : "disconnected");
+      setConnectionStatus(instance?.active ? "reconnecting" : "disconnected");
     }
   });
 
-  socket.on("connect_error", (error) => {
+  instance.on("connect_error", (error) => {
     console.log(LOG_TAG, "Connect error:", error?.message || error);
-    setConnectionStatus(socket?.active ? "reconnecting" : "disconnected");
+    setConnectionStatus(instance?.active ? "reconnecting" : "disconnected");
   });
 
-  socket.on("error", (error) => {
+  instance.on("error", (error) => {
     console.log(LOG_TAG, "Socket error:", error);
   });
 
-  return socket;
+  return instance;
 };
 
 export const getSocket = () => socket;
