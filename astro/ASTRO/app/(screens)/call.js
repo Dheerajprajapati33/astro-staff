@@ -32,7 +32,9 @@ try {
   const agoraModule = require("react-native-agora");
   createAgoraRtcEngine = agoraModule.createAgoraRtcEngine;
 } catch (_e) {
-  console.log("[AstroCall] react-native-agora native module not loaded; running in web/mock mode.");
+  console.log(
+    "[AstroCall] react-native-agora native module not loaded; running in web/mock mode.",
+  );
 }
 
 const LOG_TAG = "[AstroCall]";
@@ -52,7 +54,9 @@ export default function CallScreen() {
 
   const [currentUser, setCurrentUser] = useState(null);
   const [callStatus, setCallStatus] = useState("connected"); // "connected" | "ended"
-  const [secondsLeft, setSecondsLeft] = useState(Number(maxDurationSeconds) || 1500);
+  const [secondsLeft, setSecondsLeft] = useState(
+    Number(maxDurationSeconds) || 1500,
+  );
   const [callDurationSeconds, setCallDurationSeconds] = useState(0);
 
   // Media Controls
@@ -172,7 +176,12 @@ export default function CallScreen() {
   // Local Web Camera Hook
   useEffect(() => {
     let active = true;
-    if (callStatus === "connected" && Platform.OS === "web" && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    if (
+      callStatus === "connected" &&
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
       navigator.mediaDevices
         .getUserMedia({
           video: { facingMode: isFrontCamera ? "user" : "environment" },
@@ -207,9 +216,11 @@ export default function CallScreen() {
 
   // Stream local webcam frames to the client tab (Web)
   useEffect(() => {
-    if (callStatus !== "connected" || isCameraOff || Platform.OS !== "web") return;
+    if (callStatus !== "connected" || isCameraOff || Platform.OS !== "web")
+      return;
 
-    const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    const canvas =
+      typeof document !== "undefined" ? document.createElement("canvas") : null;
     if (!canvas) return;
     canvas.width = 320;
     canvas.height = 400;
@@ -219,7 +230,13 @@ export default function CallScreen() {
       if (localVideoTagRef.current && broadcastChannelRef.current && ctx) {
         try {
           if (localVideoTagRef.current.videoWidth > 0) {
-            ctx.drawImage(localVideoTagRef.current, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+              localVideoTagRef.current,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
             const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
             broadcastChannelRef.current.postMessage({
               type: "remote_video_frame",
@@ -234,7 +251,10 @@ export default function CallScreen() {
       clearInterval(interval);
       if (broadcastChannelRef.current) {
         try {
-          broadcastChannelRef.current.postMessage({ type: "remote_video_frame", frame: null });
+          broadcastChannelRef.current.postMessage({
+            type: "remote_video_frame",
+            frame: null,
+          });
         } catch (e) {}
       }
     };
@@ -287,7 +307,8 @@ export default function CallScreen() {
       if (hasJoinedAgoraRef.current) return;
       hasJoinedAgoraRef.current = true;
 
-      const duration = data?.maxDurationSeconds || Number(maxDurationSeconds) || 1500;
+      const duration =
+        data?.maxDurationSeconds || Number(maxDurationSeconds) || 1500;
       setSecondsLeft(duration);
       callDurationSecondsRef.current = 0;
       setCallDurationSeconds(0);
@@ -306,7 +327,8 @@ export default function CallScreen() {
       }, 1000);
 
       // Duration Timer
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = setInterval(() => {
         callDurationSecondsRef.current += 1;
         setCallDurationSeconds(callDurationSecondsRef.current);
@@ -322,16 +344,40 @@ export default function CallScreen() {
         }
 
         console.log(LOG_TAG, "Fetching Host Agora token for:", consultationId);
-        const tokenRes = await getCallToken({ consultationId, uid: 2, role: "astrologer" }).unwrap();
-        const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
+        const tokenRes = await getCallToken({
+          consultationId,
+          uid: 2,
+          role: "astrologer",
+        }).unwrap();
+        const agoraData =
+          tokenRes?.data?.agora ||
+          tokenRes?.agora ||
+          tokenRes?.data ||
+          tokenRes;
 
         if (agoraData && createAgoraRtcEngine) {
           const targetToken = agoraData.astrologerToken || agoraData.token;
-          const targetChannelName = agoraData.channelName || `call_${consultationId}`;
-          const rawUid = agoraData.astrologerUid !== undefined ? agoraData.astrologerUid : agoraData.uid;
-          const targetUid = rawUid !== undefined && rawUid !== null && Number(rawUid) !== 1 ? Number(rawUid) : 2;
-          const targetAppId = agoraData.appId || agoraData.app_id || AGORA_APP_ID;
-          console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as Host:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
+          const targetChannelName =
+            agoraData.channelName || `call_${consultationId}`;
+          const rawUid =
+            agoraData.astrologerUid !== undefined
+              ? agoraData.astrologerUid
+              : agoraData.uid;
+          const targetUid =
+            rawUid !== undefined && rawUid !== null && Number(rawUid) !== 1
+              ? Number(rawUid)
+              : 2;
+          const targetAppId =
+            agoraData.appId || agoraData.app_id || AGORA_APP_ID;
+          console.log(
+            LOG_TAG,
+            "Joining Agora 2-Way Voice/Video Call as Host:",
+            targetChannelName,
+            "uid:",
+            targetUid,
+            "tokenPresent:",
+            !!targetToken,
+          );
 
           const engine = createAgoraRtcEngine();
           agoraEngineRef.current = engine;
@@ -346,19 +392,44 @@ export default function CallScreen() {
           if (engine.registerEventHandler) {
             engine.registerEventHandler({
               onJoinChannelSuccess: (connection, elapsed) => {
-                console.log(LOG_TAG, "Agora Host onJoinChannelSuccess:", connection.channelId);
+                console.log(
+                  LOG_TAG,
+                  "Agora Host onJoinChannelSuccess:",
+                  connection.channelId,
+                );
                 if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-                if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
-                if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
-                if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-                if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+                if (engine.setDefaultAudioRouteToSpeakerphone)
+                  engine.setDefaultAudioRouteToSpeakerphone(true);
+                if (engine.setEnableSpeakerphone)
+                  engine.setEnableSpeakerphone(true);
+                if (engine.muteLocalAudioStream)
+                  engine.muteLocalAudioStream(false);
+                if (engine.muteAllRemoteAudioStreams)
+                  engine.muteAllRemoteAudioStreams(false);
               },
               onUserJoined: (connection, remoteUid, elapsed) => {
-                console.log(LOG_TAG, "Agora Host onUserJoined remoteUid:", remoteUid);
-                if (engine.muteRemoteAudioStream) engine.muteRemoteAudioStream(remoteUid, false);
+                console.log(
+                  LOG_TAG,
+                  "Agora Host onUserJoined remoteUid:",
+                  remoteUid,
+                );
+                if (engine.muteRemoteAudioStream)
+                  engine.muteRemoteAudioStream(remoteUid, false);
               },
-              onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) => {
-                console.log(LOG_TAG, "Agora Host onRemoteAudioStateChanged:", remoteUid, state, reason);
+              onRemoteAudioStateChanged: (
+                connection,
+                remoteUid,
+                state,
+                reason,
+                elapsed,
+              ) => {
+                console.log(
+                  LOG_TAG,
+                  "Agora Host onRemoteAudioStateChanged:",
+                  remoteUid,
+                  state,
+                  reason,
+                );
               },
               onError: (err, msg) => {
                 console.log(LOG_TAG, "Agora Host RTC Error:", err, msg);
@@ -371,14 +442,18 @@ export default function CallScreen() {
           if (engine.setClientRole) engine.setClientRole(1); // ClientRoleBroadcaster
           engine.enableAudio();
           if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-          if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+          if (engine.setDefaultAudioRouteToSpeakerphone)
+            engine.setDefaultAudioRouteToSpeakerphone(true);
           if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
           engine.enableVideo();
 
-          if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
-          if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
+          if (engine.adjustRecordingSignalVolume)
+            engine.adjustRecordingSignalVolume(100);
+          if (engine.adjustPlaybackSignalVolume)
+            engine.adjustPlaybackSignalVolume(100);
           if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-          if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+          if (engine.muteAllRemoteAudioStreams)
+            engine.muteAllRemoteAudioStreams(false);
 
           engine.startPreview();
 
@@ -392,7 +467,11 @@ export default function CallScreen() {
           });
         }
       } catch (err) {
-        console.log(LOG_TAG, "Agora Host RTC setup notice:", err?.message || err);
+        console.log(
+          LOG_TAG,
+          "Agora Host RTC setup notice:",
+          err?.message || err,
+        );
       }
     },
     [consultationId, getCallToken, maxDurationSeconds],
@@ -403,14 +482,18 @@ export default function CallScreen() {
     (data) => {
       console.log(LOG_TAG, "call_ended event received:", data);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       cleanupAgora();
       setCallStatus("ended");
-      setEndedReason(data?.reason || data?.consultation?.endReason || "client_ended");
+      setEndedReason(
+        data?.reason || data?.consultation?.endReason || "client_ended",
+      );
 
       const mins = Math.max(1, Math.ceil(callDurationSecondsRef.current / 60));
       const rate = Number(ratePerMinute) || 25;
-      const earnings = data?.amount || data?.consultation?.amount || mins * rate;
+      const earnings =
+        data?.amount || data?.consultation?.amount || mins * rate;
       setTotalEarnings(earnings);
 
       setShowSummaryModal(true);
@@ -444,8 +527,12 @@ export default function CallScreen() {
       // Automatically join Agora RTC voice call session upon screen mount
       handleCallStartedRef.current?.({ maxDurationSeconds });
 
-      const offStart = onEvent("call_started", (data) => handleCallStartedRef.current?.(data));
-      const offEnd = onEvent("call_ended", (data) => handleCallEndedEventRef.current?.(data));
+      const offStart = onEvent("call_started", (data) =>
+        handleCallStartedRef.current?.(data),
+      );
+      const offEnd = onEvent("call_ended", (data) =>
+        handleCallEndedEventRef.current?.(data),
+      );
 
       return () => {
         offStart();
@@ -458,7 +545,8 @@ export default function CallScreen() {
     return () => {
       isMounted = false;
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       cleanupAgora();
     };
   }, [consultationId]);
@@ -468,7 +556,9 @@ export default function CallScreen() {
     const next = !isMuted;
     setIsMuted(next);
     if (localWebStreamRef.current) {
-      localWebStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
+      localWebStreamRef.current
+        .getAudioTracks()
+        .forEach((t) => (t.enabled = !next));
     }
     if (agoraEngineRef.current?.muteLocalAudioStream) {
       agoraEngineRef.current.muteLocalAudioStream(next);
@@ -479,7 +569,9 @@ export default function CallScreen() {
     const next = !isCameraOff;
     setIsCameraOff(next);
     if (localWebStreamRef.current) {
-      localWebStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = !next));
+      localWebStreamRef.current
+        .getVideoTracks()
+        .forEach((t) => (t.enabled = !next));
     }
     if (agoraEngineRef.current?.muteLocalVideoStream) {
       agoraEngineRef.current.muteLocalVideoStream(next);
@@ -530,7 +622,10 @@ export default function CallScreen() {
     console.log(LOG_TAG, "Astrologer declined call");
     if (broadcastChannelRef.current) {
       try {
-        broadcastChannelRef.current.postMessage({ type: "call_ended", reason: "declined" });
+        broadcastChannelRef.current.postMessage({
+          type: "call_ended",
+          reason: "declined",
+        });
       } catch (e) {}
     }
     emitEvent("astrologer_reject_call", { consultationId });
@@ -542,14 +637,24 @@ export default function CallScreen() {
     const onBackPress = () => {
       if (callStatus === "connected") {
         if (Platform.OS === "web") {
-          if (window.confirm("Do you want to end this video call consultation?")) {
+          if (
+            window.confirm("Do you want to end this video call consultation?")
+          ) {
             handleEndCall("astrologer_hung_up");
           }
         } else {
-          Alert.alert("End Consultation", "Are you sure you want to end this video consultation?", [
-            { text: "Cancel", style: "cancel" },
-            { text: "End Call", style: "destructive", onPress: () => handleEndCall("astrologer_hung_up") },
-          ]);
+          Alert.alert(
+            "End Consultation",
+            "Are you sure you want to end this video consultation?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "End Call",
+                style: "destructive",
+                onPress: () => handleEndCall("astrologer_hung_up"),
+              },
+            ],
+          );
         }
         return true;
       }
@@ -567,17 +672,21 @@ export default function CallScreen() {
       {callStatus === "incoming" && (
         <SafeAreaView style={styles.incomingSafeArea}>
           <View style={styles.incomingHeader}>
-            <Text style={styles.incomingBadge}>Incoming Video Consultation</Text>
+            <Text style={styles.incomingBadge}>Incoming Voice Call</Text>
             <Text style={styles.problemText}>{problem}</Text>
           </View>
 
           <View style={styles.avatarCenterWrap}>
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <Animated.View
+              style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
+            />
             <View style={styles.incomingAvatarCircle}>
               <Ionicons name="person" size={RF(50)} color="#fff" />
             </View>
             <Text style={styles.clientNameRinging}>{userName}</Text>
-            <Text style={styles.rateBadgeText}>₹{ratePerMinute}/min • Private Zoom Video Call</Text>
+            <Text style={styles.rateBadgeText}>
+              ₹{ratePerMinute}/min • Voice call
+            </Text>
           </View>
 
           <View style={styles.incomingActionButtons}>
@@ -587,7 +696,12 @@ export default function CallScreen() {
               onPress={handleDeclineCall}
               activeOpacity={0.85}
             >
-              <Ionicons name="call" size={RF(28)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
+              <Ionicons
+                name="call"
+                size={RF(28)}
+                color="#fff"
+                style={{ transform: [{ rotate: "135deg" }] }}
+              />
               <Text style={styles.btnActionLbl}>Decline</Text>
             </TouchableOpacity>
 
@@ -613,11 +727,17 @@ export default function CallScreen() {
           <SafeAreaView style={styles.topOverlayBar} edges={["top"]}>
             <View style={styles.hostHeaderBadge}>
               <View style={styles.smallAvatarWrap}>
-                <Text style={styles.avatarInitial}>{userName ? userName[0].toUpperCase() : "C"}</Text>
+                <Text style={styles.avatarInitial}>
+                  {userName ? userName[0].toUpperCase() : "C"}
+                </Text>
               </View>
               <View>
-                <Text style={styles.headerHostName} numberOfLines={1}>{userName}</Text>
-                <Text style={styles.headerRateText}>{problem} • Voice Call</Text>
+                <Text style={styles.headerHostName} numberOfLines={1}>
+                  {userName}
+                </Text>
+                <Text style={styles.headerRateText}>
+                  {problem} • Voice Call
+                </Text>
               </View>
             </View>
 
@@ -629,12 +749,18 @@ export default function CallScreen() {
 
           {/* Centered WhatsApp-Style Voice Avatar with Pulse Animation */}
           <View style={styles.voiceAvatarCenterWrap}>
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <Animated.View
+              style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
+            />
             <View style={styles.voiceAvatarCircle}>
               <Ionicons name="person" size={RF(50)} color="#fff" />
             </View>
-            <Text style={styles.voiceAstrologerName}>{currentUser?.name || "Astrologer Host"}</Text>
-            <Text style={styles.voiceSubStatus}>Voice Consultation Connected</Text>
+            <Text style={styles.voiceAstrologerName}>
+              {currentUser?.name || "Astrologer Host"}
+            </Text>
+            <Text style={styles.voiceSubStatus}>
+              Voice Consultation Connected
+            </Text>
 
             {/* Client Icon Badge */}
             <View style={styles.clientBadgeBox}>
@@ -651,8 +777,14 @@ export default function CallScreen() {
               onPress={handleToggleMute}
               activeOpacity={0.8}
             >
-              <Ionicons name={isMuted ? "mic-off" : "mic"} size={RF(24)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>{isMuted ? "Unmute" : "Mute"}</Text>
+              <Ionicons
+                name={isMuted ? "mic-off" : "mic"}
+                size={RF(24)}
+                color="#fff"
+              />
+              <Text style={styles.controlBtnLabel}>
+                {isMuted ? "Unmute" : "Mute"}
+              </Text>
             </TouchableOpacity>
 
             {/* Speaker Toggle */}
@@ -661,8 +793,14 @@ export default function CallScreen() {
               onPress={handleToggleSpeaker}
               activeOpacity={0.8}
             >
-              <Ionicons name={isSpeaker ? "volume-high" : "volume-mute"} size={RF(24)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>{isSpeaker ? "Speaker" : "Ear-piece"}</Text>
+              <Ionicons
+                name={isSpeaker ? "volume-high" : "volume-mute"}
+                size={RF(24)}
+                color="#fff"
+              />
+              <Text style={styles.controlBtnLabel}>
+                {isSpeaker ? "Speaker" : "Ear-piece"}
+              </Text>
             </TouchableOpacity>
 
             {/* End Call Button */}
@@ -671,7 +809,12 @@ export default function CallScreen() {
               onPress={() => handleEndCall("astrologer_hung_up")}
               activeOpacity={0.85}
             >
-              <Ionicons name="call" size={RF(26)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
+              <Ionicons
+                name="call"
+                size={RF(26)}
+                color="#fff"
+                style={{ transform: [{ rotate: "135deg" }] }}
+              />
               <Text style={styles.endBtnLabel}>End</Text>
             </TouchableOpacity>
           </View>
@@ -697,15 +840,17 @@ export default function CallScreen() {
               {endedReason === "balance_exhausted"
                 ? `Call ended automatically as ${userName}'s wallet balance was exhausted.`
                 : endedReason === "astrologer_hung_up"
-                ? `You have ended the call consultation with ${userName}.`
-                : endedReason === "time_expired"
-                ? `Consultation time limit reached for call with ${userName}.`
-                : `${userName || "Client"} has ended the call consultation.`}
+                  ? `You have ended the call consultation with ${userName}.`
+                  : endedReason === "time_expired"
+                    ? `Consultation time limit reached for call with ${userName}.`
+                    : `${userName || "Client"} has ended the call consultation.`}
             </Text>
 
             <View style={styles.summaryStatsGrid}>
               <View style={styles.summaryBox}>
-                <Text style={styles.summaryVal}>{formatTimer(callDurationSeconds)}</Text>
+                <Text style={styles.summaryVal}>
+                  {formatTimer(callDurationSeconds)}
+                </Text>
                 <Text style={styles.summaryLbl}>Duration</Text>
               </View>
               <View style={styles.summaryBox}>

@@ -61,10 +61,12 @@ export default function GoLive() {
   const [totalGiftsReceived, setTotalGiftsReceived] = useState(0);
   const [totalCoinsEarned, setTotalCoinsEarned] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [durationSeconds, setDurationSeconds] = useState(0);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [floatingEmojis, setFloatingEmojis] = useState([]);
 
   const [startLiveMutation, { isLoading: isStarting }] = useStartLiveSessionMutation();
   const [endLiveMutation] = useEndLiveSessionMutation();
@@ -232,6 +234,22 @@ export default function GoLive() {
     [giftAnim],
   );
 
+  // Trigger floating emoji animation
+  const spawnFloatingEmoji = useCallback((emoji) => {
+    const id = String(Date.now() + Math.random());
+    const animVal = new Animated.Value(0);
+    const randomX = Math.random() * 60 - 30;
+    setFloatingEmojis((prev) => [...prev.slice(-15), { id, emoji, animVal, randomX }]);
+
+    Animated.timing(animVal, {
+      toValue: 1,
+      duration: 2400,
+      useNativeDriver: true,
+    }).start(() => {
+      setFloatingEmojis((prev) => prev.filter((item) => item.id !== id));
+    });
+  }, []);
+
   // Realtime multi-tab sync via BroadcastChannel (Web)
   useEffect(() => {
     if (typeof window !== "undefined" && window.BroadcastChannel) {
@@ -262,6 +280,8 @@ export default function GoLive() {
             ]);
           } else if (data?.type === "live_gift_received") {
             showGiftToast(data);
+          } else if (data?.type === "live_emoji_received" || data?.type === "send_live_emoji") {
+            if (data?.emoji) spawnFloatingEmoji(data.emoji);
           }
         };
 
@@ -272,7 +292,7 @@ export default function GoLive() {
         console.log(LOG_TAG, "BroadcastChannel setup error:", e);
       }
     }
-  }, [showGiftToast]);
+  }, [showGiftToast, spawnFloatingEmoji]);
 
   // Start Live Session Handler
   const handleStartLive = async () => {
@@ -467,6 +487,17 @@ export default function GoLive() {
         console.log(LOG_TAG, "Live gift received:", data);
         showGiftToast(data);
       });
+
+      // Listen for live emojis
+      socket.on("live_emoji_received", (data) => {
+        console.log(LOG_TAG, "Live emoji received:", data);
+        if (data?.emoji) spawnFloatingEmoji(data.emoji);
+      });
+
+      socket.on("send_live_emoji", (data) => {
+        console.log(LOG_TAG, "Live emoji sent from viewer:", data);
+        if (data?.emoji) spawnFloatingEmoji(data.emoji);
+      });
     }
   };
 
@@ -541,6 +572,15 @@ export default function GoLive() {
 
     if (agoraEngineRef.current?.muteLocalAudioStream) {
       agoraEngineRef.current.muteLocalAudioStream(next);
+    }
+  };
+
+  // Toggle Speaker
+  const handleToggleSpeaker = () => {
+    const next = !isSpeakerMuted;
+    setIsSpeakerMuted(next);
+    if (agoraEngineRef.current?.muteAllRemoteAudioStreams) {
+      agoraEngineRef.current.muteAllRemoteAudioStreams(next);
     }
   };
 
@@ -745,6 +785,42 @@ export default function GoLive() {
               </Animated.View>
             )}
 
+            {/* Floating Instagram-style Reaction Emojis Container */}
+            <View style={styles.floatingEmojiLayer} pointerEvents="none">
+              {floatingEmojis.map((item) => {
+                const translateY = item.animVal.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -280],
+                });
+                const opacity = item.animVal.interpolate({
+                  inputRange: [0, 0.7, 1],
+                  outputRange: [1, 0.8, 0],
+                });
+                const scale = item.animVal.interpolate({
+                  inputRange: [0, 0.2, 1],
+                  outputRange: [0.5, 1.2, 1],
+                });
+                return (
+                  <Animated.View
+                    key={item.id}
+                    style={[
+                      styles.floatingEmojiItem,
+                      {
+                        transform: [
+                          { translateY },
+                          { translateX: item.randomX },
+                          { scale },
+                        ],
+                        opacity,
+                      },
+                    ]}
+                  >
+                    <Text style={styles.floatingEmojiText}>{item.emoji}</Text>
+                  </Animated.View>
+                );
+              })}
+            </View>
+
             {/* Bottom Section: Floating Comments & Host Controls */}
             <View style={styles.bottomSection}>
               {/* Floating Comments List */}
@@ -783,6 +859,18 @@ export default function GoLive() {
                     color="#fff"
                   />
                   <Text style={styles.actionBtnLabel}>{isMuted ? "Unmute" : "Mute"}</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.hostActionBtn, isSpeakerMuted && styles.hostActionBtnActive]}
+                  onPress={handleToggleSpeaker}
+                >
+                  <Ionicons
+                    name={isSpeakerMuted ? "volume-mute" : "volume-high"}
+                    size={RF(20)}
+                    color="#fff"
+                  />
+                  <Text style={styles.actionBtnLabel}>{isSpeakerMuted ? "Spk Off" : "Speaker"}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1080,6 +1168,23 @@ const styles = StyleSheet.create({
     color: "#fff7e8",
     fontSize: RF(11),
     fontWeight: "600",
+  },
+  floatingEmojiLayer: {
+    position: "absolute",
+    right: wp(4),
+    bottom: hp(15),
+    width: wp(16),
+    height: hp(35),
+    alignItems: "center",
+    justifyContent: "flex-end",
+    zIndex: 10,
+  },
+  floatingEmojiItem: {
+    position: "absolute",
+    bottom: 0,
+  },
+  floatingEmojiText: {
+    fontSize: RF(32),
   },
   bottomSection: {
     paddingHorizontal: wp(4),

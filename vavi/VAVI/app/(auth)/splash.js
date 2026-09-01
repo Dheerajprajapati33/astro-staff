@@ -59,7 +59,7 @@ export default function Splash() {
       style={styles.background}
     >
       <SafeAreaView style={styles.container}>
-        <Text style={styles.bottomText}>Preparing your future...</Text>
+        {/* <Text style={styles.bottomText}>Preparing your future...</Text> */}
       </SafeAreaView>
     </ImageBackground>
   );

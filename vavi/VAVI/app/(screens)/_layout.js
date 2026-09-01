@@ -27,7 +27,9 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          animation: "fade",
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+          animation: "slide_from_right",
         }}
       />
     </>

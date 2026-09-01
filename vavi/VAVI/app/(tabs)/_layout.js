@@ -39,7 +39,9 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* TAB 1 → DISCOVER */}
+
+
+      {/* TAB 1 → CONSULT */}
       <Tabs.Screen
         name="consult"
         options={{
@@ -47,7 +49,7 @@ export default function TabLayout() {
 
           tabBarIcon: ({ color, size }) => (
             <Ionicons
-              name="compass-outline"
+              name="chatbubble-ellipses-outline"
               size={size}
               color={color}
             />
@@ -55,7 +57,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* TAB 2 → CONSULT */}
+      {/* TAB 2 → DISCOVER */}
       <Tabs.Screen
         name="index"
         options={{
@@ -63,7 +65,7 @@ export default function TabLayout() {
 
           tabBarIcon: ({ color, size }) => (
             <Ionicons
-              name="chatbubble-ellipses-outline"
+              name="compass-outline"
               size={size}
               color={color}
             />

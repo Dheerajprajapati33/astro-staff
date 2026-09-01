@@ -1,23 +1,29 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
+import { useGetWalletBalanceQuery } from "../../redux/walletApi";
 
 export default function Header() {
+  const { data: balanceData } = useGetWalletBalanceQuery(undefined, {
+    pollingInterval: 10000,
+  });
+
+  const rawBalance = balanceData?.data?.balance ?? balanceData?.balance ?? 0;
+  const balance = Number(rawBalance) || 0;
+
   return (
     <View style={styles.container}>
-      {/* Menu */}
-      {/* <TouchableOpacity>
-        <Ionicons name="menu-outline" size={RF(26)} color={Colors.darkBrown} />
-      </TouchableOpacity> */}
-      <TouchableOpacity onPress={() => router.push("/Wallet")}>
-        <Ionicons
-          name="wallet-outline"
-          size={RF(23)}
-          color={Colors.darkBrown}
-        />
+      {/* Wallet Pill Button (InstaAstro Style) */}
+      <TouchableOpacity
+        style={styles.walletPill}
+        onPress={() => router.push("/Wallet")}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="wallet-outline" size={RF(22)} color="#ffffff" />
+        <Text style={styles.walletBalanceText}>₹{balance}</Text>
       </TouchableOpacity>
 
       {/* Logo */}
@@ -31,21 +37,10 @@ export default function Header() {
 
       {/* Right Icons */}
       <View style={styles.rightIcons}>
-        {/* Wallet */}
-        {/* <TouchableOpacity
-          style={styles.iconButton}
-          onPress={() => router.push("/Wallet")}
-        >
-          <Ionicons
-            name="wallet-outline"
-            size={RF(23)}
-            color={Colors.darkBrown}
-          />
-        </TouchableOpacity> */}
-
         {/* Notification */}
         <TouchableOpacity
-          onPress={() => router.push("/Notification")} //
+          onPress={() => router.push("/Notification")}
+          activeOpacity={0.8}
         >
           <Ionicons
             name="notifications-outline"
@@ -67,6 +62,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
+  walletPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#22c55e",
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.9),
+    borderRadius: wp(5),
+    zIndex: 20,
+  },
+
+  walletBalanceText: {
+    color: "#ffffff",
+    fontSize: RF(16),
+    fontWeight: "700",
+    marginLeft: wp(1.5),
+  },
+
   logoContainer: {
     position: "absolute",
     left: 0,
@@ -84,9 +96,5 @@ const styles = StyleSheet.create({
   rightIcons: {
     flexDirection: "row",
     alignItems: "center",
-  },
-
-  iconButton: {
-    marginRight: wp(4),
   },
 });

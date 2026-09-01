@@ -12,7 +12,14 @@ export default function RootLayout() {
       <ChatRequestProvider>
         <CallRequestProvider>
           <StatusBar barStyle="dark-content" />
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              gestureEnabled: true,
+              fullScreenGestureEnabled: true,
+              animation: "slide_from_right",
+            }}
+          />
         </CallRequestProvider>
       </ChatRequestProvider>
     </Provider>

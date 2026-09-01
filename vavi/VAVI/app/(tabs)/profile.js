@@ -24,6 +24,7 @@ import {
   useUpdateProfileMutation,
 } from "../../redux/updateApi";
 import { hp, RF, wp } from "../../utils/responsive";
+import { performClientLogoutVavi } from "../../utils/auth";
 
 const ProfileRow = ({
   icon,
@@ -235,47 +236,32 @@ export default function Profile() {
       appendFormValue(formData, "birthTime", birthTime);
 
       appendFormValue(formData, "birthPlace", birthPlace);
-
-      appendFormValue(formData, "city", city);
-
-      appendFormValue(formData, "state", stateName);
-
-      appendFormValue(formData, "country", country);
+      formData.append("name", name);
+      formData.append("email", email);
+      formData.append("gender", gender);
+      formData.append("dob", dob);
+      formData.append("tob", tob);
+      formData.append("pob", pob);
+      formData.append("maritalStatus", maritalStatus);
+      formData.append("topicOfConcern", topicOfConcern);
 
       if (selectedImage?.uri) {
         formData.append("profilePic", {
           uri: selectedImage.uri,
-          name: selectedImage.name,
-          type: selectedImage.type,
+          type: selectedImage.type || "image/jpeg",
+          name: selectedImage.name || "profile.jpg",
         });
       }
 
-      console.log("Updating profile...");
+      console.log("Submitting profile update...");
+      const res = await updateProfile(formData).unwrap();
+      console.log("Profile update response:", res);
 
-      const response = await updateProfile(formData).unwrap();
-
-      console.log("Update profile response:", response);
-
-      if (!response?.success) {
-        Alert.alert(
-          "Update Failed",
-          response?.message || "Profile update nahi ho paayi.",
-        );
-
-        return;
-      }
-
+      Alert.alert("Success", "Profile updated successfully!");
       setSelectedImage(null);
-
-      await refetch();
-
-      Alert.alert(
-        "Success",
-        response?.message || "Profile updated successfully.",
-      );
+      refetch();
     } catch (error) {
-      console.log("Update profile error:", error);
-
+      console.log("Profile update error:", error);
       const errorMessage =
         error?.data?.message ||
         error?.data?.error ||
@@ -288,9 +274,7 @@ export default function Profile() {
 
   const performLogout = async () => {
     try {
-      await AsyncStorage.multiRemove(["userData", "token", "user"]);
-
-      router.replace("/(auth)/login");
+      await performClientLogoutVavi();
     } catch (error) {
       console.log("Logout error:", error);
 

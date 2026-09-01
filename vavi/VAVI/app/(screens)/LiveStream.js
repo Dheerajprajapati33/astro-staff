@@ -72,7 +72,9 @@ export default function LiveStream() {
   const [showGiftSheet, setShowGiftSheet] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
+  const [isMicMuted, setIsMicMuted] = useState(true);
   const [liveVideoFrame, setLiveVideoFrame] = useState(null);
+  const [floatingEmojis, setFloatingEmojis] = useState([]);
 
   const [joinLiveMutation] = useJoinLiveSessionMutation();
   const [leaveLiveMutation] = useLeaveLiveSessionMutation();
@@ -83,6 +85,22 @@ export default function LiveStream() {
   const commentsListRef = useRef(null);
   const sessionEndedRef = useRef(false);
   const broadcastChannelRef = useRef(null);
+
+  // Trigger floating emoji animation
+  const spawnFloatingEmoji = useCallback((emoji) => {
+    const id = String(Date.now() + Math.random());
+    const animVal = new Animated.Value(0);
+    const randomX = Math.random() * 60 - 30;
+    setFloatingEmojis((prev) => [...prev.slice(-15), { id, emoji, animVal, randomX }]);
+
+    Animated.timing(animVal, {
+      toValue: 1,
+      duration: 2400,
+      useNativeDriver: true,
+    }).start(() => {
+      setFloatingEmojis((prev) => prev.filter((item) => item.id !== id));
+    });
+  }, []);
 
   // Load User Data
   useEffect(() => {
@@ -157,6 +175,8 @@ export default function LiveStream() {
             ]);
           } else if (data?.type === "live_gift_received") {
             showGiftToast(data);
+          } else if (data?.type === "live_emoji_received" || data?.type === "send_live_emoji") {
+            if (data?.emoji) spawnFloatingEmoji(data.emoji);
           }
         };
 
@@ -364,6 +384,14 @@ export default function LiveStream() {
             if (isMounted) showGiftToast(data);
           });
 
+          // Live emoji received / sent
+          socket.on("live_emoji_received", (data) => {
+            if (isMounted && data?.emoji) spawnFloatingEmoji(data.emoji);
+          });
+          socket.on("send_live_emoji", (data) => {
+            if (isMounted && data?.emoji) spawnFloatingEmoji(data.emoji);
+          });
+
           // Live stream ended by host
           socket.on("live_stream_ended", () => {
             if (sessionEndedRef.current) return;
@@ -513,6 +541,59 @@ export default function LiveStream() {
     showGiftToast(payload);
   };
 
+  // Send Instagram-style reaction emoji
+  const handleSendEmoji = (emojiChar) => {
+    const userObj = currentUser || { id: "user", name: "Devotee" };
+    const payload = {
+      liveSessionId: String(liveSessionId),
+      user: {
+        id: userObj?.id || userObj?._id || "user",
+        name: userObj?.name || "Devotee",
+      },
+      emoji: emojiChar,
+    };
+
+    const socket = getChatSocket();
+    if (socket) {
+      socket.emit("send_live_emoji", payload);
+    }
+
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.postMessage({
+          type: "send_live_emoji",
+          ...payload,
+        });
+      } catch (e) {}
+    }
+
+    spawnFloatingEmoji(emojiChar);
+  };
+
+  // Toggle Client Microphone (Talk to Astrologer)
+  const handleToggleMic = () => {
+    const next = !isMicMuted;
+    setIsMicMuted(next);
+
+    if (agoraEngineRef.current) {
+      try {
+        agoraEngineRef.current.muteLocalAudioStream(next);
+        if (!next) {
+          agoraEngineRef.current.enableLocalAudio(true);
+        }
+      } catch (e) {}
+    }
+
+    const socket = getChatSocket();
+    if (socket && liveSessionId) {
+      socket.emit("client_audio_state_change", {
+        liveSessionId: String(liveSessionId),
+        userId: currentUser?.id || "user",
+        isMuted: next,
+      });
+    }
+  };
+
   // Handle Close / Exit
   const handleClose = () => {
     router.back();
@@ -640,6 +721,42 @@ export default function LiveStream() {
           </Animated.View>
         )}
 
+        {/* Floating Instagram-style Reaction Emojis Container */}
+        <View style={styles.floatingEmojiLayer} pointerEvents="none">
+          {floatingEmojis.map((item) => {
+            const translateY = item.animVal.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, -280],
+            });
+            const opacity = item.animVal.interpolate({
+              inputRange: [0, 0.7, 1],
+              outputRange: [1, 0.8, 0],
+            });
+            const scale = item.animVal.interpolate({
+              inputRange: [0, 0.2, 1],
+              outputRange: [0.5, 1.2, 1],
+            });
+            return (
+              <Animated.View
+                key={item.id}
+                style={[
+                  styles.floatingEmojiItem,
+                  {
+                    transform: [
+                      { translateY },
+                      { translateX: item.randomX },
+                      { scale },
+                    ],
+                    opacity,
+                  },
+                ]}
+              >
+                <Text style={styles.floatingEmojiText}>{item.emoji}</Text>
+              </Animated.View>
+            );
+          })}
+        </View>
+
         {/* Bottom Interactive Area */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -669,7 +786,21 @@ export default function LiveStream() {
             />
           </View>
 
-          {/* Input & Gift Bar */}
+          {/* Quick Instagram-style Emoji Reaction Bar */}
+          <View style={styles.emojiBar}>
+            {["❤️", "🔥", "🙏", "👏", "🌟"].map((emoji) => (
+              <TouchableOpacity
+                key={emoji}
+                style={styles.emojiChip}
+                onPress={() => handleSendEmoji(emoji)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.emojiChipText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Input, Mic & Gift Bar */}
           <View style={styles.inputBar}>
             <View style={styles.inputWrapper}>
               <TextInput
@@ -689,6 +820,19 @@ export default function LiveStream() {
                 <Ionicons name="send" size={RF(16)} color="#fff" />
               </TouchableOpacity>
             </View>
+
+            {/* Mute/Unmute Mic Button to Talk to Astrologer */}
+            <TouchableOpacity
+              style={[styles.micButton, !isMicMuted && styles.micButtonActive]}
+              onPress={handleToggleMic}
+              activeOpacity={0.85}
+            >
+              <Ionicons
+                name={isMicMuted ? "mic-off" : "mic"}
+                size={RF(20)}
+                color="#fff"
+              />
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.giftButton}
@@ -837,6 +981,41 @@ const styles = StyleSheet.create({
     fontSize: RF(11),
     fontWeight: "600",
   },
+  floatingEmojiLayer: {
+    position: "absolute",
+    right: wp(4),
+    bottom: hp(15),
+    width: wp(16),
+    height: hp(35),
+    alignItems: "center",
+    justifyContent: "flex-end",
+    zIndex: 10,
+  },
+  floatingEmojiItem: {
+    position: "absolute",
+    bottom: 0,
+  },
+  floatingEmojiText: {
+    fontSize: RF(32),
+  },
+  emojiBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: wp(2),
+    marginBottom: hp(0.8),
+  },
+  emojiChip: {
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.5),
+    borderRadius: wp(5),
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+  },
+  emojiChipText: {
+    fontSize: RF(16),
+  },
   bottomArea: {
     paddingHorizontal: wp(4),
     paddingBottom: hp(1.5),
@@ -915,5 +1094,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 4,
+  },
+  micButton: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: "rgba(0,0,0,0.65)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micButtonActive: {
+    backgroundColor: "#4CAF50",
+    borderColor: "#4CAF50",
   },
 });

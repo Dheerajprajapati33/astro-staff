@@ -30,7 +30,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import CountdownTimer from "../../components/chat/CountdownTimer";
 import Typography from "../../constants/Typography";
@@ -61,6 +61,7 @@ const LOG_TAG = "[ChatScreen]";
 const ROOM_POLL_INTERVAL_MS = 5000;
 
 export default function Chat() {
+  const insets = useSafeAreaInsets();
   const {
     consultationId,
     roomId,
@@ -979,7 +980,12 @@ export default function Chat() {
           </View>
         )}
 
-        <View style={styles.inputWrapper}>
+        <View
+          style={[
+            styles.inputWrapper,
+            { paddingBottom: Math.max(insets.bottom, hp(0.8)) },
+          ]}
+        >
           <TextInput
             placeholder={
               chatEnded

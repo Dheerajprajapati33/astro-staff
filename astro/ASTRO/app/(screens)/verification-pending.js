@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
+import { performClientLogout } from "../../utils/auth";
 
 import { useGetProfileQuery } from "../../redux/ProfileApi";
 
@@ -62,9 +63,7 @@ export default function VerificationPending() {
   };
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem("userData");
-
-    router.replace("/(auth)/login");
+    await performClientLogout();
   };
 
   return (

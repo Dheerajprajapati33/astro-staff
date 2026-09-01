@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "../../constants/Colors";import { useLoginMutation } from "../../redux/authApi";
+import Colors from "../../constants/Colors";
+import { useLoginMutation } from "../../redux/authApi";
 import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Login() {
@@ -177,50 +178,6 @@ export default function Login() {
               )}
             </TouchableOpacity>
 
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.line} />
-
-              <Text style={styles.orText}>OR</Text>
-
-              <View style={styles.line} />
-            </View>
-
-            {/* Google Button */}
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleGoogleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="google" size={RF(24)} color="#EA4335" />
-
-              <Text style={styles.socialText}>Login with Google</Text>
-
-              <Ionicons
-                name="chevron-forward"
-                size={RF(22)}
-                color={Colors.primary}
-              />
-            </TouchableOpacity>
-
-            {/* Facebook Button */}
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleFacebookLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="facebook" size={RF(24)} color="#1877F2" />
-
-              <Text style={styles.socialText}>Login with Facebook</Text>
-
-              <Ionicons
-                name="chevron-forward"
-                size={RF(22)}
-                color={Colors.primary}
-              />
-            </TouchableOpacity>
           </View>
         </SafeAreaView>
       </ImageBackground>

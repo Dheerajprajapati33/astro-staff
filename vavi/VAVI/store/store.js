@@ -17,16 +17,52 @@ import { numerologyApi } from "../redux/numerologyApi";
 import { updateApi } from "../redux/updateApi";
 import { walletApi } from "../redux/walletApi";
 
+import { performClientLogoutVavi } from "../utils/auth";
+
+let lastLoginTime = 0;
+
+export const recordFreshLogin = () => {
+  lastLoginTime = Date.now();
+  console.log("[Store] Fresh login recorded at timestamp:", lastLoginTime);
+};
+
 const authErrorMiddleware = (store) => (next) => (action) => {
-  if (action?.payload?.status === 401) {
-    console.log("Unauthorized (401) detected, logging out...");
-    AsyncStorage.multiRemove(["userData", "token", "user"])
-      .then(() => {
-        router.replace("/(auth)/login");
+  const result = next(action);
+
+  // Check for protected endpoint HTTP 401 Unauthorized errors
+  if (
+    action?.type?.endsWith("/rejected") &&
+    action?.payload?.status === 401 &&
+    !action?.type?.startsWith("authApi/")
+  ) {
+    // Ignore pre-login 401 errors arriving right after a fresh login transition (within 4 seconds)
+    if (Date.now() - lastLoginTime < 4000) {
+      console.log(
+        "[Store Middleware] Ignoring stale pre-login 401 action right after fresh login:",
+        action.type,
+      );
+      return result;
+    }
+
+    // Only trigger auto-logout if user actually has an active session stored
+    AsyncStorage.getItem("userData")
+      .then((userData) => {
+        if (userData) {
+          const parsed = JSON.parse(userData);
+          if (parsed?.token) {
+            console.log(
+              "Unauthorized (401) on protected API detected:",
+              action.type,
+              "- logging out...",
+            );
+            performClientLogoutVavi();
+          }
+        }
       })
-      .catch((err) => console.log("Failed to clear userData on 401:", err));
+      .catch((err) => console.log("Failed to check userData on 401:", err));
   }
-  return next(action);
+
+  return result;
 };
 
 export const store = configureStore({

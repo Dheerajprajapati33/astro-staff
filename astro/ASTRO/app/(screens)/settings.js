@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
+import { performClientLogout } from "../../utils/auth";
 
 const ORANGE = "#ff6a00";
 const RED = "#ff2d2d";
@@ -28,15 +29,9 @@ const settingsData = [
 ];
 const handleLogout = async () => {
   try {
-    await AsyncStorage.removeItem("userData");
-
-    await AsyncStorage.removeItem("token");
-
-    await AsyncStorage.removeItem("user");
+    await performClientLogout();
 
     Alert.alert("Logout Successful", "You have been logged out.");
-
-    router.replace("/(auth)/login");
   } catch (error) {
     console.log("LOGOUT ERROR:", error);
 

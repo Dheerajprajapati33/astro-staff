@@ -15,12 +15,14 @@ import {
 
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ChatInputBar({
   disabled,
   onSend,
   onTyping,
 }) {
+  const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [isListening, setIsListening] =
     useState(false);
@@ -314,7 +316,10 @@ export default function ChatInputBar({
       {/* ====================================== */}
 
       <View
-        style={styles.container}
+        style={[
+          styles.container,
+          { paddingBottom: Math.max(insets.bottom, hp(0.8)) },
+        ]}
       >
         <TextInput
           style={styles.input}

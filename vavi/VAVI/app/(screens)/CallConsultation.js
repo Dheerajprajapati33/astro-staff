@@ -45,7 +45,9 @@ try {
   const agoraModule = require("react-native-agora");
   createAgoraRtcEngine = agoraModule.createAgoraRtcEngine;
 } catch (_e) {
-  console.log("[CallConsultation] react-native-agora native module not loaded; running in web/mock mode.");
+  console.log(
+    "[CallConsultation] react-native-agora native module not loaded; running in web/mock mode.",
+  );
 }
 
 const LOG_TAG = "[CallConsultation]";
@@ -172,9 +174,14 @@ export default function CallConsultation() {
           const data = event.data;
           console.log(LOG_TAG, "BroadcastChannel message:", data);
 
-          if (data?.type === "call_started" || data?.type === "astrologer_accept_call") {
+          if (
+            data?.type === "call_started" ||
+            data?.type === "astrologer_accept_call"
+          ) {
             if (callStatus === "ringing") {
-              handleCallStarted({ maxDurationSeconds: data?.maxDurationSeconds || maxDuration });
+              handleCallStarted({
+                maxDurationSeconds: data?.maxDurationSeconds || maxDuration,
+              });
             }
           } else if (data?.type === "remote_video_frame") {
             setRemoteVideoFrame(data.frame);
@@ -195,7 +202,12 @@ export default function CallConsultation() {
   // Local Web Camera Hook
   useEffect(() => {
     let active = true;
-    if (callStatus === "connected" && Platform.OS === "web" && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    if (
+      callStatus === "connected" &&
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
       navigator.mediaDevices
         .getUserMedia({
           video: { facingMode: isFrontCamera ? "user" : "environment" },
@@ -230,9 +242,11 @@ export default function CallConsultation() {
 
   // Stream local webcam frames to the astrologer tab (Web)
   useEffect(() => {
-    if (callStatus !== "connected" || isCameraOff || Platform.OS !== "web") return;
+    if (callStatus !== "connected" || isCameraOff || Platform.OS !== "web")
+      return;
 
-    const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    const canvas =
+      typeof document !== "undefined" ? document.createElement("canvas") : null;
     if (!canvas) return;
     canvas.width = 320;
     canvas.height = 400;
@@ -242,7 +256,13 @@ export default function CallConsultation() {
       if (localVideoTagRef.current && broadcastChannelRef.current && ctx) {
         try {
           if (localVideoTagRef.current.videoWidth > 0) {
-            ctx.drawImage(localVideoTagRef.current, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+              localVideoTagRef.current,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
             const dataUrl = canvas.toDataURL("image/jpeg", 0.5);
             broadcastChannelRef.current.postMessage({
               type: "client_video_frame",
@@ -257,7 +277,10 @@ export default function CallConsultation() {
       clearInterval(interval);
       if (broadcastChannelRef.current) {
         try {
-          broadcastChannelRef.current.postMessage({ type: "client_video_frame", frame: null });
+          broadcastChannelRef.current.postMessage({
+            type: "client_video_frame",
+            frame: null,
+          });
         } catch (e) {}
       }
     };
@@ -283,7 +306,12 @@ export default function CallConsultation() {
 
   // Setup Agora RTC immediately on screen mount
   const setupAgora = useCallback(async () => {
-    if (!consultationId || callStatusRef.current === "ended" || hasJoinedAgoraRef.current) return;
+    if (
+      !consultationId ||
+      callStatusRef.current === "ended" ||
+      hasJoinedAgoraRef.current
+    )
+      return;
     hasJoinedAgoraRef.current = true;
 
     try {
@@ -294,20 +322,46 @@ export default function CallConsultation() {
         ]);
       }
 
-      let targetToken = Array.isArray(params?.agoraToken) ? params.agoraToken[0] : params?.agoraToken;
-      let targetChannelName = Array.isArray(params?.channelName) ? params.channelName[0] : params?.channelName;
-      let targetUid = Number(Array.isArray(params?.userUid) ? params.userUid[0] : params?.userUid) || 1;
+      let targetToken = Array.isArray(params?.agoraToken)
+        ? params.agoraToken[0]
+        : params?.agoraToken;
+      let targetChannelName = Array.isArray(params?.channelName)
+        ? params.channelName[0]
+        : params?.channelName;
+      let targetUid =
+        Number(
+          Array.isArray(params?.userUid) ? params.userUid[0] : params?.userUid,
+        ) || 1;
 
       if (!targetToken) {
-        console.log(LOG_TAG, "No initial params token, fetching User Agora token for:", consultationId);
+        console.log(
+          LOG_TAG,
+          "No initial params token, fetching User Agora token for:",
+          consultationId,
+        );
         try {
-          const tokenRes = await getCallToken({ consultationId, uid: 1, role: "user" }).unwrap();
-          const agoraData = tokenRes?.data?.agora || tokenRes?.agora || tokenRes?.data || tokenRes;
+          const tokenRes = await getCallToken({
+            consultationId,
+            uid: 1,
+            role: "user",
+          }).unwrap();
+          const agoraData =
+            tokenRes?.data?.agora ||
+            tokenRes?.agora ||
+            tokenRes?.data ||
+            tokenRes;
           targetToken = agoraData?.userToken || agoraData?.token || "";
-          targetChannelName = agoraData?.channelName || targetChannelName || `call_${consultationId}`;
+          targetChannelName =
+            agoraData?.channelName ||
+            targetChannelName ||
+            `call_${consultationId}`;
           targetUid = Number(agoraData?.userUid || agoraData?.uid) || 1;
         } catch (tokenErr) {
-          console.log(LOG_TAG, "Token fetch notice:", tokenErr?.message || tokenErr);
+          console.log(
+            LOG_TAG,
+            "Token fetch notice:",
+            tokenErr?.message || tokenErr,
+          );
         }
       }
 
@@ -315,7 +369,15 @@ export default function CallConsultation() {
       targetChannelName = targetChannelName || `call_${consultationId}`;
 
       if (createAgoraRtcEngine) {
-        console.log(LOG_TAG, "Joining Agora 2-Way Voice/Video Call as User on mount:", targetChannelName, "uid:", targetUid, "tokenPresent:", !!targetToken);
+        console.log(
+          LOG_TAG,
+          "Joining Agora 2-Way Voice/Video Call as User on mount:",
+          targetChannelName,
+          "uid:",
+          targetUid,
+          "tokenPresent:",
+          !!targetToken,
+        );
 
         const engine = createAgoraRtcEngine();
         agoraEngineRef.current = engine;
@@ -328,21 +390,46 @@ export default function CallConsultation() {
         if (engine.registerEventHandler) {
           engine.registerEventHandler({
             onJoinChannelSuccess: (connection, elapsed) => {
-              console.log(LOG_TAG, "Agora User onJoinChannelSuccess:", connection.channelId);
+              console.log(
+                LOG_TAG,
+                "Agora User onJoinChannelSuccess:",
+                connection.channelId,
+              );
               if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-              if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
-              if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
-              if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-              if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+              if (engine.setDefaultAudioRouteToSpeakerphone)
+                engine.setDefaultAudioRouteToSpeakerphone(true);
+              if (engine.setEnableSpeakerphone)
+                engine.setEnableSpeakerphone(true);
+              if (engine.muteLocalAudioStream)
+                engine.muteLocalAudioStream(false);
+              if (engine.muteAllRemoteAudioStreams)
+                engine.muteAllRemoteAudioStreams(false);
             },
             onUserJoined: (connection, remoteUid, elapsed) => {
-              console.log(LOG_TAG, "Agora User onUserJoined remoteUid:", remoteUid);
+              console.log(
+                LOG_TAG,
+                "Agora User onUserJoined remoteUid:",
+                remoteUid,
+              );
               setCallStatus("connected");
               setPeerConnected(true);
-              if (engine.muteRemoteAudioStream) engine.muteRemoteAudioStream(remoteUid, false);
+              if (engine.muteRemoteAudioStream)
+                engine.muteRemoteAudioStream(remoteUid, false);
             },
-            onRemoteAudioStateChanged: (connection, remoteUid, state, reason, elapsed) => {
-              console.log(LOG_TAG, "Agora User onRemoteAudioStateChanged:", remoteUid, state, reason);
+            onRemoteAudioStateChanged: (
+              connection,
+              remoteUid,
+              state,
+              reason,
+              elapsed,
+            ) => {
+              console.log(
+                LOG_TAG,
+                "Agora User onRemoteAudioStateChanged:",
+                remoteUid,
+                state,
+                reason,
+              );
             },
             onError: (err, msg) => {
               console.log(LOG_TAG, "Agora User RTC Error:", err, msg);
@@ -354,14 +441,18 @@ export default function CallConsultation() {
         if (engine.setClientRole) engine.setClientRole(1);
         engine.enableAudio();
         if (engine.enableLocalAudio) engine.enableLocalAudio(true);
-        if (engine.setDefaultAudioRouteToSpeakerphone) engine.setDefaultAudioRouteToSpeakerphone(true);
+        if (engine.setDefaultAudioRouteToSpeakerphone)
+          engine.setDefaultAudioRouteToSpeakerphone(true);
         if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
         engine.enableVideo();
 
-        if (engine.adjustRecordingSignalVolume) engine.adjustRecordingSignalVolume(100);
-        if (engine.adjustPlaybackSignalVolume) engine.adjustPlaybackSignalVolume(100);
+        if (engine.adjustRecordingSignalVolume)
+          engine.adjustRecordingSignalVolume(100);
+        if (engine.adjustPlaybackSignalVolume)
+          engine.adjustPlaybackSignalVolume(100);
         if (engine.muteLocalAudioStream) engine.muteLocalAudioStream(false);
-        if (engine.muteAllRemoteAudioStreams) engine.muteAllRemoteAudioStreams(false);
+        if (engine.muteAllRemoteAudioStreams)
+          engine.muteAllRemoteAudioStreams(false);
 
         engine.startPreview();
 
@@ -403,7 +494,8 @@ export default function CallConsultation() {
       }, 1000);
 
       // Duration Timer
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       durationIntervalRef.current = setInterval(() => {
         callDurationSecondsRef.current += 1;
         setCallDurationSeconds(callDurationSecondsRef.current);
@@ -417,20 +509,24 @@ export default function CallConsultation() {
     (data) => {
       console.log(LOG_TAG, "call_ended event received:", data);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       cleanupAgora();
       setCallStatus("ended");
 
       // Calculate amount deducted based on duration & rate
       const mins = Math.max(1, Math.ceil(callDurationSecondsRef.current / 60));
       const rate = Number(ratePerMinute) || 25;
-      const totalAmount = data?.amount || data?.consultation?.amount || mins * rate;
+      const totalAmount =
+        data?.amount || data?.consultation?.amount || mins * rate;
       setAmountDeducted(totalAmount);
 
       if (data?.userMessage) {
         setUserMessage(data.userMessage);
       } else if (data?.reason === "balance_exhausted") {
-        setUserMessage("Call ended automatically because your wallet balance was exhausted. Please recharge.");
+        setUserMessage(
+          "Call ended automatically because your wallet balance was exhausted. Please recharge.",
+        );
       }
 
       setShowSummaryModal(true);
@@ -454,22 +550,32 @@ export default function CallConsultation() {
   useEffect(() => {
     if (!consultationId || callStatus === "ended") return;
 
-    const consultationsList = Array.isArray(consultationHistoryData?.data?.consultations)
+    const consultationsList = Array.isArray(
+      consultationHistoryData?.data?.consultations,
+    )
       ? consultationHistoryData.data.consultations
       : Array.isArray(consultationHistoryData?.consultations)
-      ? consultationHistoryData.consultations
-      : Array.isArray(consultationHistoryData?.data)
-      ? consultationHistoryData.data
-      : [];
+        ? consultationHistoryData.consultations
+        : Array.isArray(consultationHistoryData?.data)
+          ? consultationHistoryData.data
+          : [];
 
     const match = consultationsList.find((c) => c.id === consultationId);
     if (!match) return;
 
     if (match.status === "ongoing" && callStatus === "ringing") {
-      console.log(LOG_TAG, "Consultation is ongoing — starting 2-way video call!");
+      console.log(
+        LOG_TAG,
+        "Consultation is ongoing — starting 2-way video call!",
+      );
       handleCallStartedRef.current?.({ maxDurationSeconds: match.maxDuration });
-    } else if (["completed", "missed", "cancelled"].includes(match.status) && callStatus !== "ended") {
-      handleCallEndedEventRef.current?.({ message: `Call was ${match.status}.` });
+    } else if (
+      ["completed", "missed", "cancelled"].includes(match.status) &&
+      callStatus !== "ended"
+    ) {
+      handleCallEndedEventRef.current?.({
+        message: `Call was ${match.status}.`,
+      });
     }
   }, [consultationHistoryData, consultationId, callStatus]);
 
@@ -480,7 +586,12 @@ export default function CallConsultation() {
 
   // Step 2: Setup Socket
   useEffect(() => {
-    if (!consultationId || !currentUser?.id || callStatusRef.current === "ended") return;
+    if (
+      !consultationId ||
+      !currentUser?.id ||
+      callStatusRef.current === "ended"
+    )
+      return;
 
     let isMounted = true;
 
@@ -516,7 +627,8 @@ export default function CallConsultation() {
   useEffect(() => {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+      if (durationIntervalRef.current)
+        clearInterval(durationIntervalRef.current);
       cleanupAgora();
     };
   }, [cleanupAgora]);
@@ -526,7 +638,9 @@ export default function CallConsultation() {
     const next = !isMuted;
     setIsMuted(next);
     if (localWebStreamRef.current) {
-      localWebStreamRef.current.getAudioTracks().forEach((t) => (t.enabled = !next));
+      localWebStreamRef.current
+        .getAudioTracks()
+        .forEach((t) => (t.enabled = !next));
     }
     if (agoraEngineRef.current?.muteLocalAudioStream) {
       agoraEngineRef.current.muteLocalAudioStream(next);
@@ -537,7 +651,9 @@ export default function CallConsultation() {
     const next = !isCameraOff;
     setIsCameraOff(next);
     if (localWebStreamRef.current) {
-      localWebStreamRef.current.getVideoTracks().forEach((t) => (t.enabled = !next));
+      localWebStreamRef.current
+        .getVideoTracks()
+        .forEach((t) => (t.enabled = !next));
     }
     if (agoraEngineRef.current?.muteLocalVideoStream) {
       agoraEngineRef.current.muteLocalVideoStream(next);
@@ -586,14 +702,24 @@ export default function CallConsultation() {
     const onBackPress = () => {
       if (callStatus === "connected") {
         if (Platform.OS === "web") {
-          if (window.confirm("Do you want to end this video call consultation?")) {
+          if (
+            window.confirm("Do you want to end this video call consultation?")
+          ) {
             handleEndCall("client_hung_up");
           }
         } else {
-          Alert.alert("End Consultation", "Are you sure you want to end this video call?", [
-            { text: "Cancel", style: "cancel" },
-            { text: "End Call", style: "destructive", onPress: () => handleEndCall("client_hung_up") },
-          ]);
+          Alert.alert(
+            "End Consultation",
+            "Are you sure you want to end this video call?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "End Call",
+                style: "destructive",
+                onPress: () => handleEndCall("client_hung_up"),
+              },
+            ],
+          );
         }
         return true;
       }
@@ -616,16 +742,23 @@ export default function CallConsultation() {
         <SafeAreaView style={styles.ringingSafeArea}>
           <View style={styles.ringingHeader}>
             <Text style={styles.callingLabel}>Calling Astrologer...</Text>
-            <Text style={styles.waitingSub}>Connecting 2-Way Video Consultation</Text>
+            <Text style={styles.waitingSub}>Connecting</Text>
           </View>
 
           <View style={styles.avatarCenterWrap}>
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <Animated.View
+              style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
+            />
             <View style={styles.ringingAvatarCircle}>
-              <Image source={astrologerImgSource} style={styles.ringingAvatarImg} />
+              <Image
+                source={astrologerImgSource}
+                style={styles.ringingAvatarImg}
+              />
             </View>
             <Text style={styles.astrologerNameRinging}>{astrologerName}</Text>
-            <Text style={styles.rateBadgeText}>₹{ratePerMinute}/min • Private Zoom Video Call</Text>
+            <Text style={styles.rateBadgeText}>
+              ₹{ratePerMinute}/min • Voice Call
+            </Text>
           </View>
 
           <View style={styles.ringingActions}>
@@ -634,7 +767,12 @@ export default function CallConsultation() {
               onPress={() => handleEndCall("cancelled_by_user")}
               activeOpacity={0.85}
             >
-              <Ionicons name="call" size={RF(28)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
+              <Ionicons
+                name="call"
+                size={RF(28)}
+                color="#fff"
+                style={{ transform: [{ rotate: "135deg" }] }}
+              />
             </TouchableOpacity>
             <Text style={styles.cancelLabel}>Cancel</Text>
           </View>
@@ -651,8 +789,12 @@ export default function CallConsultation() {
             <View style={styles.hostHeaderBadge}>
               <Image source={astrologerImgSource} style={styles.smallAvatar} />
               <View>
-                <Text style={styles.headerHostName} numberOfLines={1}>{astrologerName}</Text>
-                <Text style={styles.headerRateText}>₹{ratePerMinute}/min • Voice Call</Text>
+                <Text style={styles.headerHostName} numberOfLines={1}>
+                  {astrologerName}
+                </Text>
+                <Text style={styles.headerRateText}>
+                  ₹{ratePerMinute}/min • Voice Call
+                </Text>
               </View>
             </View>
 
@@ -664,25 +806,39 @@ export default function CallConsultation() {
 
           {/* Centered WhatsApp-Style Voice Avatar with Pulse Animation */}
           <View style={styles.voiceAvatarCenterWrap}>
-            <Animated.View style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]} />
+            <Animated.View
+              style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
+            />
             <View style={styles.voiceAvatarCircle}>
-              <Image source={astrologerImgSource} style={styles.voiceAvatarImg} />
+              <Image
+                source={astrologerImgSource}
+                style={styles.voiceAvatarImg}
+              />
             </View>
             <Text style={styles.voiceAstrologerName}>{astrologerName}</Text>
-            <Text style={styles.voiceSubStatus}>Voice Consultation Connected</Text>
-            
+            <Text style={styles.voiceSubStatus}>
+              Voice Consultation Connected
+            </Text>
+
             {/* Client Icon Badge */}
             <View style={styles.clientBadgeBox}>
               <Ionicons name="person-circle" size={RF(22)} color="#ff6a00" />
-              <Text style={styles.clientBadgeText}>You ({currentUser?.name || "Client"})</Text>
+              <Text style={styles.clientBadgeText}>
+                You ({currentUser?.name || "Client"})
+              </Text>
             </View>
 
             {/* Low Balance Warning Banner */}
             {secondsLeft <= 60 && callStatus === "connected" && (
               <View style={styles.warningBanner}>
-                <Ionicons name="warning-outline" size={RF(16)} color="#fdba74" />
+                <Ionicons
+                  name="warning-outline"
+                  size={RF(16)}
+                  color="#fdba74"
+                />
                 <Text style={styles.warningText}>
-                  ⚠️ Less than 1 minute remaining! Call will auto-end when balance is exhausted.
+                  ⚠️ Less than 1 minute remaining! Call will auto-end when
+                  balance is exhausted.
                 </Text>
               </View>
             )}
@@ -696,8 +852,14 @@ export default function CallConsultation() {
               onPress={handleToggleMute}
               activeOpacity={0.8}
             >
-              <Ionicons name={isMuted ? "mic-off" : "mic"} size={RF(24)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>{isMuted ? "Unmute" : "Mute"}</Text>
+              <Ionicons
+                name={isMuted ? "mic-off" : "mic"}
+                size={RF(24)}
+                color="#fff"
+              />
+              <Text style={styles.controlBtnLabel}>
+                {isMuted ? "Unmute" : "Mute"}
+              </Text>
             </TouchableOpacity>
 
             {/* Speaker Toggle */}
@@ -706,8 +868,14 @@ export default function CallConsultation() {
               onPress={handleToggleSpeaker}
               activeOpacity={0.8}
             >
-              <Ionicons name={isSpeaker ? "volume-high" : "volume-mute"} size={RF(24)} color="#fff" />
-              <Text style={styles.controlBtnLabel}>{isSpeaker ? "Speaker" : "Ear-piece"}</Text>
+              <Ionicons
+                name={isSpeaker ? "volume-high" : "volume-mute"}
+                size={RF(24)}
+                color="#fff"
+              />
+              <Text style={styles.controlBtnLabel}>
+                {isSpeaker ? "Speaker" : "Ear-piece"}
+              </Text>
             </TouchableOpacity>
 
             {/* End Call Button */}
@@ -716,7 +884,12 @@ export default function CallConsultation() {
               onPress={() => handleEndCall("client_hung_up")}
               activeOpacity={0.85}
             >
-              <Ionicons name="call" size={RF(26)} color="#fff" style={{ transform: [{ rotate: "135deg" }] }} />
+              <Ionicons
+                name="call"
+                size={RF(26)}
+                color="#fff"
+                style={{ transform: [{ rotate: "135deg" }] }}
+              />
               <Text style={styles.endBtnLabel}>End</Text>
             </TouchableOpacity>
           </View>
@@ -735,12 +908,15 @@ export default function CallConsultation() {
 
             <Text style={styles.summaryTitle}>Consultation Completed</Text>
             <Text style={styles.summarySub}>
-              {userMessage || `Your private session with ${astrologerName} has ended.`}
+              {userMessage ||
+                `Your private session with ${astrologerName} has ended.`}
             </Text>
 
             <View style={styles.summaryStatsGrid}>
               <View style={styles.summaryBox}>
-                <Text style={styles.summaryVal}>{formatTimer(callDurationSeconds)}</Text>
+                <Text style={styles.summaryVal}>
+                  {formatTimer(callDurationSeconds)}
+                </Text>
                 <Text style={styles.summaryLbl}>Duration</Text>
               </View>
               <View style={styles.summaryBox}>

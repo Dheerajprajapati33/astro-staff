@@ -20,6 +20,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Colors from "../../constants/Colors";
 import { useLoginMutation, useVerifyOtpMutation } from "../../redux/authApi";
 import { hp, RF, wp } from "../../utils/responsive";
+import { recordFreshLogin } from "../../store/store";
+import { resetAllApiStatesVavi } from "../../utils/auth";
 
 export default function Otp() {
   const params = useLocalSearchParams();
@@ -223,6 +225,9 @@ export default function Otp() {
         role: user?.role || role || "user",
       };
 
+      recordFreshLogin();
+      resetAllApiStatesVavi();
+
       await AsyncStorage.setItem("userData", JSON.stringify(userData));
 
       await AsyncStorage.setItem("token", token);
@@ -231,7 +236,7 @@ export default function Otp() {
 
       console.log("User data saved successfully");
 
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/consult");
     } catch (error) {
       console.log("Verify OTP API Error:", error);
 
