@@ -35,6 +35,7 @@ import {
   endChatSession,
   forceReconnectChatSocket,
   getChatSocket,
+  getConnectionStatus,
   joinChatSession,
   onConnectionStatusChange,
   removeChatListeners,
@@ -407,9 +408,29 @@ export default function ChatConsultation() {
       }
 
       console.log(LOG_TAG, "App resumed, forcing chat socket reconnect");
+      const socket = getChatSocket();
+      const isConnected =
+        socket?.connected || getConnectionStatus() === "connected";
 
       forceReconnectChatSocket();
       refetchConsultationHistoryRef.current?.();
+      if (!isConnected) {
+        console.log(
+          LOG_TAG,
+          "App resumed and socket is disconnected, forcing chat socket reconnect",
+        );
+        if (typeof forceReconnectChatSocket === "function") {
+          forceReconnectChatSocket();
+        } else if (typeof connectChatSocket === "function") {
+          connectChatSocket();
+        }
+        refetchConsultationHistoryRef.current?.();
+      } else {
+        console.log(
+          LOG_TAG,
+          "App resumed but socket is already active/connected. Skipping disruptive reconnect.",
+        );
+      }
     };
 
     const subscription = AppState.addEventListener(

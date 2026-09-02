@@ -6,6 +6,8 @@ import {
 import { useEffect, useState } from "react";
 import {
   Alert,
+  PermissionsAndroid,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -163,21 +165,61 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
 
     // ----------------------------------------
     // CHECK PERMISSION
+    // CHECK PERMISSION SAFELY
     // ----------------------------------------
 
     try {
+      if (Platform.OS === "android") {
+        try {
+          const micGranted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: "Microphone Permission",
+              message: "Vavi needs microphone access to convert your voice to text.",
+              buttonPositive: "Allow",
+            }
+          );
+
+          if (micGranted !== PermissionsAndroid.RESULTS.GRANTED) {
+            Alert.alert(
+              "Microphone Access Needed",
+              "Please allow microphone permission to use voice typing."
+            );
+            return;
+          }
+        } catch (androidPermErr) {
+          console.log("[Speech] Android permission request notice:", androidPermErr);
+        }
+      }
+
       const permission =
         await ExpoSpeechRecognitionModule.requestPermissionsAsync();
 
       console.log("[Speech] Permission:", permission);
 
       if (!permission.granted) {
+      if (!permission?.granted && permission?.status !== "granted") {
         Alert.alert(
           "Microphone Access Needed",
           "Please allow microphone and speech recognition access to use voice typing.",
+          "Please allow microphone and speech recognition access to use voice typing."
         );
 
         return;
+      }
+
+      // Check if recognition is available on this device
+      try {
+        const isAvailable = await ExpoSpeechRecognitionModule.isRecognitionAvailable();
+        if (!isAvailable) {
+          Alert.alert(
+            "Voice Typing Unavailable",
+            "Speech recognition service is not available on this device."
+          );
+          return;
+        }
+      } catch (availErr) {
+        console.log("[Speech] Availability check notice:", availErr);
       }
 
       // --------------------------------------
@@ -197,14 +239,29 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
 
         addsPunctuation: true,
       });
+      try {
+        ExpoSpeechRecognitionModule.start({
+          lang: "en-US",
+          interimResults: true,
+          maxAlternatives: 1,
+          continuous: false,
+          addsPunctuation: true,
+        });
+      } catch (startErr) {
+        console.log("[Speech] Start error:", startErr);
+        setIsListening(false);
+      }
     } catch (error) {
       console.error("[Speech] Start error:", error);
+      console.error("[Speech] Main error:", error);
 
       setIsListening(false);
 
       Alert.alert(
         "Voice Typing Error",
         "Unable to start voice typing. Please check your microphone permission.",
+        "Voice Typing Notice",
+        "Unable to start voice typing. Please check your microphone permission."
       );
     }
   };
