@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -10,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Alert } from "react-native";
 
 import { SafeAreaView } from "react-native-safe-area-context";
 

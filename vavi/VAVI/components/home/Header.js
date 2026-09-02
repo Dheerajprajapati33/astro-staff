@@ -1,5 +1,7 @@
+import React, { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import Colors from "../../constants/Colors";
@@ -7,22 +9,46 @@ import { hp, RF, wp } from "../../utils/responsive";
 import { useGetWalletBalanceQuery } from "../../redux/walletApi";
 
 export default function Header() {
+  const segments = useSegments();
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments]);
+
   const { data: balanceData } = useGetWalletBalanceQuery(undefined, {
-    pollingInterval: 10000,
+    skip: !hasToken || segments?.[0] === "(auth)",
   });
 
-  const rawBalance = balanceData?.data?.balance ?? balanceData?.balance ?? 0;
+  const rawBalance =
+    balanceData?.data?.balance ??
+    balanceData?.balance ??
+    balanceData?.data?.walletBalance ??
+    0;
   const balance = Number(rawBalance) || 0;
 
   return (
     <View style={styles.container}>
-      {/* Wallet Pill Button (InstaAstro Style) */}
+      {/* Wallet Button */}
       <TouchableOpacity
         style={styles.walletPill}
         onPress={() => router.push("/Wallet")}
         activeOpacity={0.8}
       >
-        <Ionicons name="wallet-outline" size={RF(22)} color="#ffffff" />
+        <Ionicons name="wallet-outline" size={RF(20)} color="#ffffff" />
         <Text style={styles.walletBalanceText}>₹{balance}</Text>
       </TouchableOpacity>
 
@@ -66,8 +92,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#22c55e",
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.9),
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(0.8),
     borderRadius: wp(5),
     zIndex: 20,
   },

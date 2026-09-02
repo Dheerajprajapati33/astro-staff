@@ -3,11 +3,9 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Platform,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,15 +13,18 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Colors from "../../constants/Colors";
-import { resolveImageUri } from "../../config/api";
 import { RF, hp, wp } from "../../utils/responsive";
 import BookingCard from "../../components/bookings/BookingCard";
 import BookingDetailsSheet from "../../components/bookings/BookingDetailsSheet";
-import { useGetConsultationHistoryQuery, useCreateReviewMutation } from "../../redux/consultationApi";
-import { useGetAstrologersQuery } from "../../redux/AstroApi";
+import {
+  useGetConsultationHistoryQuery,
+  useCreateReviewMutation,
+} from "../../redux/consultationApi";
 
 const ORANGE = "#ff6a00";
 
@@ -35,29 +36,53 @@ const FILTER_TABS = [
 ];
 
 export default function Bookings() {
+  const isFocused = useIsFocused();
+  const segments = useSegments();
+  const [hasToken, setHasToken] = useState(false);
   const [selectedTab, setSelectedTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [modalMode, setModalMode] = useState("details"); // "details" | "rate"
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  // Fetch Consultation History from Backend
-  const { data: historyData, isLoading, refetch, isFetching } = useGetConsultationHistoryQuery(
-    { page: 1, limit: 50 },
-    { pollingInterval: 8000 },
-  );
+  React.useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments, isFocused]);
 
-  // Fetch Top Astrologers for Empty State Carousel
-  const { data: astrologersData } = useGetAstrologersQuery({ page: 1, limit: 6 });
-  const topAstrologers = astrologersData?.data?.users || [];
+  // Fetch Consultation History from Backend (Single call on tab visit, NO continuous polling)
+  const {
+    data: historyData,
+    isLoading,
+    refetch,
+    isFetching,
+  } = useGetConsultationHistoryQuery(
+    { page: 1, limit: 50 },
+    {
+      skip: !hasToken || !isFocused || segments?.[0] === "(auth)",
+      refetchOnMountOrArgChange: true,
+    },
+  );
 
   const rawConsultations = Array.isArray(historyData?.data?.consultations)
     ? historyData.data.consultations
     : Array.isArray(historyData?.consultations)
-    ? historyData.consultations
-    : Array.isArray(historyData?.data)
-    ? historyData.data
-    : [];
+      ? historyData.consultations
+      : Array.isArray(historyData?.data)
+        ? historyData.data
+        : [];
 
   const bookingsList = rawConsultations;
 
@@ -87,7 +112,11 @@ export default function Bookings() {
   // Filter Bookings by Tab & Search Query
   const filteredBookings = useMemo(() => {
     return bookingsList.filter((item) => {
-      const type = (item?.type || item?.consultationType || "call").toLowerCase();
+      const type = (
+        item?.type ||
+        item?.consultationType ||
+        "call"
+      ).toLowerCase();
       const name = (
         item?.astrologer?.name ||
         item?.astrologerUser?.name ||
@@ -99,7 +128,8 @@ export default function Bookings() {
 
       let tabMatch = true;
       if (selectedTab === "call") {
-        tabMatch = type === "call" || type === "video_call" || type === "voice_call";
+        tabMatch =
+          type === "call" || type === "video_call" || type === "voice_call";
       } else if (selectedTab === "chat") {
         tabMatch = type === "chat";
       } else if (selectedTab === "pooja") {
@@ -107,7 +137,8 @@ export default function Bookings() {
       }
 
       const q = searchQuery.toLowerCase().trim();
-      const searchMatch = !q || name.includes(q) || problem.includes(q) || bookingId.includes(q);
+      const searchMatch =
+        !q || name.includes(q) || problem.includes(q) || bookingId.includes(q);
 
       return tabMatch && searchMatch;
     });
@@ -115,7 +146,12 @@ export default function Bookings() {
 
   const [createReview] = useCreateReviewMutation();
 
-  const handleReviewSubmit = async ({ consultationId, astrologerId, rating, review }) => {
+  const handleReviewSubmit = async ({
+    consultationId,
+    astrologerId,
+    rating,
+    review,
+  }) => {
     try {
       await createReview({
         astrologerId,
@@ -126,7 +162,10 @@ export default function Bookings() {
       Alert.alert("Thank You!", "Your review has been submitted successfully.");
     } catch (err) {
       console.log("Submit review error:", err);
-      Alert.alert("Review Submitted", "Thank you for rating your consultation experience!");
+      Alert.alert(
+        "Review Submitted",
+        "Thank you for rating your consultation experience!",
+      );
     }
   };
 
@@ -148,7 +187,9 @@ export default function Bookings() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>My Bookings</Text>
-          <Text style={styles.headerSubtitle}>History of consultations & services</Text>
+          <Text style={styles.headerSubtitle}>
+            History of consultations & services
+          </Text>
         </View>
 
         <TouchableOpacity
@@ -168,8 +209,12 @@ export default function Bookings() {
           onPress={() => {
             const type = (activeSession?.type || "call").toLowerCase();
             router.push({
-              pathname: type === "chat" ? "/ChatConsultation" : "/CallConsultation",
-              params: { consultationId: activeSession.id || activeSession.consultationId },
+              pathname:
+                type === "chat" ? "/ChatConsultation" : "/CallConsultation",
+              params: {
+                consultationId:
+                  activeSession.id || activeSession.consultationId,
+              },
             });
           }}
           activeOpacity={0.9}
@@ -178,8 +223,12 @@ export default function Bookings() {
             <Ionicons name="radio-button-on" size={RF(18)} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.activeAlertTitle}>Consultation Session In Progress</Text>
-            <Text style={styles.activeAlertSub}>Tap to return to live session</Text>
+            <Text style={styles.activeAlertTitle}>
+              Consultation Session In Progress
+            </Text>
+            <Text style={styles.activeAlertSub}>
+              Tap to return to live session
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={RF(18)} color="#fff" />
         </TouchableOpacity>
@@ -187,7 +236,12 @@ export default function Bookings() {
 
       {/* Search Input */}
       <View style={styles.searchWrap}>
-        <Ionicons name="search" size={RF(18)} color="#999" style={styles.searchIcon} />
+        <Ionicons
+          name="search"
+          size={RF(18)}
+          color="#999"
+          style={styles.searchIcon}
+        />
         <TextInput
           style={styles.searchInput}
           placeholder="Search by Astrologer or Topic..."
@@ -216,7 +270,9 @@ export default function Bookings() {
           </View>
           <View style={styles.statsDivider} />
           <View style={styles.statsCol}>
-            <Text style={[styles.statsNum, { color: "#2E7D32" }]}>₹{statsMetrics.totalSpent}</Text>
+            <Text style={[styles.statsNum, { color: "#2E7D32" }]}>
+              ₹{statsMetrics.totalSpent}
+            </Text>
             <Text style={styles.statsLabel}>Total Spent</Text>
           </View>
         </View>
@@ -233,7 +289,12 @@ export default function Bookings() {
               onPress={() => setSelectedTab(tab.id)}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabChipText, isActive && styles.tabChipTextActive]}>
+              <Text
+                style={[
+                  styles.tabChipText,
+                  isActive && styles.tabChipTextActive,
+                ]}
+              >
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -244,7 +305,9 @@ export default function Bookings() {
       {/* Bookings List */}
       <FlatList
         data={filteredBookings}
-        keyExtractor={(item) => String(item.id || item.consultationId || Math.random())}
+        keyExtractor={(item) =>
+          String(item.id || item.consultationId || Math.random())
+        }
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -271,62 +334,18 @@ export default function Bookings() {
           ) : (
             <View style={styles.emptyContainer}>
               <View style={styles.emptyIconCircle}>
-                <Ionicons name="calendar-outline" size={RF(36)} color={ORANGE} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={RF(36)}
+                  color={ORANGE}
+                />
               </View>
               <Text style={styles.emptyTitle}>No Bookings Found</Text>
               <Text style={styles.emptySub}>
                 {searchQuery
                   ? "No consultations matched your search filter."
-                  : "You haven't booked any consultations yet. Connect with verified astrologers below!"}
+                  : "You haven't booked any consultations yet."}
               </Text>
-
-              {/* Recommended Top Astrologers Carousel */}
-              {topAstrologers.length > 0 && (
-                <View style={styles.recommendedSection}>
-                  <Text style={styles.recommendedTitle}>Recommended Astrologers</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.recommendedScroll}
-                  >
-                    {topAstrologers.map((astro) => {
-                      const imageSource =
-                        resolveImageUri(astro?.profilePic || astro?.profileImage) ||
-                        require("../../assets/images/placeholder.jpeg");
-
-                      return (
-                        <TouchableOpacity
-                          key={astro.id}
-                          style={styles.astroCard}
-                          onPress={() =>
-                            router.push({
-                              pathname: "/astrodetail",
-                              params: { id: astro.id, astrologerData: JSON.stringify(astro) },
-                            })
-                          }
-                          activeOpacity={0.85}
-                        >
-                          <Image source={imageSource} style={styles.astroAvatar} />
-                          <Text style={styles.astroName} numberOfLines={1}>
-                            {astro.name || "Astrologer"}
-                          </Text>
-                          <Text style={styles.astroExp} numberOfLines={1}>
-                            {astro?.expertises?.[0]?.name || "Vedic Astrology"}
-                          </Text>
-                          <View style={styles.astroPriceBadge}>
-                            <Text style={styles.astroPriceText}>
-                              ₹{astro?.callPrice || astro?.chatPrice || 25}/min
-                            </Text>
-                          </View>
-                          <View style={styles.astroConnectBtn}>
-                            <Text style={styles.astroConnectText}>Connect</Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </ScrollView>
-                </View>
-              )}
 
               <TouchableOpacity
                 style={styles.emptyCtaBtn}
@@ -530,83 +549,16 @@ const styles = StyleSheet.create({
     fontSize: RF(11.5),
     color: "#777",
     textAlign: "center",
-    marginTop: hp(0.6),
-    lineHeight: RF(17),
+    lineHeight: hp(2.3),
     marginBottom: hp(2),
-    paddingHorizontal: wp(6),
+    paddingHorizontal: wp(4),
   },
-  recommendedSection: {
-    width: "100%",
-    marginVertical: hp(1.5),
-  },
-  recommendedTitle: {
-    fontSize: RF(13.5),
-    fontWeight: "700",
-    color: "#222",
-    marginBottom: hp(1.2),
-    paddingLeft: wp(2),
-  },
-  recommendedScroll: {
-    gap: wp(3),
-    paddingHorizontal: wp(2),
-  },
-  astroCard: {
-    width: wp(34),
-    backgroundColor: "#fff",
-    borderRadius: wp(3.5),
-    padding: wp(3),
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#EAEAEA",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-  },
-  astroAvatar: {
-    width: wp(14),
-    height: wp(14),
-    borderRadius: wp(7),
-    backgroundColor: "#f0f0f0",
-    marginBottom: hp(0.8),
-  },
-  astroName: {
-    fontSize: RF(11.5),
-    fontWeight: "700",
-    color: "#222",
-    textAlign: "center",
-  },
-  astroExp: {
-    fontSize: RF(9.5),
-    color: "#777",
-    marginTop: hp(0.2),
-    textAlign: "center",
-  },
-  astroPriceBadge: {
-    backgroundColor: "#FFF8E1",
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.3),
-    borderRadius: wp(2),
-    marginTop: hp(0.6),
-  },
-  astroPriceText: {
-    fontSize: RF(10),
-    fontWeight: "700",
-    color: "#E65100",
-  },
-  astroConnectBtn: {
+  emptyCtaBtn: {
     backgroundColor: ORANGE,
-    width: "100%",
-    paddingVertical: hp(0.7),
-    borderRadius: wp(2),
+    paddingHorizontal: wp(6),
+    paddingVertical: hp(1.3),
+    borderRadius: wp(3),
     marginTop: hp(1),
-    alignItems: "center",
-  },
-  astroConnectText: {
-    color: "#fff",
-    fontSize: RF(10.5),
-    fontWeight: "700",
   },
   loadingWrap: {
     alignItems: "center",
@@ -618,12 +570,5 @@ const styles = StyleSheet.create({
     color: "#888",
     marginTop: hp(1.5),
     fontWeight: "500",
-  },
-  emptyCtaBtn: {
-    backgroundColor: ORANGE,
-    paddingHorizontal: wp(6),
-    paddingVertical: hp(1.3),
-    borderRadius: wp(3),
-    marginTop: hp(1),
   },
 });

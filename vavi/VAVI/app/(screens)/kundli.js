@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
     fontSize: RF(18),
     fontWeight: "700",
     color: "#ff5a00",
-    fontWeight: "700",
   },
   tabWrapper: {
     flexDirection: "row",
@@ -121,7 +120,6 @@ const styles = StyleSheet.create({
     fontSize: RF(10),
     color: "#111",
     fontWeight: "600",
-    fontWeight: "500",
   },
   activeTabText: {
     color: "#fff",

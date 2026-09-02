@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -63,6 +63,8 @@ const ProfileRow = ({
 };
 
 export default function Profile() {
+  const segments = useSegments();
+  const [hasToken, setHasToken] = useState(false);
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -78,6 +80,23 @@ export default function Profile() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [hasFilledProfile, setHasFilledProfile] = useState(false);
 
+  useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments]);
+
   const {
     data: profileResponse,
     isLoading: isProfileLoading,
@@ -85,7 +104,9 @@ export default function Profile() {
     isError: isProfileError,
     error: profileError,
     refetch,
-  } = useGetProfileQuery();
+  } = useGetProfileQuery(undefined, {
+    skip: !hasToken || segments?.[0] === "(auth)",
+  });
 
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
 
@@ -236,14 +257,12 @@ export default function Profile() {
       appendFormValue(formData, "birthTime", birthTime);
 
       appendFormValue(formData, "birthPlace", birthPlace);
-      formData.append("name", name);
-      formData.append("email", email);
-      formData.append("gender", gender);
-      formData.append("dob", dob);
-      formData.append("tob", tob);
-      formData.append("pob", pob);
-      formData.append("maritalStatus", maritalStatus);
-      formData.append("topicOfConcern", topicOfConcern);
+
+      appendFormValue(formData, "city", city);
+
+      appendFormValue(formData, "state", stateName);
+
+      appendFormValue(formData, "country", country);
 
       if (selectedImage?.uri) {
         formData.append("profilePic", {

@@ -1,18 +1,43 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import Colors from "../../constants/Colors";
 import { hp, wp, RF } from "../../utils/responsive";
 import { useGetWalletBalanceQuery } from "../../redux/walletApi";
 
 export default function ConsultHeader() {
+  const segments = useSegments();
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments]);
+
   const { data: balanceData } = useGetWalletBalanceQuery(undefined, {
-    pollingInterval: 10000,
+    skip: !hasToken || segments?.[0] === "(auth)",
   });
 
-  const rawBalance = balanceData?.data?.balance ?? balanceData?.balance ?? 0;
+  const rawBalance =
+    balanceData?.data?.balance ??
+    balanceData?.balance ??
+    balanceData?.data?.walletBalance ??
+    0;
   const balance = Number(rawBalance) || 0;
 
   return (
@@ -30,7 +55,7 @@ export default function ConsultHeader() {
 
       {/* Right Buttons */}
       <View style={styles.rightContainer}>
-        {/* Wallet Pill (InstaAstro Green Style) */}
+        {/* Wallet Pill Button */}
         <TouchableOpacity
           activeOpacity={0.8}
           style={styles.walletPill}

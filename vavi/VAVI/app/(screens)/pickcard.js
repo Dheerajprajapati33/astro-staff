@@ -134,7 +134,6 @@ const styles = StyleSheet.create({
     fontSize: RF(18),
     fontWeight: "700",
     color: "#ff5a00",
-    fontWeight: "700",
   },
   sparkle: {
     fontSize: RF(22),
@@ -163,7 +162,6 @@ const styles = StyleSheet.create({
     color: "#252525",
     textAlign: "center",
     fontWeight: "700",
-    fontWeight: "700",
   },
   orange: {
     color: "#ff5a00",
@@ -172,7 +170,6 @@ const styles = StyleSheet.create({
     fontSize: RF(10),
     color: "#999",
     marginTop: hp(0.6),
-    fontWeight: "600",
     fontWeight: "500",
   },
   green: {
@@ -234,7 +231,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

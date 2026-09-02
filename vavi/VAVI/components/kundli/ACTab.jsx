@@ -96,7 +96,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111",
     marginBottom: hp(1.5),
-    fontWeight: "700",
   },
   pillRow: {
     flexDirection: "row",
@@ -120,7 +119,6 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: RF(10),
     color: "#111",
-    fontWeight: "600",
     fontWeight: "500",
   },
   activeText: {
@@ -181,13 +179,11 @@ const styles = StyleSheet.create({
     fontSize: RF(17),
     color: "#0b6b1c",
     fontWeight: "700",
-    fontWeight: "700",
   },
   numText: {
     position: "absolute",
     fontSize: RF(10),
     color: "#111",
-    fontWeight: "600",
     fontWeight: "500",
   },
   desc: {
@@ -207,7 +203,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

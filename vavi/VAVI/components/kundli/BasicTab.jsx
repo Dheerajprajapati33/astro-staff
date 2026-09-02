@@ -93,7 +93,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#ff5a00",
     marginBottom: hp(1),
-    fontWeight: "700",
   },
   card: {
     borderWidth: 1,
@@ -149,12 +148,10 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: RF(16),
     fontWeight: "700",
-    fontWeight: "700",
   },
   name: {
     color: "#ff5a00",
     fontSize: RF(12),
-    fontWeight: "700",
     fontWeight: "700",
   },
   desc: {
@@ -174,7 +171,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

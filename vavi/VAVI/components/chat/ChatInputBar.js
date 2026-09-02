@@ -17,109 +17,69 @@ import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function ChatInputBar({
-  disabled,
-  onSend,
-  onTyping,
-}) {
+export default function ChatInputBar({ disabled, onSend, onTyping }) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
-  const [isListening, setIsListening] =
-    useState(false);
+  const [isListening, setIsListening] = useState(false);
 
   // ==========================================
   // SPEECH STARTED
   // ==========================================
 
-  useSpeechRecognitionEvent(
-    "start",
-    () => {
-      console.log(
-        "[Speech] Recognition started",
-      );
+  useSpeechRecognitionEvent("start", () => {
+    console.log("[Speech] Recognition started");
 
-      setIsListening(true);
-    },
-  );
+    setIsListening(true);
+  });
 
   // ==========================================
   // SPEECH RESULT
   // ==========================================
 
-  useSpeechRecognitionEvent(
-    "result",
-    (event) => {
-      console.log(
-        "[Speech] Result:",
-        event.results,
-      );
+  useSpeechRecognitionEvent("result", (event) => {
+    console.log("[Speech] Result:", event.results);
 
-      const transcript =
-        event.results?.[0]?.transcript;
+    const transcript = event.results?.[0]?.transcript;
 
-      if (
-        transcript !== undefined &&
-        transcript !== null
-      ) {
-        setText(transcript);
+    if (transcript !== undefined && transcript !== null) {
+      setText(transcript);
 
-        onTyping?.(
-          transcript.trim().length > 0,
-        );
-      }
-    },
-  );
+      onTyping?.(transcript.trim().length > 0);
+    }
+  });
 
   // ==========================================
   // SPEECH ENDED
   // ==========================================
 
-  useSpeechRecognitionEvent(
-    "end",
-    () => {
-      console.log(
-        "[Speech] Recognition ended",
-      );
+  useSpeechRecognitionEvent("end", () => {
+    console.log("[Speech] Recognition ended");
 
-      setIsListening(false);
+    setIsListening(false);
 
-      onTyping?.(false);
-    },
-  );
+    onTyping?.(false);
+  });
 
   // ==========================================
   // SPEECH ERROR
   // ==========================================
 
-  useSpeechRecognitionEvent(
-    "error",
-    (event) => {
-      console.log(
-        "[Speech] Error:",
-        event.error,
-        event.message,
+  useSpeechRecognitionEvent("error", (event) => {
+    console.log("[Speech] Error:", event.error, event.message);
+
+    setIsListening(false);
+
+    onTyping?.(false);
+
+    if (event.error === "not-allowed") {
+      Alert.alert(
+        "Microphone Permission",
+        "Please allow microphone permission to use voice typing.",
       );
-
-      setIsListening(false);
-
-      onTyping?.(false);
-
-      if (
-        event.error === "not-allowed"
-      ) {
-        Alert.alert(
-          "Microphone Permission",
-          "Please allow microphone permission to use voice typing.",
-        );
-      } else if (
-        event.error === "no-speech"
-      ) {
-        console.log(
-          "[Speech] No speech detected.",
-        );
-      }
-    },
-  );
+    } else if (event.error === "no-speech") {
+      console.log("[Speech] No speech detected.");
+    }
+  });
 
   // ==========================================
   // CLEANUP
@@ -130,10 +90,7 @@ export default function ChatInputBar({
       try {
         ExpoSpeechRecognitionModule.stop();
       } catch (error) {
-        console.log(
-          "[Speech] Cleanup error:",
-          error,
-        );
+        console.log("[Speech] Cleanup error:", error);
       }
     };
   }, []);
@@ -142,14 +99,10 @@ export default function ChatInputBar({
   // TEXT INPUT
   // ==========================================
 
-  const handleChangeText = (
-    value,
-  ) => {
+  const handleChangeText = (value) => {
     setText(value);
 
-    onTyping?.(
-      value.trim().length > 0,
-    );
+    onTyping?.(value.trim().length > 0);
   };
 
   // ==========================================
@@ -157,13 +110,9 @@ export default function ChatInputBar({
   // ==========================================
 
   const handleSend = () => {
-    const trimmed =
-      text.trim();
+    const trimmed = text.trim();
 
-    if (
-      !trimmed ||
-      disabled
-    ) {
+    if (!trimmed || disabled) {
       return;
     }
 
@@ -172,10 +121,7 @@ export default function ChatInputBar({
       try {
         ExpoSpeechRecognitionModule.stop();
       } catch (error) {
-        console.log(
-          "[Speech] Stop error:",
-          error,
-        );
+        console.log("[Speech] Stop error:", error);
       }
 
       setIsListening(false);
@@ -192,92 +138,76 @@ export default function ChatInputBar({
   // MICROPHONE
   // ==========================================
 
-  const handleMicPress =
-    async () => {
-      if (disabled) {
-        return;
-      }
+  const handleMicPress = async () => {
+    if (disabled) {
+      return;
+    }
 
-      // ----------------------------------------
-      // STOP LISTENING
-      // ----------------------------------------
+    // ----------------------------------------
+    // STOP LISTENING
+    // ----------------------------------------
 
-      if (isListening) {
-        console.log(
-          "[Speech] Stopping...",
-        );
-
-        try {
-          ExpoSpeechRecognitionModule.stop();
-        } catch (error) {
-          console.log(
-            "[Speech] Stop error:",
-            error,
-          );
-        }
-
-        setIsListening(false);
-
-        return;
-      }
-
-      // ----------------------------------------
-      // CHECK PERMISSION
-      // ----------------------------------------
+    if (isListening) {
+      console.log("[Speech] Stopping...");
 
       try {
-        const permission =
-          await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-
-        console.log(
-          "[Speech] Permission:",
-          permission,
-        );
-
-        if (!permission.granted) {
-          Alert.alert(
-            "Microphone Access Needed",
-            "Please allow microphone and speech recognition access to use voice typing.",
-          );
-
-          return;
-        }
-
-        // --------------------------------------
-        // START RECOGNITION
-        // --------------------------------------
-
-        console.log(
-          "[Speech] Starting...",
-        );
-
-        ExpoSpeechRecognitionModule.start(
-          {
-            lang: "en-US",
-
-            interimResults: true,
-
-            maxAlternatives: 1,
-
-            continuous: false,
-
-            addsPunctuation: true,
-          },
-        );
+        ExpoSpeechRecognitionModule.stop();
       } catch (error) {
-        console.error(
-          "[Speech] Start error:",
-          error,
-        );
-
-        setIsListening(false);
-
-        Alert.alert(
-          "Voice Typing Error",
-          "Unable to start voice typing. Please check your microphone permission.",
-        );
+        console.log("[Speech] Stop error:", error);
       }
-    };
+
+      setIsListening(false);
+
+      return;
+    }
+
+    // ----------------------------------------
+    // CHECK PERMISSION
+    // ----------------------------------------
+
+    try {
+      const permission =
+        await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+
+      console.log("[Speech] Permission:", permission);
+
+      if (!permission.granted) {
+        Alert.alert(
+          "Microphone Access Needed",
+          "Please allow microphone and speech recognition access to use voice typing.",
+        );
+
+        return;
+      }
+
+      // --------------------------------------
+      // START RECOGNITION
+      // --------------------------------------
+
+      console.log("[Speech] Starting...");
+
+      ExpoSpeechRecognitionModule.start({
+        lang: "en-US",
+
+        interimResults: true,
+
+        maxAlternatives: 1,
+
+        continuous: false,
+
+        addsPunctuation: true,
+      });
+    } catch (error) {
+      console.error("[Speech] Start error:", error);
+
+      setIsListening(false);
+
+      Alert.alert(
+        "Voice Typing Error",
+        "Unable to start voice typing. Please check your microphone permission.",
+      );
+    }
+  };
 
   return (
     <View>
@@ -286,28 +216,12 @@ export default function ChatInputBar({
       {/* ====================================== */}
 
       {isListening ? (
-        <View
-          style={styles.listeningRow}
-        >
-          <Ionicons
-            name="mic"
-            size={RF(13)}
-            color={Colors.primary}
-          />
+        <View style={styles.listeningRow}>
+          <Ionicons name="mic" size={RF(13)} color={Colors.primary} />
 
-          <Text
-            style={
-              styles.listeningText
-            }
-          >
-            Listening...
-          </Text>
+          <Text style={styles.listeningText}>Listening...</Text>
 
-          <View
-            style={
-              styles.listeningDot
-            }
-          />
+          <View style={styles.listeningDot} />
         </View>
       ) : null}
 
@@ -324,22 +238,16 @@ export default function ChatInputBar({
         <TextInput
           style={styles.input}
           placeholder={
-            disabled
-              ? "Waiting for astrologer to join..."
-              : "Type a message..."
+            disabled ? "Waiting for astrologer to join..." : "Type a message..."
           }
           placeholderTextColor="#9ca3af"
           value={text}
-          onChangeText={
-            handleChangeText
-          }
+          onChangeText={handleChangeText}
           editable={!disabled}
           multiline={true}
           textAlignVertical="center"
           returnKeyType="send"
-          onSubmitEditing={
-            handleSend
-          }
+          onSubmitEditing={handleSend}
         />
 
         {/* ================================== */}
@@ -351,29 +259,17 @@ export default function ChatInputBar({
           style={[
             styles.micBtn,
 
-            isListening &&
-              styles.micBtnActive,
+            isListening && styles.micBtnActive,
 
-            disabled &&
-              styles.micButtonDisabled,
+            disabled && styles.micButtonDisabled,
           ]}
-          onPress={
-            handleMicPress
-          }
+          onPress={handleMicPress}
           disabled={disabled}
         >
           <Ionicons
-            name={
-              isListening
-                ? "mic"
-                : "mic-outline"
-            }
+            name={isListening ? "mic" : "mic-outline"}
             size={RF(18)}
-            color={
-              isListening
-                ? Colors.white
-                : Colors.primary
-            }
+            color={isListening ? Colors.white : Colors.primary}
           />
         </TouchableOpacity>
 
@@ -386,171 +282,136 @@ export default function ChatInputBar({
           style={[
             styles.sendButton,
 
-            (disabled ||
-              !text.trim()) &&
-              styles.sendButtonDisabled,
+            (disabled || !text.trim()) && styles.sendButtonDisabled,
           ]}
           onPress={handleSend}
-          disabled={
-            disabled ||
-            !text.trim()
-          }
+          disabled={disabled || !text.trim()}
         >
-          <Ionicons
-            name="send"
-            size={RF(18)}
-            color={Colors.white}
-          />
+          <Ionicons name="send" size={RF(18)} color={Colors.white} />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles =
-  StyleSheet.create({
-    container: {
-      minHeight: hp(7),
+const styles = StyleSheet.create({
+  container: {
+    minHeight: hp(7),
 
-      paddingHorizontal: wp(
-        2.5,
-      ),
+    paddingHorizontal: wp(2.5),
 
-      paddingVertical: hp(
-        0.8,
-      ),
+    paddingVertical: hp(0.8),
 
-      flexDirection: "row",
+    flexDirection: "row",
 
-      alignItems: "center",
+    alignItems: "center",
 
-      backgroundColor:
-        Colors.white,
+    backgroundColor: Colors.white,
 
-      borderTopWidth: 1,
+    borderTopWidth: 1,
 
-      borderTopColor:
-        "#f2f2f2",
-    },
+    borderTopColor: "#f2f2f2",
+  },
 
-    input: {
-      flex: 1,
+  input: {
+    flex: 1,
 
-      minHeight: hp(5),
+    minHeight: hp(5),
 
-      maxHeight: hp(14),
+    maxHeight: hp(14),
 
-      borderWidth: 1,
+    borderWidth: 1,
 
-      borderColor:
-        "#e5e7eb",
+    borderColor: "#e5e7eb",
 
-      borderRadius: wp(6),
+    borderRadius: wp(6),
 
-      paddingHorizontal:
-        wp(3.5),
+    paddingHorizontal: wp(3.5),
 
-      paddingVertical: hp(
-        1,
-      ),
+    paddingVertical: hp(1),
 
-      fontSize: RF(11),
+    fontSize: RF(11),
 
-      color:
-        Colors.darkBrown,
+    color: Colors.darkBrown,
 
-      fontWeight: "700",
-    },
+    fontWeight: "700",
+  },
 
-    micBtn: {
-      width: wp(10),
+  micBtn: {
+    width: wp(10),
 
-      height: wp(10),
+    height: wp(10),
 
-      borderRadius: wp(5),
+    borderRadius: wp(5),
 
-      backgroundColor:
-        "#fff1e8",
+    backgroundColor: "#fff1e8",
 
-      alignItems: "center",
+    alignItems: "center",
 
-      justifyContent:
-        "center",
+    justifyContent: "center",
 
-      marginLeft: wp(2),
-    },
+    marginLeft: wp(2),
+  },
 
-    micBtnActive: {
-      backgroundColor:
-        "#dc2626",
-    },
+  micBtnActive: {
+    backgroundColor: "#dc2626",
+  },
 
-    micButtonDisabled: {
-      opacity: 0.5,
-    },
+  micButtonDisabled: {
+    opacity: 0.5,
+  },
 
-    sendButton: {
-      width: wp(10),
+  sendButton: {
+    width: wp(10),
 
-      height: wp(10),
+    height: wp(10),
 
-      borderRadius: wp(5),
+    borderRadius: wp(5),
 
-      backgroundColor:
-        Colors.primary,
+    backgroundColor: Colors.primary,
 
-      justifyContent:
-        "center",
+    justifyContent: "center",
 
-      alignItems: "center",
+    alignItems: "center",
 
-      marginLeft: wp(2),
-    },
+    marginLeft: wp(2),
+  },
 
-    sendButtonDisabled: {
-      opacity: 0.5,
-    },
+  sendButtonDisabled: {
+    opacity: 0.5,
+  },
 
-    listeningRow: {
-      height: hp(3.5),
+  listeningRow: {
+    height: hp(3.5),
 
-      flexDirection:
-        "row",
+    flexDirection: "row",
 
-      alignItems:
-        "center",
+    alignItems: "center",
 
-      paddingHorizontal:
-        wp(4),
+    paddingHorizontal: wp(4),
 
-      backgroundColor:
-        Colors.white,
-    },
+    backgroundColor: Colors.white,
+  },
 
-    listeningText: {
-      marginLeft: wp(
-        1.5,
-      ),
+  listeningText: {
+    marginLeft: wp(1.5),
 
-      fontSize: RF(10),
+    fontSize: RF(10),
 
-      color:
-        Colors.primary,
+    color: Colors.primary,
 
-      fontWeight: "600",
-    },
+    fontWeight: "600",
+  },
 
-    listeningDot: {
-      width: wp(2),
+  listeningDot: {
+    width: wp(2),
 
-      height: wp(2),
+    height: wp(2),
 
-      borderRadius:
-        wp(1),
+    borderRadius: wp(1),
 
-      backgroundColor:
-        Colors.primary,
+    backgroundColor: Colors.primary,
 
-      marginLeft: wp(1.5),
-    },
-  });
+    marginLeft: wp(1.5),
+  },
+});

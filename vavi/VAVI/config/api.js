@@ -1,5 +1,5 @@
 export const BASE_URL =
-  "https://jai-kulariya.taile3ce76.ts.net";
+  "https://noncompulsory-augustine-unbewilderingly.ngrok-free.dev";
 
 export const resolveImageUri = (uri) => {
   if (!uri) return null;
@@ -9,3 +9,5 @@ export const resolveImageUri = (uri) => {
   const cleanPath = uri.startsWith("/") ? uri.slice(1) : uri;
   return { uri: `${BASE_URL}/${cleanPath}` };
 };
+
+export const SOCKET_URL = BASE_URL;

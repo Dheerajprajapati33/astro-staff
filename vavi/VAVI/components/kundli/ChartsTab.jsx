@@ -238,7 +238,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111",
     marginBottom: hp(1),
-    fontWeight: "700",
   },
   chartBtnRow: {
     flexDirection: "row",
@@ -261,7 +260,6 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: RF(10),
     color: "#111",
-    fontWeight: "600",
     fontWeight: "500",
   },
   activePillText: {
@@ -307,13 +305,11 @@ const styles = StyleSheet.create({
     fontSize: RF(13),
     fontWeight: "700",
     color: "#111",
-    fontWeight: "700",
   },
   numText: {
     position: "absolute",
     fontSize: RF(14),
     color: ORANGE,
-    fontWeight: "700",
     fontWeight: "700",
   },
   planetTabRow: {
@@ -349,7 +345,6 @@ const styles = StyleSheet.create({
     fontSize: RF(9),
     fontWeight: "700",
     paddingHorizontal: wp(1),
-    fontWeight: "700",
   },
   tableRow: {
     flexDirection: "row",
@@ -378,7 +373,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

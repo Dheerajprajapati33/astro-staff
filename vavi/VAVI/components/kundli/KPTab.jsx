@@ -139,7 +139,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111",
     marginBottom: hp(1),
-    fontWeight: "700",
   },
   tableWrapper: {
     borderWidth: 1,
@@ -165,7 +164,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: wp(1),
     borderRightWidth: 0.5,
     borderRightColor: "#ff9b72",
-    fontWeight: "700",
   },
   row: {
     flexDirection: "row",
@@ -198,7 +196,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

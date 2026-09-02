@@ -142,7 +142,6 @@ const styles = StyleSheet.create({
   switchText: {
     fontSize: RF(11),
     color: "#111",
-    fontWeight: "600",
     fontWeight: "500",
   },
   activeSwitchText: {
@@ -158,12 +157,10 @@ const styles = StyleSheet.create({
     fontSize: RF(12),
     color: "#111",
     fontWeight: "700",
-    fontWeight: "700",
   },
   pathText: {
     fontSize: RF(12),
     color: "#999",
-    fontWeight: "700",
     fontWeight: "700",
   },
   arrow: {
@@ -189,7 +186,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#fff",
     fontSize: RF(11),
-    fontWeight: "700",
     textAlign: "center",
     fontWeight: "700",
   },
@@ -231,7 +227,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

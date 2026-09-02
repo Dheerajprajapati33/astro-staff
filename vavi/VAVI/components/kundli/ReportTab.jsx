@@ -183,7 +183,6 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: RF(10.5),
     color: "#111",
-    fontWeight: "700",
     fontWeight: "500",
   },
   activeText: {
@@ -194,7 +193,6 @@ const styles = StyleSheet.create({
     color: "#111",
     fontWeight: "700",
     marginBottom: hp(1.3),
-    fontWeight: "700",
   },
   statusCard: {
     minHeight: hp(6.5),
@@ -219,7 +217,6 @@ const styles = StyleSheet.create({
   badgeText: {
     color: "#fff",
     fontSize: RF(9),
-    fontWeight: "700",
     fontWeight: "700",
   },
   cardText: {
@@ -276,7 +273,6 @@ const styles = StyleSheet.create({
     fontSize: RF(8.5),
     fontWeight: "700",
     paddingHorizontal: wp(1),
-    fontWeight: "700",
   },
   tableRow: {
     flexDirection: "row",
@@ -308,7 +304,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useSegments } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,10 +24,29 @@ import { useGetAstrologersQuery } from "../../redux/AstroApi";
 import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Discover() {
+  const segments = useSegments();
+  const [hasToken, setHasToken] = useState(false);
   const { category } = useLocalSearchParams();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments]);
 
   useEffect(() => {
     if (category) {
@@ -41,7 +61,10 @@ export default function Discover() {
       limit,
       role: "astrologer",
     });
-  const { data: followingData } = useGetFollowingQuery({ page: 1, limit: 50 });
+  const { data: followingData } = useGetFollowingQuery(
+    { page: 1, limit: 50 },
+    { skip: !hasToken || segments?.[0] === "(auth)" }
+  );
   const followingAstroIds =
     followingData?.data?.following?.map((f) => f.astrologerId) || [];
   const astrologers = data?.data?.users || [];

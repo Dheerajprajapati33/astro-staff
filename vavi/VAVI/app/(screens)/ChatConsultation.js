@@ -64,13 +64,17 @@ export default function ChatConsultation() {
     ? params.astrologerName[0]
     : params?.astrologerName;
 
-  const initialMaxDuration = Number(
-    Array.isArray(params?.maxDuration) ? params.maxDuration[0] : params?.maxDuration,
-  ) || 1500;
+  const initialMaxDuration =
+    Number(
+      Array.isArray(params?.maxDuration)
+        ? params.maxDuration[0]
+        : params?.maxDuration,
+    ) || 1500;
 
   const [currentUserId, setCurrentUserId] = useState(null);
   const [isChatActive, setIsChatActive] = useState(false);
-  const [maxDurationSeconds, setMaxDurationSeconds] = useState(initialMaxDuration);
+  const [maxDurationSeconds, setMaxDurationSeconds] =
+    useState(initialMaxDuration);
   const [secondsLeft, setSecondsLeft] = useState(initialMaxDuration);
   const [messages, setMessages] = useState([]);
   const [isAstrologerTyping, setIsAstrologerTyping] = useState(false);
@@ -154,9 +158,15 @@ export default function ChatConsultation() {
     if (match.status === "ongoing" && match.startedAt) {
       const startedAtMs = new Date(match.startedAt).getTime();
       const elapsedSec = Math.floor((Date.now() - startedAtMs) / 1000);
-      const remaining = Math.max(0, (match.maxDuration ?? maxDurationSeconds) - elapsedSec);
+      const remaining = Math.max(
+        0,
+        (match.maxDuration ?? maxDurationSeconds) - elapsedSec,
+      );
 
-      console.log(LOG_TAG, "RECOVERED/RESYNCED ongoing chat state:", { elapsedSec, remaining });
+      console.log(LOG_TAG, "RECOVERED/RESYNCED ongoing chat state:", {
+        elapsedSec,
+        remaining,
+      });
 
       setIsChatActive(true);
       setMaxDurationSeconds(match.maxDuration ?? maxDurationSeconds);
@@ -174,11 +184,9 @@ export default function ChatConsultation() {
       if (!endAlertShownRef.current) {
         endAlertShownRef.current = true;
 
-        Alert.alert(
-          "Chat Ended",
-          "Your chat consultation has ended.",
-          [{ text: "OK", onPress: () => router.back() }],
-        );
+        Alert.alert("Chat Ended", "Your chat consultation has ended.", [
+          { text: "OK", onPress: () => router.back() },
+        ]);
       }
     }
   }, [consultationHistoryData, consultationId, chatEnded, maxDurationSeconds]);
@@ -215,7 +223,11 @@ export default function ChatConsultation() {
     let isMounted = true;
 
     const setup = async () => {
-      console.log(LOG_TAG, "Setting up chat socket for consultation:", consultationId);
+      console.log(
+        LOG_TAG,
+        "Setting up chat socket for consultation:",
+        consultationId,
+      );
 
       const socket = await connectChatSocket();
 
@@ -302,7 +314,11 @@ export default function ChatConsultation() {
     return () => {
       isMounted = false;
 
-      console.log(LOG_TAG, "Cleaning up chat socket listeners for:", consultationId);
+      console.log(
+        LOG_TAG,
+        "Cleaning up chat socket listeners for:",
+        consultationId,
+      );
 
       removeChatListeners();
     };
@@ -311,7 +327,10 @@ export default function ChatConsultation() {
   // Fully disconnect socket on screen unmount
   useEffect(() => {
     return () => {
-      console.log(LOG_TAG, "Unmounting ChatConsultation screen, disconnecting socket");
+      console.log(
+        LOG_TAG,
+        "Unmounting ChatConsultation screen, disconnecting socket",
+      );
 
       disconnectChatSocket();
     };
@@ -328,7 +347,10 @@ export default function ChatConsultation() {
         // pushed while we were disconnected was missed — refetching history
         // is what backfills it, doubling as the timer resync.
         if (hasConnectedOnceRef.current) {
-          console.log(LOG_TAG, "Socket reconnected, resyncing consultation history");
+          console.log(
+            LOG_TAG,
+            "Socket reconnected, resyncing consultation history",
+          );
 
           refetchConsultationHistoryRef.current?.();
         }
@@ -375,7 +397,8 @@ export default function ChatConsultation() {
 
     const handleAppStateChange = (nextState) => {
       const cameToForeground =
-        appStateRef.current.match(/inactive|background/) && nextState === "active";
+        appStateRef.current.match(/inactive|background/) &&
+        nextState === "active";
 
       appStateRef.current = nextState;
 
@@ -389,7 +412,10 @@ export default function ChatConsultation() {
       refetchConsultationHistoryRef.current?.();
     };
 
-    const subscription = AppState.addEventListener("change", handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
 
     return () => {
       subscription.remove();
@@ -419,7 +445,10 @@ export default function ChatConsultation() {
   const handleSend = useCallback(
     (text) => {
       if (!consultationId || !currentUserId) {
-        console.log(LOG_TAG, "handleSend blocked: missing consultationId/currentUserId");
+        console.log(
+          LOG_TAG,
+          "handleSend blocked: missing consultationId/currentUserId",
+        );
 
         return;
       }
@@ -475,7 +504,9 @@ export default function ChatConsultation() {
 
       setMessages((prev) =>
         prev.map((m) =>
-          m.clientTempId === message.clientTempId ? { ...m, status: "sending" } : m,
+          m.clientTempId === message.clientTempId
+            ? { ...m, status: "sending" }
+            : m,
         ),
       );
 
@@ -491,7 +522,9 @@ export default function ChatConsultation() {
       if (!emitted) {
         setMessages((prev) =>
           prev.map((m) =>
-            m.clientTempId === message.clientTempId ? { ...m, status: "failed" } : m,
+            m.clientTempId === message.clientTempId
+              ? { ...m, status: "failed" }
+              : m,
           ),
         );
 
@@ -521,7 +554,11 @@ export default function ChatConsultation() {
         typingTimeoutRef.current = setTimeout(() => {
           typingTimeoutRef.current = null;
 
-          emitTypingIndicator({ consultationId, role: "user", isTyping: false });
+          emitTypingIndicator({
+            consultationId,
+            role: "user",
+            isTyping: false,
+          });
         }, 1500);
       }
     },
@@ -529,7 +566,10 @@ export default function ChatConsultation() {
   );
 
   const handleRefresh = useCallback(() => {
-    console.log(LOG_TAG, "Manual refresh pulled — resyncing consultation state + reconnecting socket");
+    console.log(
+      LOG_TAG,
+      "Manual refresh pulled — resyncing consultation state + reconnecting socket",
+    );
 
     // Pull-to-refresh: nudge the socket back to life if it dropped silently,
     // and refetch the consultation record to resync timer/status from wall-clock.
@@ -549,7 +589,12 @@ export default function ChatConsultation() {
   const timerExpiredRef = useRef(false);
 
   useEffect(() => {
-    if (!isChatActive || chatEnded || secondsLeft > 0 || timerExpiredRef.current) {
+    if (
+      !isChatActive ||
+      chatEnded ||
+      secondsLeft > 0 ||
+      timerExpiredRef.current
+    ) {
       return;
     }
 
@@ -592,7 +637,10 @@ export default function ChatConsultation() {
           text: "End Chat",
           style: "destructive",
           onPress: () => {
-            console.log(LOG_TAG, "User ending chat session via back navigation");
+            console.log(
+              LOG_TAG,
+              "User ending chat session via back navigation",
+            );
 
             endChatSession({ consultationId, reason: "completed" });
             router.back();
@@ -603,11 +651,14 @@ export default function ChatConsultation() {
   }, [isChatActive, chatEnded, consultationId]);
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
-      handleBack();
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        handleBack();
 
-      return true;
-    });
+        return true;
+      },
+    );
 
     return () => subscription.remove();
   }, [handleBack]);
@@ -619,7 +670,10 @@ export default function ChatConsultation() {
   }, [messages.length]);
 
   if (!consultationId) {
-    console.log(LOG_TAG, "No consultationId param provided — cannot start chat");
+    console.log(
+      LOG_TAG,
+      "No consultationId param provided — cannot start chat",
+    );
 
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -679,7 +733,9 @@ export default function ChatConsultation() {
           )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+          onContentSizeChange={() =>
+            listRef.current?.scrollToEnd({ animated: true })
+          }
           refreshControl={
             <RefreshControl
               refreshing={isHistoryFetching && !isHistoryLoading}
@@ -690,7 +746,11 @@ export default function ChatConsultation() {
           }
           ListHeaderComponent={
             <View style={styles.secureBox}>
-              <Ionicons name="lock-closed-outline" size={RF(11)} color={Colors.primary} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={RF(11)}
+                color={Colors.primary}
+              />
               <Text style={styles.secureText}>
                 {isHistoryLoading
                   ? "Connecting to chat..."
@@ -699,7 +759,10 @@ export default function ChatConsultation() {
             </View>
           }
           ListFooterComponent={
-            <TypingIndicator visible={isAstrologerTyping} name={astrologerName} />
+            <TypingIndicator
+              visible={isAstrologerTyping}
+              name={astrologerName}
+            />
           }
         />
 

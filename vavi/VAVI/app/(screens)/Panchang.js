@@ -525,11 +525,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  buttonWrapper: {
-    marginTop: hp(1.5),
-    marginBottom: hp(3),
-  },
-
   consultButton: {
     height: hp(6.4),
 

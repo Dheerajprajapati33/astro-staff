@@ -9,54 +9,104 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 
+import { router } from "expo-router";
 import TopAstrologers from "../../constants/TopAstrologers";
-
 import Colors from "../../constants/Colors";
+import { resolveImageUri } from "../../config/api";
 import { hp, RF, wp } from "../../utils/responsive";
 
-export default function TopAstrologerCard() {
+export default function TopAstrologerCard({ data }) {
+  const astrologersList =
+    Array.isArray(data) && data.length > 0 ? data : TopAstrologers;
+
+  const handleCardPress = (item) => {
+    if (item?.id) {
+      router.push({
+        pathname: "/astrodetail",
+        params: {
+          id: item.id,
+          astrologerData: JSON.stringify(item),
+        },
+      });
+    }
+  };
+
   const renderItem = ({ item }) => {
+    const isOnline = Boolean(
+      item?.online ??
+      item?.isOnline ??
+      item?.isCallOnline ??
+      item?.isChatOnline,
+    );
+
+    const imageSource =
+      typeof item?.image === "number" ||
+      (typeof item?.image === "object" &&
+        item?.image?.uri === undefined &&
+        !item?.profilePic)
+        ? item.image
+        : item?.profilePic ||
+            (typeof item?.image === "string" ? item.image : null)
+          ? resolveImageUri(item.profilePic || item.image)
+          : require("../../assets/images/placeholder.jpeg");
+
+    const speciality =
+      item?.speciality ||
+      (Array.isArray(item?.expertises)
+        ? item.expertises
+            .map((e) => (typeof e === "string" ? e : e?.name))
+            .filter(Boolean)
+            .join(", ")
+        : "") ||
+      "Vedic Astrologer";
+
+    const experience = item?.experience
+      ? String(item.experience).includes("Year")
+        ? item.experience
+        : `${item.experience}+ Years`
+      : "5+ Years";
+
+    const rating = item?.rating || "4.8";
+
     return (
-      <TouchableOpacity activeOpacity={0.9} style={styles.card}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        style={styles.card}
+        onPress={() => handleCardPress(item)}
+      >
         {/* Profile Image */}
-
         <View style={styles.imageWrapper}>
-          <Image source={item.image} style={styles.image} resizeMode="cover" />
-
-          {item.online && <View style={styles.onlineDot} />}
+          <Image source={imageSource} style={styles.image} resizeMode="cover" />
+          {isOnline && <View style={styles.onlineDot} />}
         </View>
 
         {/* Rating */}
-
         <View style={styles.ratingContainer}>
           <Ionicons name="star" size={RF(10)} color="#FFB100" />
-
-          <Text style={styles.rating}>{item.rating}</Text>
+          <Text style={styles.rating}>{rating}</Text>
         </View>
 
         {/* Name */}
-
         <Text numberOfLines={2} style={styles.name}>
-          {item.name}
+          {item?.name || "Astrologer"}
         </Text>
 
         {/* Expertise */}
-
         <Text numberOfLines={1} style={styles.speciality}>
-          {item.speciality}
+          {speciality}
         </Text>
 
         {/* Experience */}
-
-        <Text style={styles.experience}>Exp. {item.experience}</Text>
+        <Text style={styles.experience}>Exp. {experience}</Text>
       </TouchableOpacity>
     );
   };
+
   return (
     <FlatList
-      data={TopAstrologers}
+      data={astrologersList}
       renderItem={renderItem}
-      keyExtractor={(item) => item.id.toString()}
+      keyExtractor={(item) => (item.id || Math.random()).toString()}
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.listContainer}

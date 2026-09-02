@@ -412,7 +412,6 @@ export default function CallConsultation() {
                 remoteUid,
               );
               setCallStatus("connected");
-              setPeerConnected(true);
               if (engine.muteRemoteAudioStream)
                 engine.muteRemoteAudioStream(remoteUid, false);
             },

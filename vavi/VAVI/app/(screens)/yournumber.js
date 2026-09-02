@@ -8,12 +8,11 @@ import {
 
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { LinearGradient } from "expo-linear-gradient";
 
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
 
 import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
 

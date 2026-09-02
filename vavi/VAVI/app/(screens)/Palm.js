@@ -308,7 +308,6 @@ const styles = StyleSheet.create({
     fontSize: RF(21),
     color: ORANGE,
     fontWeight: "700",
-    fontWeight: "700",
   },
   sparkle: {
     color: ORANGE,
@@ -333,7 +332,6 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: "700",
     marginTop: hp(1.5),
-    fontWeight: "700",
   },
   sub: {
     fontSize: RF(11),
@@ -379,7 +377,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: RF(11),
     fontWeight: "700",
-    fontWeight: "700",
   },
   mainButton: {
     width: "100%",
@@ -395,7 +392,6 @@ const styles = StyleSheet.create({
   mainBtnText: {
     color: "#fff",
     fontSize: RF(14),
-    fontWeight: "700",
     fontWeight: "700",
   },
 
@@ -438,7 +434,6 @@ const styles = StyleSheet.create({
     zIndex: 5,
     color: "#fff",
     fontSize: RF(12),
-    fontWeight: "700",
     backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: wp(4),
     paddingVertical: hp(0.8),
@@ -467,7 +462,6 @@ const styles = StyleSheet.create({
     fontSize: RF(12),
     fontWeight: "700",
     marginBottom: hp(0.7),
-    fontWeight: "700",
   },
   progressTrack: {
     width: "100%",
@@ -529,7 +523,6 @@ const styles = StyleSheet.create({
   scanButtonText: {
     color: "#fff",
     fontSize: RF(14),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });

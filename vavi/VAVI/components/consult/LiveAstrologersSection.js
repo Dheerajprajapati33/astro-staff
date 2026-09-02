@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 import Colors from "../../constants/Colors";
@@ -15,13 +15,32 @@ import { resolveImageUri } from "../../config/api";
 import { hp, RF, wp } from "../../utils/responsive";
 import { useGetLiveSessionsQuery } from "../../redux/liveApi";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const ORANGE = "#ff6a00";
 
 export default function LiveAstrologersSection() {
-  const { data: liveData } = useGetLiveSessionsQuery(
-    { page: 1, limit: 10 },
-    { pollingInterval: 5000 },
-  );
+  const segments = useSegments();
+  const [hasToken, setHasToken] = React.useState(false);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const checkToken = async () => {
+      try {
+        const raw = await AsyncStorage.getItem("userData");
+        const parsed = raw ? JSON.parse(raw) : null;
+        if (isMounted) setHasToken(!!parsed?.token);
+      } catch (_e) {
+        if (isMounted) setHasToken(false);
+      }
+    };
+    checkToken();
+    return () => {
+      isMounted = false;
+    };
+  }, [segments]);
+
+  const { data: liveData } = useGetLiveSessionsQuery({ page: 1, limit: 10 });
 
   const rawSessions = Array.isArray(liveData?.data?.sessions)
     ? liveData.data.sessions
@@ -37,7 +56,11 @@ export default function LiveAstrologersSection() {
 
   // Filter out any ended sessions
   const sessions = rawSessions.filter(
-    (s) => s && s.status !== "ended" && s.status !== "completed" && s.isLive !== false,
+    (s) =>
+      s &&
+      s.status !== "ended" &&
+      s.status !== "completed" &&
+      s.isLive !== false,
   );
 
   // Only show when there is an active live stream; remove completely when ended
@@ -49,10 +72,23 @@ export default function LiveAstrologersSection() {
     router.push({
       pathname: "/LiveStream",
       params: {
-        liveSessionId: String(item.id || item.liveSessionId || item._id || "live_1"),
-        astrologerName: item?.astrologer?.name || item?.user?.name || item?.hostName || item?.name || "Astrologer",
-        astrologerImage: item?.astrologer?.profilePic || item?.user?.profilePic || item?.thumbnail || item?.image || "",
-        title: item?.title || item?.sessionTitle || "Live Astrology Consultation",
+        liveSessionId: String(
+          item.id || item.liveSessionId || item._id || "live_1",
+        ),
+        astrologerName:
+          item?.astrologer?.name ||
+          item?.user?.name ||
+          item?.hostName ||
+          item?.name ||
+          "Astrologer",
+        astrologerImage:
+          item?.astrologer?.profilePic ||
+          item?.user?.profilePic ||
+          item?.thumbnail ||
+          item?.image ||
+          "",
+        title:
+          item?.title || item?.sessionTitle || "Live Astrology Consultation",
       },
     });
   };
@@ -71,13 +107,26 @@ export default function LiveAstrologersSection() {
         data={sessions}
         horizontal
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => String(item.id || item.liveSessionId || item._id || Math.random())}
+        keyExtractor={(item) =>
+          String(item.id || item.liveSessionId || item._id || Math.random())
+        }
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => {
-          const name = item?.astrologer?.name || item?.user?.name || item?.hostName || item?.name || "Astrologer";
-          const imageUri = item?.astrologer?.profilePic || item?.user?.profilePic || item?.thumbnail || item?.image;
-          const sessionTitle = item?.title || item?.sessionTitle || "Daily Horoscope Live";
-          const viewers = item?.viewersCount ?? item?.viewers ?? item?.viewerCount ?? 1;
+          const name =
+            item?.astrologer?.name ||
+            item?.user?.name ||
+            item?.hostName ||
+            item?.name ||
+            "Astrologer";
+          const imageUri =
+            item?.astrologer?.profilePic ||
+            item?.user?.profilePic ||
+            item?.thumbnail ||
+            item?.image;
+          const sessionTitle =
+            item?.title || item?.sessionTitle || "Daily Horoscope Live";
+          const viewers =
+            item?.viewersCount ?? item?.viewers ?? item?.viewerCount ?? 1;
           const imageSource = imageUri
             ? resolveImageUri(imageUri)
             : require("../../assets/images/background.png");
@@ -88,7 +137,11 @@ export default function LiveAstrologersSection() {
               style={styles.card}
               onPress={() => handleJoinLive(item)}
             >
-              <Image source={imageSource} style={styles.cardImage} resizeMode="cover" />
+              <Image
+                source={imageSource}
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
               <View style={styles.imageOverlay} />
 
               <View style={styles.liveTag}>

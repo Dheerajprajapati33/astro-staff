@@ -35,7 +35,10 @@ export const joinChatSession = ({ consultationId, userId, role = "user" }) => {
   setLastJoinParams(payload);
 
   if (!socket) {
-    console.log(LOG_TAG, "joinChatSession saved params (socket not initialized yet)");
+    console.log(
+      LOG_TAG,
+      "joinChatSession saved params (socket not initialized yet)",
+    );
     return;
   }
   if (socket.connected) {
@@ -43,9 +46,17 @@ export const joinChatSession = ({ consultationId, userId, role = "user" }) => {
     socket.emit("join_chat_session", payload);
     socket.emit("join_consultation", payload);
   } else {
-    console.log(LOG_TAG, "Socket connecting, attaching connect listener to join chat room:", payload);
+    console.log(
+      LOG_TAG,
+      "Socket connecting, attaching connect listener to join chat room:",
+      payload,
+    );
     socket.once("connect", () => {
-      console.log(LOG_TAG, "Connected, emitting delayed room join on unified socket:", payload);
+      console.log(
+        LOG_TAG,
+        "Connected, emitting delayed room join on unified socket:",
+        payload,
+      );
       socket.emit("join_chat_session", payload);
       socket.emit("join_consultation", payload);
     });
@@ -55,10 +66,17 @@ export const joinChatSession = ({ consultationId, userId, role = "user" }) => {
 export const sendChatMessage = (payload) => {
   const socket = getCallSocket();
   if (!socket || !socket.connected) {
-    console.log(LOG_TAG, "sendChatMessage called before unified socket connected");
+    console.log(
+      LOG_TAG,
+      "sendChatMessage called before unified socket connected",
+    );
     return false;
   }
-  console.log(LOG_TAG, "Emitting send_chat_message on unified socket:", payload);
+  console.log(
+    LOG_TAG,
+    "Emitting send_chat_message on unified socket:",
+    payload,
+  );
   socket.emit("send_chat_message", payload);
   return true;
 };

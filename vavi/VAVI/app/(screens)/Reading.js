@@ -152,7 +152,6 @@ const styles = StyleSheet.create({
     fontSize: RF(27),
     fontWeight: "700",
     color: ORANGE,
-    fontWeight: "700",
   },
   sparkle: {
     fontSize: RF(22),
@@ -217,7 +216,6 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: "700",
     marginTop: hp(0.3),
-    fontWeight: "700",
   },
   badge: {
     alignSelf: "flex-start",
@@ -231,7 +229,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: RF(9),
     color: ORANGE,
-    fontWeight: "700",
     fontWeight: "700",
   },
   desc: {
@@ -277,7 +274,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: RF(13),
     fontWeight: "700",
-    fontWeight: "700",
   },
   outlineButton: {
     height: hp(5),
@@ -299,7 +295,6 @@ const styles = StyleSheet.create({
   outlineText: {
     color: GREEN,
     fontSize: RF(13),
-    fontWeight: "700",
     fontWeight: "700",
   },
 });
