@@ -28,26 +28,61 @@ export default function BookingDetailsSheet({
 
   if (!booking) return null;
 
-  const astrologer = booking?.astrologer || booking?.astrologerUser || booking?.user || {};
-  const name = astrologer?.name || booking?.astrologerName || "Astrologer";
-  const imageUri = astrologer?.profilePic || booking?.astrologerImage || "";
-  const type = (booking?.type || booking?.consultationType || "call").toLowerCase();
-  const status = (booking?.status || "completed").toLowerCase();
+  const astrologer =
+    booking?.astrologer ||
+    booking?.astrologerUser ||
+    booking?.astrologerDetails ||
+    booking?.user ||
+    {};
+  const name =
+    astrologer?.name ||
+    astrologer?.fullName ||
+    booking?.astrologerName ||
+    "Astrologer";
+  const imageUri =
+    astrologer?.profilePic ||
+    astrologer?.profileImage ||
+    astrologer?.image ||
+    booking?.astrologerImage ||
+    "";
+  const type = String(
+    booking?.type ||
+      booking?.consultationType ||
+      booking?.consultation_type ||
+      "call",
+  ).toLowerCase();
+  const status = String(booking?.status || "completed").toLowerCase();
   const amount = booking?.amount ?? booking?.totalAmount ?? booking?.fee ?? 0;
   const duration = booking?.duration ?? booking?.durationSeconds ?? 0;
-  const ratePerMin = booking?.ratePerMinute || booking?.pricePerMinute || 25;
-  const problem = booking?.problem || booking?.topic || astrologer?.expertises?.[0]?.name || "Horoscope Guidance";
-  const consultationId = booking?.id || booking?.consultationId || `VAVI-${Date.now().toString().slice(-6)}`;
+  const ratePerMin =
+    booking?.ratePerMinute ||
+    booking?.pricePerMinute ||
+    astrologer?.chatPrice ||
+    astrologer?.callPrice ||
+    25;
+  const problem =
+    booking?.problem ||
+    booking?.topic ||
+    astrologer?.expertises?.[0]?.name ||
+    "Consultation";
+  const consultationId =
+    booking?.id ||
+    booking?.consultationId ||
+    `VAVI-${Date.now().toString().slice(-6)}`;
 
   const formatDuration = (secs) => {
-    if (!secs || isNaN(secs)) return "00:00 mins";
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+    if (!secs || isNaN(secs)) return "0 mins";
+    const num = Number(secs);
+    if (num <= 0) return "0 mins";
+    if (num < 60) return `${num} secs`;
+    const m = Math.floor(num / 60);
+    const s = num % 60;
     return `${m} mins ${s > 0 ? `${s} secs` : ""}`;
   };
 
   const imageSource =
-    resolveImageUri(imageUri) || require("../../assets/images/placeholder.jpeg");
+    resolveImageUri(imageUri) ||
+    require("../../assets/images/placeholder.jpeg");
 
   const handleSubmitReview = async () => {
     setIsSubmitting(true);
@@ -106,7 +141,9 @@ export default function BookingDetailsSheet({
                 <View style={styles.receiptCard}>
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLbl}>Booking ID</Text>
-                    <Text style={styles.receiptValId} numberOfLines={1}>{consultationId}</Text>
+                    <Text style={styles.receiptValId} numberOfLines={1}>
+                      {consultationId}
+                    </Text>
                   </View>
 
                   <View style={styles.receiptDivider} />
@@ -114,13 +151,19 @@ export default function BookingDetailsSheet({
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLbl}>Consultation Mode</Text>
                     <Text style={styles.receiptVal}>
-                      {type === "chat" ? "1:1 Live Chat" : type === "video_call" ? "2-Way Zoom Video Call" : "Voice Call"}
+                      {type === "chat"
+                        ? "1:1 Live Chat"
+                        : type === "video_call"
+                          ? "2-Way Zoom Video Call"
+                          : "Voice Call"}
                     </Text>
                   </View>
 
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLbl}>Duration</Text>
-                    <Text style={styles.receiptVal}>{formatDuration(duration)}</Text>
+                    <Text style={styles.receiptVal}>
+                      {formatDuration(duration)}
+                    </Text>
                   </View>
 
                   <View style={styles.receiptRow}>
@@ -130,7 +173,15 @@ export default function BookingDetailsSheet({
 
                   <View style={styles.receiptRow}>
                     <Text style={styles.receiptLbl}>Status</Text>
-                    <Text style={[styles.receiptVal, { color: status === "completed" ? "#2E7D32" : ORANGE, fontWeight: "700" }]}>
+                    <Text
+                      style={[
+                        styles.receiptVal,
+                        {
+                          color: status === "completed" ? "#2E7D32" : ORANGE,
+                          fontWeight: "700",
+                        },
+                      ]}
+                    >
                       {status.toUpperCase()}
                     </Text>
                   </View>
@@ -144,7 +195,11 @@ export default function BookingDetailsSheet({
                 </View>
 
                 <View style={styles.guaranteeBox}>
-                  <Ionicons name="shield-checkmark" size={RF(18)} color="#4CAF50" />
+                  <Ionicons
+                    name="shield-checkmark"
+                    size={RF(18)}
+                    color="#4CAF50"
+                  />
                   <Text style={styles.guaranteeText}>
                     100% Confidential & Secure Consultation Guarantee.
                   </Text>
@@ -156,7 +211,9 @@ export default function BookingDetailsSheet({
                  ================================================== */
               <View style={styles.rateBody}>
                 <Text style={styles.sectionTitle}>Rate Your Experience</Text>
-                <Text style={styles.rateSub}>How was your session with {name}?</Text>
+                <Text style={styles.rateSub}>
+                  How was your session with {name}?
+                </Text>
 
                 {/* Stars */}
                 <View style={styles.starsRow}>

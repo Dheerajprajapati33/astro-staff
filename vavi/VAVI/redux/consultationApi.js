@@ -20,7 +20,10 @@ export const consultationApi = createApi({
         const parsedUser = JSON.parse(userData);
 
         if (parsedUser?.token) {
-          headers.set("Authorization", `Bearer ${parsedUser.token}`);
+          const rawToken = parsedUser.token.startsWith("Bearer ")
+            ? parsedUser.token
+            : `Bearer ${parsedUser.token}`;
+          headers.set("Authorization", rawToken);
         }
       }
 
@@ -43,6 +46,7 @@ export const consultationApi = createApi({
 
         body: data,
       }),
+      invalidatesTags: ["ConsultationHistory"],
     }),
 
     // ==========================
@@ -66,9 +70,24 @@ export const consultationApi = createApi({
     getConsultationHistory: builder.query({
       query: ({ page = 1, limit = 50 } = {}) => ({
         url: `/consultation/history?page=${page}&limit=${limit}`,
-
         method: "GET",
       }),
+      transformResponse: (response) => {
+        const list = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data?.consultations)
+            ? response.data.consultations
+            : Array.isArray(response?.consultations)
+              ? response.consultations
+              : Array.isArray(response?.data?.history)
+                ? response.data.history
+                : Array.isArray(response?.history)
+                  ? response.history
+                  : Array.isArray(response?.data)
+                    ? response.data
+                    : [];
+        return { consultations: list };
+      },
       providesTags: ["ConsultationHistory"],
     }),
 
@@ -78,8 +97,12 @@ export const consultationApi = createApi({
 
     getCallToken: builder.mutation({
       query: (params) => {
-        const consultationId = typeof params === "object" ? params.consultationId : params;
-        const body = typeof params === "object" ? { uid: params.uid, role: params.role } : undefined;
+        const consultationId =
+          typeof params === "object" ? params.consultationId : params;
+        const body =
+          typeof params === "object"
+            ? { uid: params.uid, role: params.role }
+            : undefined;
         return {
           url: `/consultation/token/${consultationId}`,
           method: "POST",
@@ -115,4 +138,3 @@ export const {
   useGetCallTokenMutation,
   useCreateReviewMutation,
 } = consultationApi;
-

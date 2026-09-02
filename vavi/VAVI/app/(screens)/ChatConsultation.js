@@ -108,9 +108,19 @@ export default function ChatConsultation() {
     { skip: !consultationId },
   );
 
-  useEffect(() => {
-    refetchConsultationHistoryRef.current = refetchConsultationHistory;
+  const safeRefetchHistory = useCallback(() => {
+    try {
+      if (typeof refetchConsultationHistory === "function") {
+        refetchConsultationHistory();
+      }
+    } catch (_e) {
+      // query not started yet
+    }
   }, [refetchConsultationHistory]);
+
+  useEffect(() => {
+    refetchConsultationHistoryRef.current = safeRefetchHistory;
+  }, [safeRefetchHistory]);
 
   // Load current user id (needed to tag outgoing messages / senderId)
   useEffect(() => {
@@ -407,13 +417,10 @@ export default function ChatConsultation() {
         return;
       }
 
-      console.log(LOG_TAG, "App resumed, forcing chat socket reconnect");
       const socket = getChatSocket();
       const isConnected =
         socket?.connected || getConnectionStatus() === "connected";
 
-      forceReconnectChatSocket();
-      refetchConsultationHistoryRef.current?.();
       if (!isConnected) {
         console.log(
           LOG_TAG,
@@ -600,8 +607,8 @@ export default function ChatConsultation() {
       forceReconnectChatSocket();
     }
 
-    refetchConsultationHistory();
-  }, [refetchConsultationHistory]);
+    safeRefetchHistory();
+  }, [safeRefetchHistory]);
 
   // Fires once the wall-clock-synced countdown (above) actually reaches 0
   // while the chat is live — guarded so a resync landing on 0 again (e.g.

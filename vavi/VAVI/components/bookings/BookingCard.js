@@ -1,11 +1,5 @@
 import React from "react";
-import {
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
@@ -16,58 +10,111 @@ import { RF, hp, wp } from "../../utils/responsive";
 const ORANGE = "#ff6a00";
 
 export default function BookingCard({ item, onSelectDetails, onRate }) {
-  const astrologer = item?.astrologer || item?.astrologerUser || item?.user || {};
-  const name = astrologer?.name || item?.astrologerName || "Astrologer";
-  const imageUri = astrologer?.profilePic || item?.astrologerImage || "";
-  const type = (item?.type || item?.consultationType || "call").toLowerCase();
-  const status = (item?.status || "completed").toLowerCase();
+  const astrologer =
+    item?.astrologer ||
+    item?.astrologerUser ||
+    item?.astrologerDetails ||
+    item?.user ||
+    {};
+  const name =
+    astrologer?.name ||
+    astrologer?.fullName ||
+    item?.astrologerName ||
+    "Astrologer";
+  const imageUri =
+    astrologer?.profilePic ||
+    astrologer?.profileImage ||
+    astrologer?.image ||
+    item?.astrologerImage ||
+    "";
+  const type = String(
+    item?.type || item?.consultationType || item?.consultation_type || "call",
+  ).toLowerCase();
+  const status = String(item?.status || "completed").toLowerCase();
   const amount = item?.amount ?? item?.totalAmount ?? item?.fee ?? 0;
   const duration = item?.duration ?? item?.durationSeconds ?? 0;
-  const problem = item?.problem || item?.topic || astrologer?.expertises?.[0]?.name || "Horoscope Guidance";
-  const createdAt = item?.createdAt || item?.date || new Date().toISOString();
+  const problem =
+    item?.problem ||
+    item?.topic ||
+    astrologer?.expertises?.[0]?.name ||
+    "Consultation";
+  const createdAt =
+    item?.createdAt ||
+    item?.date ||
+    item?.updatedAt ||
+    new Date().toISOString();
 
   // Format Date & Time
   const formatDate = (dateStr) => {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return dateStr;
-      return d.toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }) + ", " + d.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
+      return (
+        d.toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        }) +
+        ", " +
+        d.toLocaleTimeString("en-IN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      );
     } catch (e) {
       return dateStr;
     }
   };
 
-  // Format Duration (e.g. 15m)
+  // Format Duration (e.g. 5m 30s or 15m)
   const formatDuration = (val) => {
     if (!val || isNaN(val)) return "0m";
     const num = Number(val);
-    if (num >= 60) {
-      const m = Math.ceil(num / 60);
-      return `${m}m`;
+    if (num <= 0) return "0m";
+    if (num < 60) {
+      return `${num}s`;
     }
-    return `${num}m`;
+    const mins = Math.floor(num / 60);
+    const secs = num % 60;
+    if (secs > 0 && mins < 60) {
+      return `${mins}m ${secs}s`;
+    }
+    return `${mins}m`;
   };
 
   // Status Styling
   const getStatusBadge = () => {
     switch (status) {
       case "completed":
-        return { label: "Completed", bg: "#E8F8EE", text: "#2E7D32", icon: "checkmark-circle" };
+        return {
+          label: "Completed",
+          bg: "#E8F8EE",
+          text: "#2E7D32",
+          icon: "checkmark-circle",
+        };
       case "ongoing":
-        return { label: "Ongoing", bg: "#FFF4E5", text: ORANGE, icon: "radio-button-on" };
+        return {
+          label: "Ongoing",
+          bg: "#FFF4E5",
+          text: ORANGE,
+          icon: "radio-button-on",
+        };
       case "missed":
       case "cancelled":
-        return { label: "Cancelled", bg: "#FEECEB", text: "#D32F2F", icon: "close-circle" };
+        return {
+          label: "Cancelled",
+          bg: "#FEECEB",
+          text: "#D32F2F",
+          icon: "close-circle",
+        };
       default:
-        return { label: status.toUpperCase(), bg: "#F0F0F0", text: "#666", icon: "information-circle" };
+        return {
+          label: status.toUpperCase(),
+          bg: "#F0F0F0",
+          text: "#666",
+          icon: "information-circle",
+        };
     }
   };
 
@@ -88,10 +135,19 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
   };
 
   const imageSource =
-    resolveImageUri(imageUri) || require("../../assets/images/placeholder.jpeg");
+    resolveImageUri(imageUri) ||
+    require("../../assets/images/placeholder.jpeg");
 
-  const userRating = item?.rating || item?.review?.rating || item?.userRating || item?.reviewData?.rating;
-  const userReviewText = item?.review?.review || item?.review?.comment || item?.reviewText || item?.userReview;
+  const userRating =
+    item?.rating ||
+    item?.review?.rating ||
+    item?.userRating ||
+    item?.reviewData?.rating;
+  const userReviewText =
+    item?.review?.review ||
+    item?.review?.comment ||
+    item?.reviewText ||
+    item?.userReview;
 
   return (
     <View style={styles.card}>
@@ -114,7 +170,11 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
 
         {/* Status Badge */}
         <View style={[styles.statusBadge, { backgroundColor: statusBadge.bg }]}>
-          <Ionicons name={statusBadge.icon} size={RF(11)} color={statusBadge.text} />
+          <Ionicons
+            name={statusBadge.icon}
+            size={RF(11)}
+            color={statusBadge.text}
+          />
           <Text style={[styles.statusText, { color: statusBadge.text }]}>
             {statusBadge.label}
           </Text>
@@ -128,7 +188,9 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
         <View style={styles.statItem}>
           <View style={styles.statIconWrap}>
             <Ionicons
-              name={type === "chat" ? "chatbubble-ellipses-outline" : "call-outline"}
+              name={
+                type === "chat" ? "chatbubble-ellipses-outline" : "call-outline"
+              }
               size={RF(13)}
               color={ORANGE}
             />
@@ -136,7 +198,11 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
           <View>
             <Text style={styles.statLabel}>Type</Text>
             <Text style={styles.statValue}>
-              {type === "chat" ? "Chat" : type === "video_call" ? "Video Call" : "Voice Call"}
+              {type === "chat"
+                ? "Chat"
+                : type === "video_call"
+                  ? "Video Call"
+                  : "Voice Call"}
             </Text>
           </View>
         </View>
@@ -157,7 +223,9 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
           </View>
           <View>
             <Text style={styles.statLabel}>Deducted</Text>
-            <Text style={[styles.statValue, { color: "#2E7D32" }]}>₹{amount}</Text>
+            <Text style={[styles.statValue, { color: "#2E7D32" }]}>
+              ₹{amount}
+            </Text>
           </View>
         </View>
       </View>
@@ -202,7 +270,9 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
             size={RF(13)}
             color={userRating ? "#2E7D32" : "#F57C00"}
           />
-          <Text style={[styles.rateBtnText, !!userRating && styles.ratedBtnText]}>
+          <Text
+            style={[styles.rateBtnText, !!userRating && styles.ratedBtnText]}
+          >
             {userRating ? `${userRating}★ Rated` : "Rate"}
           </Text>
         </TouchableOpacity>
