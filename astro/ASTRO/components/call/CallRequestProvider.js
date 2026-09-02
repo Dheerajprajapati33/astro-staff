@@ -3,7 +3,7 @@
 // Manages incoming voice call alerts and accept/decline flows for the Astrologer.
 // Follows Section B (Steps 1-3) of the Voice & Video Call Consultation Guide.
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router, useSegments } from "expo-router";
 
 import IncomingCallModal from "./IncomingCallModal";
@@ -44,7 +44,11 @@ export default function CallRequestProvider({ children }) {
 
       // Listen for socket push event if pushed directly from backend
       socket.on("incoming_call_request", (data) => {
-        console.log(LOG_TAG, "incoming_call_request RECEIVED:", JSON.stringify(data));
+        console.log(
+          LOG_TAG,
+          "incoming_call_request RECEIVED:",
+          JSON.stringify(data),
+        );
         if (isMounted) {
           setIncomingCall({
             consultationId: data?.consultationId,
@@ -65,10 +69,11 @@ export default function CallRequestProvider({ children }) {
   }, [segments]);
 
   // Working fallback: poll waiting consultations filtered by consultationType === "call"
-  const { data: waitingData, error: waitingError } = useGetConsultationHistoryQuery(
-    { page: 1, limit: 10, status: "waiting" },
-    { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
-  );
+  const { data: waitingData, error: waitingError } =
+    useGetConsultationHistoryQuery(
+      { page: 1, limit: 10, status: "waiting" },
+      { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
+    );
 
   useEffect(() => {
     if (waitingError) return;
@@ -79,7 +84,9 @@ export default function CallRequestProvider({ children }) {
 
     if (incomingCall) return; // already showing incoming call
 
-    const nextCall = waitingCalls.find((c) => !dismissedIdsRef.current.has(c.id));
+    const nextCall = waitingCalls.find(
+      (c) => !dismissedIdsRef.current.has(c.id),
+    );
 
     if (nextCall) {
       console.log(LOG_TAG, "Surfacing incoming call request:", nextCall.id);
@@ -96,7 +103,8 @@ export default function CallRequestProvider({ children }) {
   const handleAccept = () => {
     if (!incomingCall) return;
 
-    const { consultationId, userId, userName, problem, maxDurationSeconds } = incomingCall;
+    const { consultationId, userId, userName, problem, maxDurationSeconds } =
+      incomingCall;
 
     console.log(LOG_TAG, "Astrologer accepted call:", consultationId);
 
@@ -121,7 +129,11 @@ export default function CallRequestProvider({ children }) {
   };
 
   const handleDecline = () => {
-    console.log(LOG_TAG, "Astrologer declined call:", incomingCall?.consultationId);
+    console.log(
+      LOG_TAG,
+      "Astrologer declined call:",
+      incomingCall?.consultationId,
+    );
     if (incomingCall?.consultationId) {
       dismissedIdsRef.current.add(incomingCall.consultationId);
     }

@@ -66,7 +66,6 @@ export default function Splash() {
             fontFamily: Typography?.bold,
           }}
         >
-          Preparing your future...
         </Text>
       </SafeAreaView>
     </ImageBackground>

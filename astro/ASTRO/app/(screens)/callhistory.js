@@ -50,7 +50,7 @@ export default function CallHistory() {
     refetch,
   } = useGetConsultationHistoryQuery(
     { page: 1, limit: 50, type: "call" },
-    { pollingInterval: 10000 }
+    { pollingInterval: 10000 },
   );
 
   const consultationsList = useMemo(() => {
@@ -170,7 +170,8 @@ export default function CallHistory() {
           <View style={{ flex: 1 }}>
             <Text style={styles.infoTitle}>Voice Consultation History</Text>
             <Text style={styles.infoText}>
-              View details, duration, and earnings for all your client voice calls.
+              View details, duration, and earnings for all your client voice
+              calls.
             </Text>
           </View>
         </View>
@@ -215,7 +216,9 @@ export default function CallHistory() {
                 color="#ccc"
                 style={{ marginBottom: hp(1) }}
               />
-              <Text style={styles.emptyText}>No voice consultation history found.</Text>
+              <Text style={styles.emptyText}>
+                No voice consultation history found.
+              </Text>
             </View>
           }
           renderItem={({ item, index }) => {
@@ -230,9 +233,11 @@ export default function CallHistory() {
               item?.problem || item?.topic || "Voice Consultation";
             const { time, label } = formatDate(item?.createdAt || item?.date);
             const status = (item?.status || "completed").toLowerCase();
-            const durationSecs = Number(item?.duration || item?.durationSeconds) || 0;
+            const durationSecs =
+              Number(item?.duration || item?.durationSeconds) || 0;
             const durationMins = Math.ceil(durationSecs / 60);
-            const amount = item?.amount || item?.astrologerEarnings || item?.fee || 0;
+            const amount =
+              item?.amount || item?.astrologerEarnings || item?.fee || 0;
 
             return (
               <TouchableOpacity
@@ -264,12 +269,20 @@ export default function CallHistory() {
 
                   <View style={styles.metaRow}>
                     <View style={styles.metaBadge}>
-                      <Ionicons name="time-outline" size={RF(11)} color="#2196F3" />
+                      <Ionicons
+                        name="time-outline"
+                        size={RF(11)}
+                        color="#2196F3"
+                      />
                       <Text style={styles.metaText}>{durationMins} min</Text>
                     </View>
 
                     <View style={styles.metaBadge}>
-                      <Ionicons name="wallet-outline" size={RF(11)} color="#4CAF50" />
+                      <Ionicons
+                        name="wallet-outline"
+                        size={RF(11)}
+                        color="#4CAF50"
+                      />
                       <Text style={[styles.metaText, { color: "#2E7D32" }]}>
                         ₹{amount}
                       </Text>
@@ -281,7 +294,11 @@ export default function CallHistory() {
                 <View style={styles.right}>
                   {!!time && (
                     <View style={styles.timeRow}>
-                      <Ionicons name="time-outline" size={RF(11)} color={ORANGE} />
+                      <Ionicons
+                        name="time-outline"
+                        size={RF(11)}
+                        color={ORANGE}
+                      />
                       <Text style={styles.time}>{time}</Text>
                     </View>
                   )}

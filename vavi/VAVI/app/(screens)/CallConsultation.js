@@ -459,8 +459,10 @@ export default function CallConsultation() {
           clientRoleType: 1,
           publishMicrophoneTrack: true,
           publishCameraTrack: true,
+          publishCameraTrack: false,
           autoSubscribeAudio: true,
           autoSubscribeVideo: true,
+          autoSubscribeVideo: false,
         });
       }
     } catch (err) {

@@ -31,18 +31,14 @@ export default function Reviews() {
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
 
-  const {
-    data,
-    isLoading,
-    refetch,
-  } = useGetReviewsQuery(undefined, {
+  const { data, isLoading, refetch } = useGetReviewsQuery(undefined, {
     pollingInterval: 10000,
   });
 
   useFocusEffect(
     useCallback(() => {
       refetch();
-    }, [refetch])
+    }, [refetch]),
   );
 
   const [addReply, { isLoading: replyLoading }] = useAddReviewReplyMutation();
@@ -278,7 +274,10 @@ const ReviewCard = ({
     <View style={styles.reviewCard}>
       <View style={styles.reviewTop}>
         <Image
-          source={resolveImageUri(item?.profilePic) || require("../../assets/images/banner.png")}
+          source={
+            resolveImageUri(item?.profilePic) ||
+            require("../../assets/images/banner.png")
+          }
           style={styles.avatar}
         />
 

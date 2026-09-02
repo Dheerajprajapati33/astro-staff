@@ -55,14 +55,19 @@ export default function ChatRequestProvider({ children }) {
   // (confirmed live: "Unknown column 'Consultation.type' in 'where clause'"
   // - the DB column is actually `consultationType`). Only pass `status`,
   // which is confirmed working, and filter to chat consultations ourselves.
-  const { data: waitingData, error: waitingError } = useGetConsultationHistoryQuery(
-    { page: 1, limit: 10, status: "waiting" },
-    { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
-  );
+  const { data: waitingData, error: waitingError } =
+    useGetConsultationHistoryQuery(
+      { page: 1, limit: 10, status: "waiting" },
+      { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
+    );
 
   useEffect(() => {
     if (waitingError) {
-      console.log(LOG_TAG, "waiting-requests poll error:", JSON.stringify(waitingError));
+      console.log(
+        LOG_TAG,
+        "waiting-requests poll error:",
+        JSON.stringify(waitingError),
+      );
       return;
     }
 
@@ -70,14 +75,22 @@ export default function ChatRequestProvider({ children }) {
       (c) => c.consultationType === "chat",
     );
 
-    console.log(LOG_TAG, "waiting-requests poll result count:", waitingList.length);
+    console.log(
+      LOG_TAG,
+      "waiting-requests poll result count:",
+      waitingList.length,
+    );
 
     if (incomingRequest) return; // already showing one, don't interrupt
 
     const next = waitingList.find((c) => !dismissedIdsRef.current.has(c.id));
 
     if (next) {
-      console.log(LOG_TAG, "surfacing waiting consultation as incoming request:", next.id);
+      console.log(
+        LOG_TAG,
+        "surfacing waiting consultation as incoming request:",
+        next.id,
+      );
 
       setIncomingRequest({
         consultationId: next.id,
@@ -123,11 +136,7 @@ export default function ChatRequestProvider({ children }) {
   };
 
   const handleDecline = () => {
-    console.log(
-      LOG_TAG,
-      "REQUEST DECLINED:",
-      JSON.stringify(incomingRequest),
-    );
+    console.log(LOG_TAG, "REQUEST DECLINED:", JSON.stringify(incomingRequest));
 
     if (incomingRequest?.consultationId) {
       dismissedIdsRef.current.add(incomingRequest.consultationId);

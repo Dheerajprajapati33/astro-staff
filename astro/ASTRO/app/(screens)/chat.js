@@ -3,7 +3,10 @@ import { router, useLocalSearchParams } from "expo-router";
 // expo-speech-recognition uses native modules — not available in Expo Go.
 // We wrap the import so the app degrades gracefully (mic button is hidden)
 // instead of crashing on load.
-let ExpoSpeechRecognitionModule = { stop: () => {}, requestPermissionsAsync: async () => ({ granted: false }) };
+let ExpoSpeechRecognitionModule = {
+  stop: () => {},
+  requestPermissionsAsync: async () => ({ granted: false }),
+};
 let useSpeechRecognitionEvent = () => {};
 try {
   const speechMod = require("expo-speech-recognition");
@@ -30,7 +33,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import CountdownTimer from "../../components/chat/CountdownTimer";
 import Typography from "../../constants/Typography";
@@ -159,7 +165,9 @@ export default function Chat() {
   // Room mode renders directly from the polled query (REST is the source of
   // truth). Consultation mode seeds once from history then appends live via
   // socket (see onNewMessage below).
-  const displayMessages = isConsultationMode ? messages : (historyData?.messages ?? []);
+  const displayMessages = isConsultationMode
+    ? messages
+    : (historyData?.messages ?? []);
 
   // Consultation mode: messaging only makes sense while a live session is
   // actually running - not before it's started (e.g. this screen mounted
@@ -177,7 +185,11 @@ export default function Chat() {
     });
 
     if (isConsultationMode && historyData?.messages) {
-      console.log(LOG_TAG, "SEEDING HISTORY MESSAGES:", historyData.messages.length);
+      console.log(
+        LOG_TAG,
+        "SEEDING HISTORY MESSAGES:",
+        historyData.messages.length,
+      );
       setMessages(historyData.messages);
     }
   }, [historyData, historyLoading, effectiveRoomId, isConsultationMode]);
@@ -238,19 +250,17 @@ export default function Chat() {
   // confirmed present on every consultation via GET /consultation/history)
   // to compute the true state and remaining time from wall-clock, self-
   // healing regardless of whether the live event fires this session.
-  const {
-    data: consultationHistoryData,
-    refetch: refetchConsultationHistory,
-  } = useGetConsultationHistoryQuery(
-    { page: 1, limit: 50 },
-    {
-      skip: !isConsultationMode,
-      // Short-lived poll so the fallback below can retry if its first fetch
-      // raced the backend's status write right after accept - stops once a
-      // definitive status has actually been seen.
-      pollingInterval: isConsultationMode && !historyResolved ? 3000 : 0,
-    },
-  );
+  const { data: consultationHistoryData, refetch: refetchConsultationHistory } =
+    useGetConsultationHistoryQuery(
+      { page: 1, limit: 50 },
+      {
+        skip: !isConsultationMode,
+        // Short-lived poll so the fallback below can retry if its first fetch
+        // raced the backend's status write right after accept - stops once a
+        // definitive status has actually been seen.
+        pollingInterval: isConsultationMode && !historyResolved ? 3000 : 0,
+      },
+    );
 
   useEffect(() => {
     refetchConsultationHistoryRef.current = refetchConsultationHistory;
@@ -271,7 +281,11 @@ export default function Chat() {
       (c) => c.id === consultationId,
     );
 
-    console.log(LOG_TAG, "consultation status fallback lookup:", JSON.stringify(match));
+    console.log(
+      LOG_TAG,
+      "consultation status fallback lookup:",
+      JSON.stringify(match),
+    );
 
     if (!match) return;
 
@@ -280,7 +294,10 @@ export default function Chat() {
       const elapsedSec = Math.floor((Date.now() - startedAtMs) / 1000);
       const remaining = Math.max(0, (match.maxDuration ?? 0) - elapsedSec);
 
-      console.log(LOG_TAG, "RECOVERED/RESYNCED ongoing chat state:", { elapsedSec, remaining });
+      console.log(LOG_TAG, "RECOVERED/RESYNCED ongoing chat state:", {
+        elapsedSec,
+        remaining,
+      });
 
       setChatActive(true);
       setSecondsLeft(remaining);
@@ -313,7 +330,10 @@ export default function Chat() {
             {
               text: "OK",
               onPress: () => {
-                console.log(LOG_TAG, "fallback chat-ended alert dismissed: navigating to home");
+                console.log(
+                  LOG_TAG,
+                  "fallback chat-ended alert dismissed: navigating to home",
+                );
                 router.replace("/(home)");
               },
             },
@@ -366,11 +386,10 @@ export default function Chat() {
       });
 
       if (!socket || !consultationId) {
-        console.log(
-          LOG_TAG,
-          "CANNOT JOIN, MISSING SOCKET OR consultationId",
-          { hasSocket: !!socket, consultationId },
-        );
+        console.log(LOG_TAG, "CANNOT JOIN, MISSING SOCKET OR consultationId", {
+          hasSocket: !!socket,
+          consultationId,
+        });
         return;
       }
 
@@ -466,19 +485,15 @@ export default function Chat() {
           alertMsg = `Client has ended this chat consultation session.${amount != null ? ` Total Earnings: ₹${amount}` : ""}`;
         }
 
-        Alert.alert(
-          alertTitle,
-          alertMsg,
-          [
-            {
-              text: "OK",
-              onPress: () => {
-                console.log(LOG_TAG, "chat_ended: navigating to home");
-                router.replace("/(home)");
-              },
+        Alert.alert(alertTitle, alertMsg, [
+          {
+            text: "OK",
+            onPress: () => {
+              console.log(LOG_TAG, "chat_ended: navigating to home");
+              router.replace("/(home)");
             },
-          ],
-        );
+          },
+        ]);
       };
 
       socket.on("chat_session_joined", onSessionJoined);
@@ -512,7 +527,11 @@ export default function Chat() {
 
       // We'll reconcile state if status transitions from non-connected to connected
       const unsubStatusReconcile = onConnectionStatusChange((status) => {
-        if (status === "connected" && prevStatus !== "connected" && hasConnectedBefore) {
+        if (
+          status === "connected" &&
+          prevStatus !== "connected" &&
+          hasConnectedBefore
+        ) {
           reconcileAfterReconnect("socket reconnected");
         }
         if (status === "connected") {
@@ -614,7 +633,12 @@ export default function Chat() {
   useSpeechRecognitionEvent("end", () => setIsListening(false));
 
   useSpeechRecognitionEvent("error", (event) => {
-    console.log(LOG_TAG, "speech recognition error:", event.error, event.message);
+    console.log(
+      LOG_TAG,
+      "speech recognition error:",
+      event.error,
+      event.message,
+    );
     setIsListening(false);
   });
 
@@ -768,7 +792,10 @@ export default function Chat() {
           {
             text: "OK",
             onPress: () => {
-              console.log(LOG_TAG, "connection issue alert dismissed: navigating to home");
+              console.log(
+                LOG_TAG,
+                "connection issue alert dismissed: navigating to home",
+              );
               router.replace("/(home)");
             },
           },
@@ -897,7 +924,10 @@ export default function Chat() {
             {isConsultationMode && (
               <View style={styles.locationRow}>
                 {/* <Ionicons name="time-outline" size={RF(11)} color={ORANGE} /> */}
-                {chatActive && !chatEnded && socketConnected && secondsLeft != null ? (
+                {chatActive &&
+                !chatEnded &&
+                socketConnected &&
+                secondsLeft != null ? (
                   <Text style={styles.city}>
                     Live · <CountdownTimer secondsLeft={secondsLeft} /> left
                   </Text>
@@ -931,11 +961,7 @@ export default function Chat() {
 
         {isConsultationMode && connStatus !== "connected" && !chatEnded && (
           <View style={styles.warningBanner}>
-            <Ionicons
-              name="alert-circle-outline"
-              size={RF(14)}
-              color="#fff"
-            />
+            <Ionicons name="alert-circle-outline" size={RF(14)} color="#fff" />
             <Text style={styles.warningText}>
               {connStatus === "connecting"
                 ? "Connecting to server..."
@@ -958,7 +984,11 @@ export default function Chat() {
           }
           ListHeaderComponent={
             <View style={styles.secureBox}>
-              <Ionicons name="lock-closed-outline" size={RF(11)} color={ORANGE} />
+              <Ionicons
+                name="lock-closed-outline"
+                size={RF(11)}
+                color={ORANGE}
+              />
               <Text style={styles.secureText}>
                 {historyLoading
                   ? "Loading chat history..."
