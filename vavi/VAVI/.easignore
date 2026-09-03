@@ -1,0 +1,21 @@
+﻿# Dependencies
+node_modules/
+
+# Expo & Local build caches
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native build artifacts
+android/app/build/
+android/build/
+android/.gradle/
+ios/build/
+ios/Pods/
+
+# Temporary and log files
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
