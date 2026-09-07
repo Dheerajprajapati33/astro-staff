@@ -10,7 +10,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const notifications = [
   {
@@ -121,7 +122,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: wp(4),
     paddingVertical: hp(1.5),
-    
   },
 
   headerTitle: {

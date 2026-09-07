@@ -137,6 +137,30 @@ export const disconnectSocket = () => {
   }
 };
 
+// Add these helper functions in utils/socket.js:
+
+export const clearLastJoinParams = () => {
+  lastJoinParams = null;
+  currentJoinedConsultationId = null;
+  console.log(LOG_TAG, "Cleared last join consultation params");
+};
+
+export const joinLiveRoom = (payload) => {
+  if (socket?.connected) {
+    socket.emit("join_live_room", payload);
+  }
+};
+
+export const leaveLiveRoom = (payload) => {
+  if (socket?.connected) {
+    socket.emit("leave_live_room", payload);
+  }
+};
+// add as a helper function to join a call consultation room with the given parameters.
+//  It checks if the socket is already connected and if the consultation ID matches the 
+// current joined consultation. If not, it updates the last join parameters and emits the 
+// "join_consultation" event to the server.
+
 export const joinCallConsultation = ({ consultationId, userId, role = "astrologer" }) => {
   if (currentJoinedConsultationId === consultationId && socket?.connected) {
     console.log(LOG_TAG, "Already joined call room:", consultationId);

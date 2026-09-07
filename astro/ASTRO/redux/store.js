@@ -14,6 +14,7 @@ import { profileApi } from "./ProfileApi";
 import { registerApi } from "./registerApi";
 import { reviewApi } from "./ReviewApi";
 import { walletApi } from "./walletApi";
+import { warningApi } from "./warningApi";
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +33,7 @@ export const store = configureStore({
     [chatApi.reducerPath]: chatApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
     [walletApi.reducerPath]: walletApi.reducer,
+    [warningApi.reducerPath]: warningApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -51,6 +53,6 @@ export const store = configureStore({
       chatApi.middleware,
       liveApi.middleware,
       walletApi.middleware,
+      warningApi.middleware,
     ),
 });
-

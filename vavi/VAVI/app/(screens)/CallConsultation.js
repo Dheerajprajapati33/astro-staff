@@ -73,7 +73,7 @@ export default function CallConsultation() {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
-  const [isSpeaker, setIsSpeaker] = useState(true);
+  const [isSpeaker, setIsSpeaker] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [amountDeducted, setAmountDeducted] = useState(0);
@@ -397,9 +397,9 @@ export default function CallConsultation() {
               );
               if (engine.enableLocalAudio) engine.enableLocalAudio(true);
               if (engine.setDefaultAudioRouteToSpeakerphone)
-                engine.setDefaultAudioRouteToSpeakerphone(true);
+                engine.setDefaultAudioRouteToSpeakerphone(false);
               if (engine.setEnableSpeakerphone)
-                engine.setEnableSpeakerphone(true);
+                engine.setEnableSpeakerphone(false);
               if (engine.muteLocalAudioStream)
                 engine.muteLocalAudioStream(false);
               if (engine.muteAllRemoteAudioStreams)
@@ -441,8 +441,8 @@ export default function CallConsultation() {
         engine.enableAudio();
         if (engine.enableLocalAudio) engine.enableLocalAudio(true);
         if (engine.setDefaultAudioRouteToSpeakerphone)
-          engine.setDefaultAudioRouteToSpeakerphone(true);
-        if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+          engine.setDefaultAudioRouteToSpeakerphone(false);
+        if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(false);
         engine.enableVideo();
 
         if (engine.adjustRecordingSignalVolume)
@@ -751,10 +751,14 @@ export default function CallConsultation() {
               style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
             />
             <View style={styles.ringingAvatarCircle}>
-              <Image
-                source={astrologerImgSource}
-                style={styles.ringingAvatarImg}
-              />
+              {astrologerImage ? (
+                <Image
+                  source={resolveImageUri(astrologerImage)}
+                  style={styles.ringingAvatarImg}
+                />
+              ) : (
+                <Ionicons name="person" size={RF(52)} color="#ffffff" />
+              )}
             </View>
             <Text style={styles.astrologerNameRinging}>{astrologerName}</Text>
             <Text style={styles.rateBadgeText}>
@@ -807,14 +811,15 @@ export default function CallConsultation() {
 
           {/* Centered WhatsApp-Style Voice Avatar with Pulse Animation */}
           <View style={styles.voiceAvatarCenterWrap}>
-            <Animated.View
-              style={[styles.pulseRing, { transform: [{ scale: pulseAnim }] }]}
-            />
             <View style={styles.voiceAvatarCircle}>
-              <Image
-                source={astrologerImgSource}
-                style={styles.voiceAvatarImg}
-              />
+              {astrologerImage ? (
+                <Image
+                  source={resolveImageUri(astrologerImage)}
+                  style={styles.voiceAvatarImg}
+                />
+              ) : (
+                <Ionicons name="person" size={RF(52)} color="#ffffff" />
+              )}
             </View>
             <Text style={styles.voiceAstrologerName}>{astrologerName}</Text>
             <Text style={styles.voiceSubStatus}>
@@ -865,7 +870,7 @@ export default function CallConsultation() {
 
             {/* Speaker Toggle */}
             <TouchableOpacity
-              style={[styles.controlBtn, !isSpeaker && styles.controlBtnActive]}
+              style={[styles.controlBtn, isSpeaker && styles.controlBtnActive]}
               onPress={handleToggleSpeaker}
               activeOpacity={0.8}
             >
@@ -1003,7 +1008,7 @@ const styles = StyleSheet.create({
     width: wp(52),
     height: wp(52),
     borderRadius: wp(26),
-    backgroundColor: "rgba(255, 106, 0, 0.2)",
+    backgroundColor: "transparent",
   },
   ringingAvatarCircle: {
     width: wp(38),
@@ -1011,8 +1016,10 @@ const styles = StyleSheet.create({
     borderRadius: wp(19),
     overflow: "hidden",
     borderWidth: 3,
-    borderColor: ORANGE,
-    backgroundColor: "#222",
+    borderColor: "#22c55e",
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
   },
   ringingAvatarImg: {
     width: "100%",
@@ -1154,6 +1161,7 @@ const styles = StyleSheet.create({
     width: wp(7),
     height: wp(7),
     borderRadius: wp(3.5),
+    backgroundColor: "#fff",
   },
   headerHostName: {
     color: "#fff",
@@ -1312,11 +1320,11 @@ const styles = StyleSheet.create({
     height: wp(36),
     borderRadius: wp(18),
     borderWidth: 3,
-    borderColor: ORANGE,
+    borderColor: "#22c55e",
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1c1830",
+    backgroundColor: "#2563eb",
     marginBottom: hp(2),
   },
   voiceAvatarImg: {

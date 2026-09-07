@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,46 +14,71 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
+import { useGetWarningsQuery } from "../../redux/warningApi";
 
 const ORANGE = "#ff6a00";
 const RED = "#ff2d2d";
 const GREEN = "#24a148";
 
-const warnings = [
-  {
-    title: "Inappropriate Language",
-    desc: "You used inappropriate language during a live session.",
-    tag: "First Warning",
-    date: "25 May 2025",
-    time: "11:30 AM",
-  },
-  {
-    title: "Misleading Information",
-    desc: "You provided misleading information to the client.",
-    tag: "Second Warning",
-    date: "18 May 2025",
-    time: "04:45 PM",
-  },
-  {
-    title: "Promoting Other Platforms",
-    desc: "You promoted other platforms during a session.",
-    tag: "Second Warning",
-    date: "10 May 2025",
-    time: "02:20 PM",
-  },
-  {
-    title: "Session Cancellation",
-    desc: "You cancelled multiple sessions without a valid reason.",
-    tag: "Third Warning",
-    date: "02 May 2025",
-    time: "09:10 AM",
-  },
-];
+const formatDate = (dateString, fallback = "") => {
+  if (!dateString) return fallback;
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return dateString;
+  return d.toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTime = (dateString, fallback = "") => {
+  if (!dateString) return fallback;
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return fallback;
+  return d.toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const formatTag = (item) => {
+  if (item?.tag) return item.tag;
+  if (item?.level) {
+    const l = String(item.level).toLowerCase();
+    if (l === "low") return "Low Warning";
+    if (l === "medium") return "Second Warning";
+    if (l === "high" || l === "critical") return "Critical Warning";
+    return (
+      String(item.level).charAt(0).toUpperCase() + String(item.level).slice(1)
+    );
+  }
+  return "Warning";
+};
 
 export default function Warnings() {
   const [showInfo, setShowInfo] = useState(false);
   const [showImportant, setShowImportant] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+
+  const { data, isLoading, isFetching, refetch } = useGetWarningsQuery(
+    { page: 1, limit: 10 },
+    {
+      refetchOnMountOrArgChange: true,
+    },
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
+
+  const warningsList = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.warnings)
+      ? data.warnings
+      : [];
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -63,10 +90,12 @@ export default function Warnings() {
         <Text style={styles.headerTitle}>Warnings</Text>
 
         <View style={[styles.headerActions, styles.headerActionsRight]}>
-          <TouchableOpacity
-            onPress={() => setShowImportant((prev) => !prev)}
-          >
-            <Ionicons name="information-circle-outline" size={RF(22)} color={GREEN} />
+          <TouchableOpacity onPress={() => setShowImportant((prev) => !prev)}>
+            <Ionicons
+              name="information-circle-outline"
+              size={RF(22)}
+              color={GREEN}
+            />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => setShowHelp((prev) => !prev)}>
@@ -117,55 +146,89 @@ export default function Warnings() {
         </View>
       )}
 
-      <FlatList
-        data={warnings}
-        keyExtractor={(item) => item.title}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.list}
-        ListHeaderComponent={
-          <>
-            {showInfo && (
-              <View style={styles.topCard}>
-                <View style={styles.shieldCircle}>
-                  <Ionicons name="shield" size={RF(35)} color={RED} />
-                  <Ionicons
-                    name="alert"
-                    size={RF(18)}
-                    color="#fff"
-                    style={styles.alertInside}
-                  />
-                </View>
+      {isLoading && !isFetching ? (
+        <View style={styles.centerContainer}>
+          <ActivityIndicator size="large" color={ORANGE} />
+          <Text style={styles.loadingText}>Loading warnings...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={warningsList}
+          keyExtractor={(item, index) => item._id || item.id || String(index)}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching}
+              onRefresh={refetch}
+              colors={[ORANGE]}
+              tintColor={ORANGE}
+            />
+          }
+          ListHeaderComponent={
+            <>
+              {showInfo && (
+                <View style={styles.topCard}>
+                  <View style={styles.shieldCircle}>
+                    <Ionicons name="shield" size={RF(35)} color={RED} />
+                    <Ionicons
+                      name="alert"
+                      size={RF(18)}
+                      color="#fff"
+                      style={styles.alertInside}
+                    />
+                  </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.topTitle}>
-                    Please follow our community guidelines and policies.
-                  </Text>
-                  <Text style={styles.topSub}>
-                    Repeated violations may lead to account restrictions.
-                  </Text>
-                </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.topTitle}>
+                      Please follow our community guidelines and policies.
+                    </Text>
+                    <Text style={styles.topSub}>
+                      Repeated violations may lead to account restrictions.
+                    </Text>
+                  </View>
 
-                <Text style={styles.clipboard}>📋</Text>
+                  <Text style={styles.clipboard}>📋</Text>
+                </View>
+              )}
+
+              <View style={styles.sectionRow}>
+                {/* <Text style={styles.sectionTitle}>All Warnings</Text> */}
               </View>
-            )}
-
-            <View style={styles.sectionRow}>
-              {/* <Text style={styles.sectionTitle}>All Warnings</Text> */}
-
-              {/* <TouchableOpacity style={styles.filterRow}>
-                <Ionicons name="filter-outline" size={RF(17)} color={RED} />
-                <Text style={styles.filterText}>Filter</Text>
-              </TouchableOpacity> */}
-            </View>
-          </>
-        }
-        renderItem={({ item }) => <WarningItem item={item} />}
-      />
+            </>
+          }
+          ListEmptyComponent={
+            !isLoading && (
+              <View style={styles.emptyContainer}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={RF(50)}
+                  color={GREEN}
+                />
+                <Text style={styles.emptyTitle}>No Warnings Found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Great job! You do not have any warnings on your account.
+                </Text>
+              </View>
+            )
+          }
+          renderItem={({ item }) => <WarningItem item={item} />}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const WarningItem = ({ item }) => {
+  const displayTitle = item?.title || "Warning";
+  const displayDesc =
+    item?.desc || item?.reason || item?.message || "No description provided.";
+  const displayTag = formatTag(item);
+  const displayDate =
+    item?.date || formatDate(item?.createdAt || item?.date, "Recently");
+  const displayTime =
+    item?.time || formatTime(item?.createdAt || item?.time, "");
+
   return (
     <View style={styles.warningCard}>
       <View style={styles.redBar} />
@@ -180,27 +243,20 @@ const WarningItem = ({ item }) => {
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {item.title}
+          {displayTitle}
         </Text>
-        <Text style={styles.warningDesc} numberOfLines={1} ellipsizeMode="tail">
-          {item.desc}
+        <Text style={styles.warningDesc} numberOfLines={2} ellipsizeMode="tail">
+          {displayDesc}
         </Text>
 
         <View style={styles.tag}>
-          <Text style={styles.tagText}>{item.tag}</Text>
+          <Text style={styles.tagText}>{displayTag}</Text>
         </View>
       </View>
 
       <View style={styles.warningRight}>
-        <Text style={styles.date}>{item.date}</Text>
-        <Text style={styles.time}>{item.time}</Text>
-
-        {/* <Ionicons
-          name="chevron-down"
-          size={RF(17)}
-          color={RED}
-          style={styles.downIcon}
-        /> */}
+        {displayDate ? <Text style={styles.date}>{displayDate}</Text> : null}
+        {displayTime ? <Text style={styles.time}>{displayTime}</Text> : null}
       </View>
     </View>
   );
@@ -504,5 +560,37 @@ const styles = StyleSheet.create({
     fontSize: RF(10),
     fontWeight: "900",
     fontFamily: Typography?.bold,
+  },
+  centerContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: hp(15),
+  },
+  loadingText: {
+    marginTop: hp(1.5),
+    fontSize: RF(12),
+    color: "#6b7280",
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: hp(8),
+    paddingHorizontal: wp(6),
+  },
+  emptyTitle: {
+    fontSize: RF(16),
+    color: "#111827",
+    fontWeight: "800",
+    fontFamily: Typography?.bold,
+    marginTop: hp(1.5),
+  },
+  emptySubtitle: {
+    fontSize: RF(11),
+    color: "#6b7280",
+    textAlign: "center",
+    marginTop: hp(0.8),
+    lineHeight: hp(2.2),
   },
 });

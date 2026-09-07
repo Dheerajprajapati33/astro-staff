@@ -41,7 +41,7 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
 
     const transcript = event.results?.[0]?.transcript;
 
-    if (transcript !== undefined && transcript !== null) {
+    if (isListening && transcript !== undefined && transcript !== null) {
       setText(transcript);
 
       onTyping?.(transcript.trim().length > 0);
@@ -116,10 +116,14 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
       return;
     }
 
-    // Stop voice recognition
+    // Stop voice recognition immediately on send
     if (isListening) {
       try {
-        ExpoSpeechRecognitionModule.stop();
+        if (ExpoSpeechRecognitionModule.abort) {
+          ExpoSpeechRecognitionModule.abort();
+        } else {
+          ExpoSpeechRecognitionModule.stop();
+        }
       } catch (error) {
         console.log("[Speech] Stop error:", error);
       }

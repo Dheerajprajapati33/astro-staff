@@ -82,7 +82,11 @@ export default function CallRequestProvider({ children }) {
       (c) => c.consultationType === "call",
     );
 
-    if (incomingCall) return; // already showing incoming call
+    // Agar astrologer live broadcast ya kisi call/chat screen par hai toh incoming call popup na dikhaye
+    const isBusyOnScreen = segments.some(
+      (s) => s === "golive" || s === "call" || s === "chat",
+    );
+    if (isBusyOnScreen || incomingCall) return;
 
     const nextCall = waitingCalls.find(
       (c) => !dismissedIdsRef.current.has(c.id),

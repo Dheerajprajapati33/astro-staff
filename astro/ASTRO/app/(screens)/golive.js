@@ -30,6 +30,7 @@ import {
   useEndLiveSessionMutation,
   useStartLiveSessionMutation,
 } from "../../redux/LiveApi";
+import { connectSocket, getSocket } from "../../utils/socket";
 
 // Safe Agora loader for dev/web resilience
 let createAgoraRtcEngine = null;
@@ -40,10 +41,13 @@ try {
   const agoraModule = require("react-native-agora");
   createAgoraRtcEngine = agoraModule.createAgoraRtcEngine;
   if (agoraModule.RtcSurfaceView) RtcSurfaceView = agoraModule.RtcSurfaceView;
-  if (agoraModule.ChannelProfileType) ChannelProfileType = agoraModule.ChannelProfileType;
+  if (agoraModule.ChannelProfileType)
+    ChannelProfileType = agoraModule.ChannelProfileType;
   if (agoraModule.ClientRoleType) ClientRoleType = agoraModule.ClientRoleType;
 } catch (_e) {
-  console.log("[GoLive] react-native-agora native module not loaded; running in mock/web mode.");
+  console.log(
+    "[GoLive] react-native-agora native module not loaded; running in mock/web mode.",
+  );
 }
 
 const ORANGE = "#ff6a00";
@@ -68,7 +72,8 @@ export default function GoLive() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [floatingEmojis, setFloatingEmojis] = useState([]);
 
-  const [startLiveMutation, { isLoading: isStarting }] = useStartLiveSessionMutation();
+  const [startLiveMutation, { isLoading: isStarting }] =
+    useStartLiveSessionMutation();
   const [endLiveMutation] = useEndLiveSessionMutation();
 
   const agoraEngineRef = useRef(null);
@@ -113,7 +118,12 @@ export default function GoLive() {
   // Web camera hook when live starts
   useEffect(() => {
     let active = true;
-    if (isLive && Platform.OS === "web" && typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+    if (
+      isLive &&
+      Platform.OS === "web" &&
+      typeof navigator !== "undefined" &&
+      navigator.mediaDevices?.getUserMedia
+    ) {
       navigator.mediaDevices
         .getUserMedia({
           video: { facingMode: isFrontCamera ? "user" : "environment" },
@@ -150,7 +160,8 @@ export default function GoLive() {
   useEffect(() => {
     if (!isLive || isCameraOff || Platform.OS !== "web") return;
 
-    const canvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    const canvas =
+      typeof document !== "undefined" ? document.createElement("canvas") : null;
     if (!canvas) return;
     canvas.width = 360;
     canvas.height = 480;
@@ -160,7 +171,13 @@ export default function GoLive() {
       if (videoElementRef.current && ctx) {
         try {
           if (videoElementRef.current.videoWidth > 0) {
-            ctx.drawImage(videoElementRef.current, 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(
+              videoElementRef.current,
+              0,
+              0,
+              canvas.width,
+              canvas.height,
+            );
             const dataUrl = canvas.toDataURL("image/jpeg", 0.55);
             if (broadcastChannelRef.current) {
               broadcastChannelRef.current.postMessage({
@@ -185,7 +202,10 @@ export default function GoLive() {
       clearInterval(frameInterval);
       if (broadcastChannelRef.current) {
         try {
-          broadcastChannelRef.current.postMessage({ type: "live_video_frame", frame: null });
+          broadcastChannelRef.current.postMessage({
+            type: "live_video_frame",
+            frame: null,
+          });
         } catch (e) {}
       }
       const socket = getSocket();
@@ -239,7 +259,10 @@ export default function GoLive() {
     const id = String(Date.now() + Math.random());
     const animVal = new Animated.Value(0);
     const randomX = Math.random() * 60 - 30;
-    setFloatingEmojis((prev) => [...prev.slice(-15), { id, emoji, animVal, randomX }]);
+    setFloatingEmojis((prev) => [
+      ...prev.slice(-15),
+      { id, emoji, animVal, randomX },
+    ]);
 
     Animated.timing(animVal, {
       toValue: 1,
@@ -261,9 +284,15 @@ export default function GoLive() {
           const data = event.data;
           console.log(LOG_TAG, "BroadcastChannel message:", data);
 
-          if (data?.type === "audience_joined" || data?.type === "audience_heartbeat") {
+          if (
+            data?.type === "audience_joined" ||
+            data?.type === "audience_heartbeat"
+          ) {
             setViewersCount((prev) => {
-              const next = Math.max(1, prev + (data?.type === "audience_joined" ? 1 : 0));
+              const next = Math.max(
+                1,
+                prev + (data?.type === "audience_joined" ? 1 : 0),
+              );
               setPeakViewers((p) => Math.max(p, next, 1));
               return next;
             });
@@ -280,7 +309,10 @@ export default function GoLive() {
             ]);
           } else if (data?.type === "live_gift_received") {
             showGiftToast(data);
-          } else if (data?.type === "live_emoji_received" || data?.type === "send_live_emoji") {
+          } else if (
+            data?.type === "live_emoji_received" ||
+            data?.type === "send_live_emoji"
+          ) {
             if (data?.emoji) spawnFloatingEmoji(data.emoji);
           }
         };
@@ -297,7 +329,10 @@ export default function GoLive() {
   // Start Live Session Handler
   const handleStartLive = async () => {
     if (!title.trim()) {
-      Alert.alert("Title Required", "Please enter a title for your live session.");
+      Alert.alert(
+        "Title Required",
+        "Please enter a title for your live session.",
+      );
       return;
     }
 
@@ -306,11 +341,16 @@ export default function GoLive() {
       const res = await startLiveMutation({ title: title.trim() }).unwrap();
       console.log(LOG_TAG, "Start live response:", res);
 
-      const session = res?.data?.session || res?.data || res;
-      const sessionId = session?.id || session?.liveSessionId || res?.liveSessionId;
-      const agoraData = session?.agora || res?.agora || {};
-      const agoraToken = agoraData?.token || session?.token || "";
-      const channel = agoraData?.channelName || session?.channelName || `live_${sessionId}`;
+      const liveObj = res?.data?.live || res?.data?.session || res?.data || res;
+      const sessionId =
+        liveObj?.id ||
+        liveObj?.liveSessionId ||
+        res?.data?.id ||
+        res?.liveSessionId;
+      const agoraData = res?.data?.agora || liveObj?.agora || res?.agora || {};
+      const agoraToken = agoraData?.token || liveObj?.token || "";
+      const channel =
+        agoraData?.channelName || liveObj?.channelName || `live_${sessionId}`;
 
       setLiveSessionId(sessionId);
       setIsLive(true);
@@ -340,27 +380,60 @@ export default function GoLive() {
           if (engine && typeof engine.initialize === "function") {
             agoraEngineRef.current = engine;
             engine.initialize({ appId: AGORA_APP_ID });
-            engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
+            engine.setChannelProfile(
+              ChannelProfileType.ChannelProfileLiveBroadcasting,
+            );
             engine.setClientRole(ClientRoleType.ClientRoleBroadcaster);
             engine.enableAudio();
             engine.enableVideo();
             engine.enableLocalAudio(true);
             engine.enableLocalVideo(true);
-            engine.startPreview();
-            if (agoraToken) {
-              await engine.joinChannel(agoraToken, channel, null, 1);
-              console.log(LOG_TAG, "Agora broadcaster joined channel:", channel);
+            if (engine.setDefaultAudioRouteToSpeakerphone) {
+              engine.setDefaultAudioRouteToSpeakerphone(true);
             }
+            engine.startPreview();
+            await engine.joinChannel(agoraToken || "", channel, 1, {
+              clientRoleType: 1, // Broadcaster
+              publishCameraTrack: true,
+              publishMicrophoneTrack: true,
+              autoSubscribeAudio: true,
+              autoSubscribeVideo: true,
+            });
+            console.log(
+              LOG_TAG,
+              "Agora broadcaster joined channel with video published:",
+              channel,
+            );
           }
         }
       } catch (agoraErr) {
-        console.log(LOG_TAG, "Expo Go / Agora native module notice:", agoraErr?.message || agoraErr);
+        console.log(
+          LOG_TAG,
+          "Expo Go / Agora native module notice:",
+          agoraErr?.message || agoraErr,
+        );
       }
 
       // 2. Connect Socket & Join Live Room
       await setupLiveSocket(sessionId);
+
+      // 3. Broadcast to multi-tab listeners (e.g. Vavi app)
+      if (broadcastChannelRef.current) {
+        try {
+          broadcastChannelRef.current.postMessage({
+            type: "live_stream_started",
+            liveSessionId: String(sessionId),
+            title: title.trim(),
+            user: currentUser,
+          });
+        } catch (e) {}
+      }
     } catch (err) {
-      console.log(LOG_TAG, "Start live API error, proceeding in local live mode:", err);
+      console.log(
+        LOG_TAG,
+        "Start live API error, proceeding in local live mode:",
+        err,
+      );
       const fallbackSessionId = `live_${Date.now()}`;
       setLiveSessionId(fallbackSessionId);
       setIsLive(true);
@@ -372,6 +445,17 @@ export default function GoLive() {
       }, 1000);
 
       await setupLiveSocket(fallbackSessionId);
+
+      if (broadcastChannelRef.current) {
+        try {
+          broadcastChannelRef.current.postMessage({
+            type: "live_stream_started",
+            liveSessionId: String(fallbackSessionId),
+            title: title.trim(),
+            user: currentUser,
+          });
+        } catch (e) {}
+      }
     }
   };
 
@@ -402,9 +486,12 @@ export default function GoLive() {
 
       // Handler to update count
       const handleCount = (data) => {
-        const count = typeof data === "number"
-          ? data
-          : Number(data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 0);
+        const count =
+          typeof data === "number"
+            ? data
+            : Number(
+                data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 0,
+              );
         if (!isNaN(count)) {
           console.log(LOG_TAG, "Host viewer count update:", count);
           setViewersCount(count);
@@ -422,12 +509,6 @@ export default function GoLive() {
         console.log(LOG_TAG, "User joined live:", data);
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
-        } else {
-          setViewersCount((prev) => {
-            const next = prev + 1;
-            setPeakViewers((p) => Math.max(p, next));
-            return next;
-          });
         }
       });
 
@@ -435,12 +516,6 @@ export default function GoLive() {
         console.log(LOG_TAG, "Audience joined live:", data);
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
-        } else {
-          setViewersCount((prev) => {
-            const next = prev + 1;
-            setPeakViewers((p) => Math.max(p, next));
-            return next;
-          });
         }
       });
 
@@ -448,8 +523,6 @@ export default function GoLive() {
         console.log(LOG_TAG, "User left live:", data);
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
-        } else {
-          setViewersCount((prev) => Math.max(0, prev - 1));
         }
       });
 
@@ -457,47 +530,119 @@ export default function GoLive() {
         console.log(LOG_TAG, "Audience left live:", data);
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
-        } else {
-          setViewersCount((prev) => Math.max(0, prev - 1));
         }
       });
 
       // Catch-all tap for any viewer count events
       socket.onAny((event, ...args) => {
-        if (typeof event === "string" && (event.includes("viewer") || event.includes("count"))) {
+        if (
+          typeof event === "string" &&
+          (event.includes("viewer") || event.includes("count"))
+        ) {
           handleCount(args[0]);
         }
       });
 
-      // Listen for live chat messages
-      socket.on("live_chat_message", (data) => {
-        console.log(LOG_TAG, "Live comment received:", data);
+      // 1. Live Comments Listener (Catches all event variations from Backend)
+      const handleIncomingComment = (data) => {
+        console.log(LOG_TAG, "Live comment received on socket:", data);
+         // Agar gift aaya hai toh use comment mein duplicate na karein (Gifts alag listener handle karega)
+        if (data?.isGift || data?.gift) 
+          return;
+        const author =
+          data?.user?.name ||
+          data?.userName ||
+          data?.sender?.name ||
+          data?.senderName ||
+          data?.name ||
+          "Devotee";
+
+        const msg =
+          data?.message ||
+          data?.text ||
+          data?.comment ||
+          (typeof data === "string" ? data : "");
+
+        // If comment carries gift payload, trigger gift toast animation
+        // if (data?.isGift || data?.gift) {
+        //   const giftObj = data?.gift || {};
+        //   showGiftToast({
+        //     user: data?.user || { name: author },
+        //     gift: {
+        //       name: giftObj?.name || "Gift 🎁",
+        //       emoji: giftObj?.emoji || "🎁",
+        //       coins: giftObj?.coins || 10,
+        //     },
+        //   });
+        // }
+
+        if (msg) {
+          setComments((prev) => [
+            ...prev.slice(-40),
+            {
+              id: data?.id || String(Date.now() + Math.random()),
+              userName: author,
+              message: msg,
+              isGift: !!(data?.isGift || data?.gift),
+            },
+          ]);
+        }
+      };
+
+      socket.on("live_chat_message", handleIncomingComment);
+      socket.on("send_live_chat_message", handleIncomingComment);
+      socket.on("receive_live_chat_message", handleIncomingComment);
+      socket.on("live_comment", handleIncomingComment);
+
+      // 2. Live Gifts Listener (Catches all gift variations)
+      const handleIncomingGift = (data) => {
+        console.log(LOG_TAG, "Live gift received on socket:", data);
+        const giftObj = data?.gift || data;
+        const userObj = data?.user ||
+          data?.sender || {
+            name: data?.userName || data?.senderName || "Devotee",
+          };
+        const senderName = userObj?.name || "Devotee";
+        const giftName = giftObj?.name || "Gift 🎁";
+        const coins = giftObj?.coins || 10;
+        const emoji = giftObj?.emoji || "🎁";
+
+        showGiftToast({
+          user: userObj,
+          gift: {
+            name: giftName,
+            emoji: emoji,
+            coins: coins,
+          },
+        });
+
+        // Also add gift directly to live comments stream
         setComments((prev) => [
           ...prev.slice(-40),
           {
-            id: data?.id || String(Date.now() + Math.random()),
-            userName: data?.user?.name || data?.userName || "Audience",
-            message: data?.message || "",
+            id: data?.id || `gift_${Date.now()}_${Math.random()}`,
+            userName: senderName,
+            message: `${emoji} Sent ${giftName} (${coins} coins)`,
+            isGift: true,
           },
         ]);
-      });
+      };
 
-      // Listen for live gifts
-      socket.on("live_gift_received", (data) => {
-        console.log(LOG_TAG, "Live gift received:", data);
-        showGiftToast(data);
-      });
+      socket.on("live_gift_received", handleIncomingGift);
+      socket.on("send_live_gift", handleIncomingGift);
+      socket.on("receive_live_gift", handleIncomingGift);
+      socket.on("live_gift", handleIncomingGift);
+      socket.on("gift_received", handleIncomingGift);
+      socket.on("gift_sent", handleIncomingGift);
 
-      // Listen for live emojis
-      socket.on("live_emoji_received", (data) => {
-        console.log(LOG_TAG, "Live emoji received:", data);
-        if (data?.emoji) spawnFloatingEmoji(data.emoji);
-      });
+      // 3. Live Emojis Listener
+      const handleIncomingEmoji = (data) => {
+        const emojiChar = data?.emoji || data?.reaction;
+        if (emojiChar) spawnFloatingEmoji(emojiChar);
+      };
 
-      socket.on("send_live_emoji", (data) => {
-        console.log(LOG_TAG, "Live emoji sent from viewer:", data);
-        if (data?.emoji) spawnFloatingEmoji(data.emoji);
-      });
+      socket.on("live_emoji_received", handleIncomingEmoji);
+      socket.on("send_live_emoji", handleIncomingEmoji);
     }
   };
 
@@ -506,7 +651,14 @@ export default function GoLive() {
     const doEnd = async () => {
       if (timerRef.current) clearInterval(timerRef.current);
 
-      // Notify backend & socket
+      // 1. Release Web camera/mic tracks so 1:1 Call can use camera later
+      if (webStreamRef.current) {
+        webStreamRef.current.getTracks().forEach((t) => t.stop());
+        webStreamRef.current = null;
+      }
+      setLocalStream(null);
+
+      // 2. Notify backend & socket
       try {
         await endLiveMutation().unwrap();
       } catch (e) {
@@ -517,9 +669,23 @@ export default function GoLive() {
       if (socket && liveSessionId) {
         socket.emit("end_live_stream", { liveSessionId });
         socket.emit("leave_live_room", { liveSessionId, role: "host" });
+
+        // Unhook Go Live specific listeners to prevent memory leaks
+        socket.off("viewer_count_update");
+        socket.off("viewers_count_update");
+        socket.off("live_viewers_count");
+        socket.off("viewer_count");
+        socket.off("user_joined_live");
+        socket.off("audience_joined");
+        socket.off("user_left_live");
+        socket.off("audience_left");
+        socket.off("live_chat_message");
+        socket.off("live_gift_received");
+        socket.off("live_emoji_received");
+        socket.off("send_live_emoji");
       }
 
-      // Cleanup Agora
+      // 3. Cleanup Agora native RTC Engine cleanly
       if (agoraEngineRef.current) {
         try {
           await agoraEngineRef.current.leaveChannel();
@@ -530,7 +696,9 @@ export default function GoLive() {
 
       if (broadcastChannelRef.current) {
         try {
-          broadcastChannelRef.current.postMessage({ type: "live_stream_ended" });
+          broadcastChannelRef.current.postMessage({
+            type: "live_stream_ended",
+          });
         } catch (e) {}
       }
 
@@ -539,7 +707,10 @@ export default function GoLive() {
     };
 
     if (Platform.OS === "web") {
-      if (typeof window !== "undefined" && window.confirm("Are you sure you want to end this live broadcast?")) {
+      if (
+        typeof window !== "undefined" &&
+        window.confirm("Are you sure you want to end this live broadcast?")
+      ) {
         doEnd();
       }
     } else {
@@ -642,7 +813,10 @@ export default function GoLive() {
               transform: isFrontCamera ? "scaleX(-1)" : "none",
             }}
           />
-        ) : Platform.OS !== "web" && isLive && !isCameraOff && RtcSurfaceView ? (
+        ) : Platform.OS !== "web" &&
+          isLive &&
+          !isCameraOff &&
+          RtcSurfaceView ? (
           <RtcSurfaceView
             canvas={{ uid: 0 }}
             style={StyleSheet.absoluteFillObject}
@@ -693,7 +867,11 @@ export default function GoLive() {
               />
 
               <View style={styles.tipBox}>
-                <Ionicons name="information-circle-outline" size={RF(16)} color={ORANGE} />
+                <Ionicons
+                  name="information-circle-outline"
+                  size={RF(16)}
+                  color={ORANGE}
+                />
                 <Text style={styles.tipText}>
                   Your followers will receive a notification when you go live!
                 </Text>
@@ -722,7 +900,9 @@ export default function GoLive() {
               <View style={styles.hostProfile}>
                 <View style={styles.avatarCircle}>
                   <Text style={styles.avatarLetter}>
-                    {currentUser?.name ? currentUser.name[0].toUpperCase() : "A"}
+                    {currentUser?.name
+                      ? currentUser.name[0].toUpperCase()
+                      : "A"}
                   </Text>
                 </View>
                 <View>
@@ -731,7 +911,9 @@ export default function GoLive() {
                   </Text>
                   <View style={styles.liveIndicator}>
                     <View style={styles.livePulseDot} />
-                    <Text style={styles.liveTimerText}>{formatTimer(durationSeconds)}</Text>
+                    <Text style={styles.liveTimerText}>
+                      {formatTimer(durationSeconds)}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -776,7 +958,8 @@ export default function GoLive() {
                 </Text>
                 <View>
                   <Text style={styles.giftToastSender}>
-                    {recentGift?.user?.name || "Viewer"} sent {recentGift?.gift?.name || "a Gift"}!
+                    {recentGift?.user?.name || "Viewer"} sent{" "}
+                    {recentGift?.gift?.name || "a Gift"}!
                   </Text>
                   <Text style={styles.giftToastCoins}>
                     +{recentGift?.gift?.coins || 10} Coins 🪙
@@ -835,7 +1018,9 @@ export default function GoLive() {
                   }
                   renderItem={({ item }) => (
                     <View style={styles.commentBubble}>
-                      <Text style={styles.commentAuthor}>{item.userName}: </Text>
+                      <Text style={styles.commentAuthor}>
+                        {item.userName}:{" "}
+                      </Text>
                       <Text style={styles.commentText}>{item.message}</Text>
                     </View>
                   )}
@@ -850,7 +1035,10 @@ export default function GoLive() {
               {/* Host Control Actions Bar */}
               <View style={styles.hostActionBar}>
                 <TouchableOpacity
-                  style={[styles.hostActionBtn, isMuted && styles.hostActionBtnActive]}
+                  style={[
+                    styles.hostActionBtn,
+                    isMuted && styles.hostActionBtnActive,
+                  ]}
                   onPress={handleToggleMute}
                 >
                   <Ionicons
@@ -858,11 +1046,16 @@ export default function GoLive() {
                     size={RF(20)}
                     color="#fff"
                   />
-                  <Text style={styles.actionBtnLabel}>{isMuted ? "Unmute" : "Mute"}</Text>
+                  <Text style={styles.actionBtnLabel}>
+                    {isMuted ? "Unmute" : "Mute"}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.hostActionBtn, isSpeakerMuted && styles.hostActionBtnActive]}
+                  style={[
+                    styles.hostActionBtn,
+                    isSpeakerMuted && styles.hostActionBtnActive,
+                  ]}
                   onPress={handleToggleSpeaker}
                 >
                   <Ionicons
@@ -870,7 +1063,9 @@ export default function GoLive() {
                     size={RF(20)}
                     color="#fff"
                   />
-                  <Text style={styles.actionBtnLabel}>{isSpeakerMuted ? "Spk Off" : "Speaker"}</Text>
+                  <Text style={styles.actionBtnLabel}>
+                    {isSpeakerMuted ? "Spk Off" : "Speaker"}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -882,7 +1077,10 @@ export default function GoLive() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.hostActionBtn, isCameraOff && styles.hostActionBtnActive]}
+                  style={[
+                    styles.hostActionBtn,
+                    isCameraOff && styles.hostActionBtnActive,
+                  ]}
                   onPress={handleToggleCamera}
                 >
                   <Ionicons
@@ -890,7 +1088,9 @@ export default function GoLive() {
                     size={RF(20)}
                     color="#fff"
                   />
-                  <Text style={styles.actionBtnLabel}>{isCameraOff ? "Cam On" : "Cam Off"}</Text>
+                  <Text style={styles.actionBtnLabel}>
+                    {isCameraOff ? "Cam On" : "Cam Off"}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -904,19 +1104,29 @@ export default function GoLive() {
           <View style={styles.summaryOverlay}>
             <View style={styles.summaryCard}>
               <View style={styles.summaryIconContainer}>
-                <Ionicons name="checkmark-circle" size={RF(50)} color="#4CAF50" />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={RF(50)}
+                  color="#4CAF50"
+                />
               </View>
 
               <Text style={styles.summaryTitle}>Live Broadcast Ended</Text>
-              <Text style={styles.summarySub}>Here is your live session summary:</Text>
+              <Text style={styles.summarySub}>
+                Here is your live session summary:
+              </Text>
 
               <View style={styles.statsGrid}>
                 <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{formatTimer(durationSeconds)}</Text>
+                  <Text style={styles.statVal}>
+                    {formatTimer(durationSeconds)}
+                  </Text>
                   <Text style={styles.statLbl}>Duration</Text>
                 </View>
                 <View style={styles.statBox}>
-                  <Text style={styles.statVal}>{Math.max(peakViewers, viewersCount)}</Text>
+                  <Text style={styles.statVal}>
+                    {Math.max(peakViewers, viewersCount)}
+                  </Text>
                   <Text style={styles.statLbl}>Peak Viewers</Text>
                 </View>
                 <View style={styles.statBox}>

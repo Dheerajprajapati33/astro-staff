@@ -23,7 +23,7 @@ import Typography from "../../constants/Typography";
 import { AGORA_APP_ID } from "../../constants/AgoraConfig";
 import { RF, hp, wp } from "../../utils/responsive";
 import { getStoredUser } from "../../utils/auth";
-import { emitEvent, getSocket, onEvent } from "../../utils/socket";
+import { emitEvent, onEvent, clearLastJoinParams } from "../../utils/socket";
 import { useGetCallTokenMutation } from "../../redux/ChatApi";
 
 // Safe Agora loader for dev/web resilience
@@ -63,7 +63,7 @@ export default function CallScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
-  const [isSpeaker, setIsSpeaker] = useState(true);
+  const [isSpeaker, setIsSpeaker] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [endedReason, setEndedReason] = useState("");
@@ -263,6 +263,8 @@ export default function CallScreen() {
   // Cleanup Agora Engine
   const cleanupAgora = useCallback(async () => {
     hasJoinedAgoraRef.current = false;
+    clearLastJoinParams(); // 👈 Call khatam hone par purana call ID socket se clear karein
+
     if (agoraEngineRef.current) {
       try {
         await agoraEngineRef.current.leaveChannel();
@@ -399,9 +401,9 @@ export default function CallScreen() {
                 );
                 if (engine.enableLocalAudio) engine.enableLocalAudio(true);
                 if (engine.setDefaultAudioRouteToSpeakerphone)
-                  engine.setDefaultAudioRouteToSpeakerphone(true);
+                  engine.setDefaultAudioRouteToSpeakerphone(false);
                 if (engine.setEnableSpeakerphone)
-                  engine.setEnableSpeakerphone(true);
+                  engine.setEnableSpeakerphone(false);
                 if (engine.muteLocalAudioStream)
                   engine.muteLocalAudioStream(false);
                 if (engine.muteAllRemoteAudioStreams)
@@ -443,8 +445,8 @@ export default function CallScreen() {
           engine.enableAudio();
           if (engine.enableLocalAudio) engine.enableLocalAudio(true);
           if (engine.setDefaultAudioRouteToSpeakerphone)
-            engine.setDefaultAudioRouteToSpeakerphone(true);
-          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(true);
+            engine.setDefaultAudioRouteToSpeakerphone(false);
+          if (engine.setEnableSpeakerphone) engine.setEnableSpeakerphone(false);
           engine.enableVideo();
 
           if (engine.adjustRecordingSignalVolume)
@@ -607,6 +609,7 @@ export default function CallScreen() {
 
     emitEvent("client_end_call", { consultationId, reason });
     emitEvent("end_call_session", { consultationId, reason });
+    clearLastJoinParams(); // 👈 Socket consultation ID clear karein
     cleanupAgora();
     setCallStatus("ended");
     setEndedReason(reason || "astrologer_hung_up");
@@ -789,7 +792,7 @@ export default function CallScreen() {
 
             {/* Speaker Toggle */}
             <TouchableOpacity
-              style={[styles.controlBtn, !isSpeaker && styles.controlBtnActive]}
+              style={[styles.controlBtn, isSpeaker && styles.controlBtnActive]}
               onPress={handleToggleSpeaker}
               activeOpacity={0.8}
             >
@@ -914,13 +917,13 @@ const styles = StyleSheet.create({
     width: wp(52),
     height: wp(52),
     borderRadius: wp(26),
-    backgroundColor: "rgba(52, 199, 89, 0.22)",
+    backgroundColor: "transparent",
   },
   incomingAvatarCircle: {
     width: wp(36),
     height: wp(36),
     borderRadius: wp(18),
-    backgroundColor: "#2e2942",
+    backgroundColor: "#16a34a",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
@@ -1246,7 +1249,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1c1830",
+    backgroundColor: "#16a34a",
     marginBottom: hp(2),
   },
   voiceAvatarImg: {

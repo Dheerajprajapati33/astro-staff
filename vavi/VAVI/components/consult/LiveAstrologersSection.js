@@ -40,7 +40,33 @@ export default function LiveAstrologersSection() {
     };
   }, [segments]);
 
-  const { data: liveData } = useGetLiveSessionsQuery({ page: 1, limit: 10 });
+  const { data: liveData, refetch } = useGetLiveSessionsQuery(
+    { page: 1, limit: 10 },
+    {
+      pollingInterval: 4000,
+      refetchOnMountOrArgChange: true,
+      refetchOnFocus: true,
+    },
+  );
+
+  // Multi-tab sync on Web
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.BroadcastChannel) {
+      try {
+        const channel = new window.BroadcastChannel("vavi_live_stream_sync");
+        channel.onmessage = (event) => {
+          if (
+            event.data?.type === "live_stream_started" ||
+            event.data?.type === "live_stream_ended" ||
+            event.data?.type === "live_video_frame"
+          ) {
+            refetch();
+          }
+        };
+        return () => channel.close();
+      } catch (e) {}
+    }
+  }, [refetch]);
 
   const rawSessions = Array.isArray(liveData?.data?.sessions)
     ? liveData.data.sessions

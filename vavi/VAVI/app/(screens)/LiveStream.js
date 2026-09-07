@@ -46,10 +46,13 @@ try {
   const agoraModule = require("react-native-agora");
   createAgoraRtcEngine = agoraModule.createAgoraRtcEngine;
   if (agoraModule.RtcSurfaceView) RtcSurfaceView = agoraModule.RtcSurfaceView;
-  if (agoraModule.ChannelProfileType) ChannelProfileType = agoraModule.ChannelProfileType;
+  if (agoraModule.ChannelProfileType)
+    ChannelProfileType = agoraModule.ChannelProfileType;
   if (agoraModule.ClientRoleType) ClientRoleType = agoraModule.ClientRoleType;
 } catch (_e) {
-  console.log("[LiveAudience] react-native-agora native module not loaded; running in mock/web mode.");
+  console.log(
+    "[LiveAudience] react-native-agora native module not loaded; running in mock/web mode.",
+  );
 }
 
 const ORANGE = "#ff6a00";
@@ -74,11 +77,21 @@ export default function LiveStream() {
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [isMicMuted, setIsMicMuted] = useState(true);
   const [liveVideoFrame, setLiveVideoFrame] = useState(null);
+  const [remoteUid, setRemoteUid] = useState(1); // 👈 Host astrologer ka UID
+  const [imageLoadError, setImageLoadError] = useState(false); // 👈 Yeh naya state add karein
   const [floatingEmojis, setFloatingEmojis] = useState([]);
 
   const [joinLiveMutation] = useJoinLiveSessionMutation();
   const [leaveLiveMutation] = useLeaveLiveSessionMutation();
-  const { data: walletData } = useGetWalletBalanceQuery();
+  const { data: walletData, refetch: refetchWallet } =
+    useGetWalletBalanceQuery();
+
+  const rawBalance =
+    walletData?.data?.balance ??
+    walletData?.balance ??
+    walletData?.data?.walletBalance ??
+    0;
+  const currentBalance = Number(rawBalance) || 0;
 
   const agoraEngineRef = useRef(null);
   const giftAnim = useRef(new Animated.Value(0)).current;
@@ -91,7 +104,10 @@ export default function LiveStream() {
     const id = String(Date.now() + Math.random());
     const animVal = new Animated.Value(0);
     const randomX = Math.random() * 60 - 30;
-    setFloatingEmojis((prev) => [...prev.slice(-15), { id, emoji, animVal, randomX }]);
+    setFloatingEmojis((prev) => [
+      ...prev.slice(-15),
+      { id, emoji, animVal, randomX },
+    ]);
 
     Animated.timing(animVal, {
       toValue: 1,
@@ -154,7 +170,9 @@ export default function LiveStream() {
             sessionEndedRef.current = true;
             if (Platform.OS === "web") {
               if (typeof window !== "undefined") {
-                window.alert("The astrologer has ended this live broadcast. Thank you for joining!");
+                window.alert(
+                  "The astrologer has ended this live broadcast. Thank you for joining!",
+                );
               }
               router.back();
             } else {
@@ -175,7 +193,10 @@ export default function LiveStream() {
             ]);
           } else if (data?.type === "live_gift_received") {
             showGiftToast(data);
-          } else if (data?.type === "live_emoji_received" || data?.type === "send_live_emoji") {
+          } else if (
+            data?.type === "live_emoji_received" ||
+            data?.type === "send_live_emoji"
+          ) {
             if (data?.emoji) spawnFloatingEmoji(data.emoji);
           }
         };
@@ -255,19 +276,55 @@ export default function LiveStream() {
             if (engine && typeof engine.initialize === "function") {
               agoraEngineRef.current = engine;
               engine.initialize({ appId: AGORA_APP_ID });
-              engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
+              engine.setChannelProfile(
+                ChannelProfileType.ChannelProfileLiveBroadcasting,
+              );
               engine.setClientRole(ClientRoleType.ClientRoleAudience);
               engine.enableAudio();
               engine.enableVideo();
               engine.setDefaultAudioRouteToSpeakerphone(true);
-              if (agoraToken) {
-                await engine.joinChannel(agoraToken, channelName, null, uid);
-                console.log(LOG_TAG, "Agora audience joined channel:", channelName);
+
+              // Host join hone par remoteUid set karein
+              if (engine.registerEventHandler) {
+                engine.registerEventHandler({
+                  onUserJoined: (_conn, rUid) => {
+                    console.log(
+                      LOG_TAG,
+                      "Host joined stream, remoteUid:",
+                      rUid,
+                    );
+                    setRemoteUid(rUid);
+                  },
+                  onUserOffline: () => {
+                    console.log(LOG_TAG, "Host left stream");
+                  },
+                  onError: (err, msg) => {
+                    console.log(LOG_TAG, "Agora error:", err, msg);
+                  },
+                });
               }
+
+              // Join Channel with Audience Video Auto-Subscribe
+              await engine.joinChannel(agoraToken || "", channelName, uid, {
+                clientRoleType: 2, // Audience
+                publishCameraTrack: false,
+                publishMicrophoneTrack: false,
+                autoSubscribeAudio: true,
+                autoSubscribeVideo: true, // 👈 Host ka video automatically play karega
+              });
+              console.log(
+                LOG_TAG,
+                "Agora audience joined channel with autoSubscribeVideo:",
+                channelName,
+              );
             }
           }
         } catch (agoraErr) {
-          console.log(LOG_TAG, "Expo Go / Agora native module notice:", agoraErr?.message || agoraErr);
+          console.log(
+            LOG_TAG,
+            "Expo Go / Agora native module notice:",
+            agoraErr?.message || agoraErr,
+          );
         }
 
         // 3. Connect Socket & Join Room
@@ -288,7 +345,11 @@ export default function LiveStream() {
           };
 
           const emitJoin = () => {
-            console.log(LOG_TAG, "Emitting join_live_room (audience):", joinPayload);
+            console.log(
+              LOG_TAG,
+              "Emitting join_live_room (audience):",
+              joinPayload,
+            );
             socket.emit("join_live_room", joinPayload);
           };
 
@@ -300,9 +361,12 @@ export default function LiveStream() {
 
           // Handle viewer count updates
           const handleAudienceCount = (data) => {
-            const count = typeof data === "number"
-              ? data
-              : Number(data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 1);
+            const count =
+              typeof data === "number"
+                ? data
+                : Number(
+                    data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 1,
+                  );
             if (!isNaN(count) && isMounted) {
               console.log(LOG_TAG, "Audience viewer count update:", count);
               setViewersCount(Math.max(1, count));
@@ -348,7 +412,10 @@ export default function LiveStream() {
 
           // Catch-all tap for viewer count
           socket.onAny((event, ...args) => {
-            if (typeof event === "string" && (event.includes("viewer") || event.includes("count"))) {
+            if (
+              typeof event === "string" &&
+              (event.includes("viewer") || event.includes("count"))
+            ) {
               handleAudienceCount(args[0]);
             }
           });
@@ -356,26 +423,49 @@ export default function LiveStream() {
           // Live video frames from host (Socket broadcast)
           socket.on("live_video_frame", (data) => {
             if (isMounted) {
-              setLiveVideoFrame(data?.frame || (typeof data === "string" ? data : null));
+              setLiveVideoFrame(
+                data?.frame || (typeof data === "string" ? data : null),
+              );
             }
           });
           socket.on("send_live_video_frame", (data) => {
             if (isMounted) {
-              setLiveVideoFrame(data?.frame || (typeof data === "string" ? data : null));
+              setLiveVideoFrame(
+                data?.frame || (typeof data === "string" ? data : null),
+              );
             }
           });
 
           // Live chat messages
           socket.on("live_chat_message", (data) => {
             if (isMounted) {
-              setComments((prev) => [
-                ...prev.slice(-40),
-                {
-                  id: data?.id || String(Date.now() + Math.random()),
-                  userName: data?.user?.name || data?.userName || "Devotee",
-                  message: data?.message || "",
-                },
-              ]);
+              const msg =
+                data?.message ||
+                data?.text ||
+                data?.comment ||
+                (typeof data === "string" ? data : "");
+              if (!msg) return;
+
+              const author = data?.user?.name || data?.userName || "Audience";
+
+              setComments((prev) => {
+                // Prevent duplicate rendering if recently added locally or via echo
+                const isDuplicate = prev.some(
+                  (c) =>
+                    c.message === msg &&
+                    (c.userName === "You" || c.userName === author),
+                );
+                if (isDuplicate) return prev;
+
+                return [
+                  ...prev.slice(-40),
+                  {
+                    id: data?.id || String(Date.now() + Math.random()),
+                    userName: author,
+                    message: msg,
+                  },
+                ];
+              });
             }
           });
 
@@ -398,7 +488,9 @@ export default function LiveStream() {
             sessionEndedRef.current = true;
             if (Platform.OS === "web") {
               if (typeof window !== "undefined") {
-                window.alert("The astrologer has ended this live broadcast. Thank you for joining!");
+                window.alert(
+                  "The astrologer has ended this live broadcast. Thank you for joining!",
+                );
               }
               router.back();
             } else {
@@ -455,14 +547,19 @@ export default function LiveStream() {
 
     const socket = getChatSocket();
     const userObj = currentUser || { id: "user", name: "Devotee" };
+    const commentMsg = chatInput.trim();
 
     const payload = {
       liveSessionId: String(liveSessionId),
+      sessionId: String(liveSessionId),
       user: {
         id: userObj?.id || userObj?._id || "user",
         name: userObj?.name || "Devotee",
       },
-      message: chatInput.trim(),
+      userName: userObj?.name || "Devotee",
+      message: commentMsg,
+      text: commentMsg,
+      comment: commentMsg,
     };
 
     console.log(LOG_TAG, "Emitting send_live_chat_message:", payload);
@@ -478,18 +575,18 @@ export default function LiveStream() {
             id: userObj?.id || userObj?._id || "user",
             name: userObj?.name || "Devotee",
           },
-          message: chatInput.trim(),
+          message: commentMsg,
         });
       } catch (e) {}
     }
 
-    // Append locally
+    // Append locally once
     setComments((prev) => [
       ...prev.slice(-40),
       {
-        id: String(Date.now()),
-        userName: userObj?.name || "You",
-        message: chatInput.trim(),
+        id: `local_${Date.now()}`,
+        userName: "You",
+        message: commentMsg,
       },
     ]);
     setChatInput("");
@@ -497,25 +594,53 @@ export default function LiveStream() {
 
   // Send Gift Handler
   const handleSendGift = (gift) => {
+    const giftCost = Number(gift?.coins) || 0;
+
+    // 1. Check if user has sufficient wallet balance
+    if (currentBalance < giftCost) {
+      Alert.alert(
+        "Insufficient Balance",
+        `You need ₹${giftCost} to send this gift. Your current wallet balance is ₹${currentBalance}.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Recharge",
+            onPress: () => {
+              setShowGiftSheet(false);
+              router.push("/Recharge");
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     setShowGiftSheet(false);
     const socket = getChatSocket();
     const userObj = currentUser || { id: "user", name: "Devotee" };
+    const giftName = gift?.name || "Gift";
+    const coins = giftCost || 10;
+    const emoji = gift?.emoji || "🎁";
 
     const payload = {
       liveSessionId: String(liveSessionId),
+      sessionId: String(liveSessionId),
       user: {
         id: userObj?.id || userObj?._id || "user",
         name: userObj?.name || "Devotee",
       },
+      userName: userObj?.name || "Devotee",
+      message: `${emoji} Sent ${giftName} (${coins} coins)`,
+      isGift: true,
       gift: {
         id: gift.id,
-        name: gift.name,
-        emoji: gift.emoji,
-        coins: gift.coins,
+        name: giftName,
+        emoji: emoji,
+        coins: coins,
       },
     };
 
-    console.log(LOG_TAG, "Emitting send_live_gift:", payload);
+    console.log(LOG_TAG, "Emitting gift via socket:", payload);
     if (socket) {
       socket.emit("send_live_gift", payload);
     }
@@ -539,6 +664,13 @@ export default function LiveStream() {
     }
 
     showGiftToast(payload);
+
+    // Refresh wallet balance after sending gift
+    if (typeof refetchWallet === "function") {
+      setTimeout(() => {
+        refetchWallet();
+      }, 500);
+    }
   };
 
   // Send Instagram-style reaction emoji
@@ -571,19 +703,61 @@ export default function LiveStream() {
   };
 
   // Toggle Client Microphone (Talk to Astrologer)
-  const handleToggleMic = () => {
+  // Toggle Client Microphone (Talk to Astrologer)
+  const handleToggleMic = async () => {
     const next = !isMicMuted;
-    setIsMicMuted(next);
 
-    if (agoraEngineRef.current) {
+    // 1. Agar Unmute kar rahe hain toh Android Mic Permission ensure karein
+    if (!next && Platform.OS === "android") {
       try {
-        agoraEngineRef.current.muteLocalAudioStream(next);
-        if (!next) {
-          agoraEngineRef.current.enableLocalAudio(true);
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert(
+            "Permission Required",
+            "Please allow microphone access to speak to the astrologer.",
+          );
+          return;
         }
-      } catch (e) {}
+      } catch (pErr) {}
     }
 
+    setIsMicMuted(next);
+
+    // 2. Agora RTC mein Role & Audio Track update karein
+    if (agoraEngineRef.current) {
+      try {
+        if (!next) {
+          // UNMUTE: Switch to Broadcaster & Publish Mic
+          agoraEngineRef.current.setClientRole(
+            ClientRoleType.ClientRoleBroadcaster || 1,
+          );
+          agoraEngineRef.current.enableLocalAudio(true);
+          agoraEngineRef.current.muteLocalAudioStream(false);
+          if (agoraEngineRef.current.updateChannelMediaOptions) {
+            agoraEngineRef.current.updateChannelMediaOptions({
+              publishMicrophoneTrack: true,
+            });
+          }
+        } else {
+          // MUTE: Switch back to Audience & Stop Mic
+          agoraEngineRef.current.muteLocalAudioStream(true);
+          agoraEngineRef.current.setClientRole(
+            ClientRoleType.ClientRoleAudience || 2,
+          );
+          if (agoraEngineRef.current.updateChannelMediaOptions) {
+            agoraEngineRef.current.updateChannelMediaOptions({
+              publishMicrophoneTrack: false,
+            });
+          }
+        }
+      } catch (e) {
+        console.log(LOG_TAG, "Mic toggle error:", e);
+      }
+    }
+
+    // 3. Socket State Emit
     const socket = getChatSocket();
     if (socket && liveSessionId) {
       socket.emit("client_audio_state_change", {
@@ -609,7 +783,15 @@ export default function LiveStream() {
     return () => sub.remove();
   }, []);
 
-  const imageSource = astrologerImage
+  // Pehle:
+  const hasValidImage =
+    typeof astrologerImage === "string" &&
+    astrologerImage.trim() !== "" &&
+    astrologerImage !== "undefined" &&
+    astrologerImage !== "null" &&
+    !imageLoadError;
+
+  const imageSource = hasValidImage
     ? resolveImageUri(astrologerImage)
     : require("../../assets/images/background.png");
 
@@ -625,31 +807,53 @@ export default function LiveStream() {
   return (
     <View style={styles.container}>
       {/* Live Video Broadcast Feed / Background */}
+
+      {/* Live Video Broadcast Feed / Background */}
       <View style={styles.videoSurface}>
+        {/* Base Layer: Astrologer Profile Picture (Always visible in background) */}
         <Image
           source={imageSource}
           resizeMode="cover"
           style={StyleSheet.absoluteFillObject}
+          onError={() => setImageLoadError(true)}
         />
-        <View style={styles.darkTint} />
 
-        {liveVideoFrame && (
+        {/* Top Layer 1: Mobile Agora Video Feed */}
+        {Platform.OS !== "web" && RtcSurfaceView && isJoined ? (
+          <RtcSurfaceView
+            canvas={{ uid: remoteUid || 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ) : null}
+
+        {/* Top Layer 2: Web Video Stream */}
+        {Platform.OS === "web" && liveVideoFrame ? (
           <Image
             source={{ uri: liveVideoFrame }}
             resizeMode="cover"
             style={StyleSheet.absoluteFillObject}
           />
-        )}
+        ) : null}
+
+        <View style={styles.darkTint} pointerEvents="none" />
       </View>
 
       <SafeAreaView style={styles.safeArea}>
         {/* Top Header */}
         <View style={styles.topHeader}>
           <View style={styles.hostBadge}>
-            <View style={styles.avatarWrap}>
-              <Text style={styles.avatarInitial}>
-                {astrologerName ? astrologerName[0].toUpperCase() : "A"}
-              </Text>
+            <View style={[styles.avatarWrap, { overflow: "hidden" }]}>
+              {hasValidImage ? (
+                <Image
+                  source={imageSource}
+                  style={{ width: "100%", height: "100%" }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarInitial}>
+                  {astrologerName ? astrologerName[0].toUpperCase() : "A"}
+                </Text>
+              )}
             </View>
             <View style={styles.hostInfo}>
               <Text style={styles.hostName} numberOfLines={1}>
@@ -712,7 +916,8 @@ export default function LiveStream() {
             </Text>
             <View>
               <Text style={styles.giftToastSender}>
-                {recentGift?.user?.name || "Viewer"} sent {recentGift?.gift?.name || "a Gift"}!
+                {recentGift?.user?.name || "Viewer"} sent{" "}
+                {recentGift?.gift?.name || "a Gift"}!
               </Text>
               <Text style={styles.giftToastCoins}>
                 {recentGift?.gift?.coins || 10} Coins 🪙
@@ -780,24 +985,11 @@ export default function LiveStream() {
               )}
               ListEmptyComponent={
                 <Text style={styles.emptyCommentsText}>
-                  Welcome to the live session! Type a message below to ask a question.
+                  Welcome to the live session! Type a message below to ask a
+                  question.
                 </Text>
               }
             />
-          </View>
-
-          {/* Quick Instagram-style Emoji Reaction Bar */}
-          <View style={styles.emojiBar}>
-            {["❤️", "🔥", "🙏", "👏", "🌟"].map((emoji) => (
-              <TouchableOpacity
-                key={emoji}
-                style={styles.emojiChip}
-                onPress={() => handleSendEmoji(emoji)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.emojiChipText}>{emoji}</Text>
-              </TouchableOpacity>
-            ))}
           </View>
 
           {/* Input, Mic & Gift Bar */}
@@ -813,7 +1005,10 @@ export default function LiveStream() {
                 returnKeyType="send"
               />
               <TouchableOpacity
-                style={[styles.sendBtn, !chatInput.trim() && styles.sendBtnDisabled]}
+                style={[
+                  styles.sendBtn,
+                  !chatInput.trim() && styles.sendBtnDisabled,
+                ]}
                 onPress={handleSendMessage}
                 disabled={!chatInput.trim()}
               >
@@ -849,7 +1044,11 @@ export default function LiveStream() {
           visible={showGiftSheet}
           onClose={() => setShowGiftSheet(false)}
           onSendGift={handleSendGift}
-          userBalance={walletData?.balance || 500}
+          onRecharge={() => {
+            setShowGiftSheet(false);
+            router.push("/Recharge");
+          }}
+          userBalance={currentBalance}
         />
       </SafeAreaView>
     </View>

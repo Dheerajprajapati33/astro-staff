@@ -2,7 +2,7 @@
 
 > **Target Platform**: React Native / Flutter / iOS / Android  
 > **Backend Base URL**: `http://<your-server-domain>:5000/api`  
-> **Socket.io Endpoint**: `ws://<your-server-domain>:5000`  
+> **Socket.io Endpoint**: `ws://<your-server-domain>:5000`
 
 ---
 
@@ -26,16 +26,18 @@ This document contains the step-by-step implementation for **Live Streaming** fo
 - Returns Agora Audience Token & uid (e.g. 47398).
 
 **Join Agora Channel as Audience**:
+
 ```javascript
 await agoraEngine.joinChannel(audienceToken, channelName, null, 47398);
 ```
 
 **Connect Socket & Join Room**:
+
 ```javascript
 socket.emit("join_live_room", {
   liveSessionId: "1000ea75-789b-4301-838e-f87060ac3a45",
   user: { id: currentUser.id, name: currentUser.name },
-  role: "audience"
+  role: "audience",
 });
 ```
 
@@ -44,28 +46,35 @@ socket.emit("join_live_room", {
 - **Update Live Viewer Count**:
   ```javascript
   socket.on("viewer_count_update", (data) => {
-    document.getElementById("viewerBadge").innerText = "👀 Viewers: " + data.viewersCount;
+    document.getElementById("viewerBadge").innerText =
+      "👀 Viewers: " + data.viewersCount;
   });
   ```
 - **Send Live Comment**:
   ```javascript
   socket.emit("send_live_chat_message", {
-    liveSessionId, user, message: "Namaste Pandit Ji! 🙏"
+    liveSessionId,
+    user,
+    message: "Namaste Pandit Ji! 🙏",
   });
   ```
 - **Send Live Gift**:
   ```javascript
   socket.emit("send_live_gift", {
-    liveSessionId, user, gift: { name: "Rose 🌹", coins: 10 }
+    liveSessionId,
+    user,
+    gift: { name: "Rose 🌹", coins: 10 },
   });
   ```
 
 ### 🔹 Step 4: User Leaves Live Stream / Host Ends Stream
 
 **User Taps Back Button**:
+
 - Call API `POST /api/live/:id/leave`, emit `leave_live_room`, call `socket.disconnect()`.
 
 **Listen for Stream Ended Event**:
+
 ```javascript
 socket.on("live_stream_ended", (data) => {
   agoraEngine.leaveChannel();
@@ -88,22 +97,25 @@ socket.on("live_stream_ended", (data) => {
 ### 🔹 Step 2: Astrologer Starts Camera & Video Broadcast
 
 **Enable Video & Preview**:
+
 ```javascript
 await agoraEngine.enableVideo();
 await agoraEngine.startPreview();
 ```
 
 **Join Agora Channel as Broadcaster (uid: 1)**:
+
 ```javascript
 await agoraEngine.joinChannel(hostToken, channelName, null, 1);
 ```
 
 **Connect Socket**:
+
 ```javascript
 socket.emit("join_live_room", {
   liveSessionId: "1000ea75-789b-4301-838e-f87060ac3a45",
   user: { id: astrologerUser.id, name: astrologerUser.name },
-  role: "host"
+  role: "host",
 });
 ```
 

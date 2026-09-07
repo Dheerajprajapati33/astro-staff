@@ -33,18 +33,36 @@ export const warningApi = createApi({
 
   endpoints: (builder) => ({
     getWarnings: builder.query({
-      query: () => ({
-        url: "/warnings/get-warnings",
-
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 10, status, level } = {}) => {
+        let url = `/warnings/get-warnings?page=${page}&limit=${limit}`;
+        if (status) url += `&status=${status}`;
+        if (level) url += `&level=${level}`;
+        return {
+          url,
+          method: "GET",
+        };
+      },
 
       transformResponse: (response) => {
         if (!response?.success) {
-          return [];
+          return { warnings: [], pagination: null };
         }
 
-        return response?.data?.warnings || [];
+        const data = response?.data;
+        if (Array.isArray(data)) {
+          return { warnings: data, pagination: null };
+        }
+        if (Array.isArray(data?.warnings)) {
+          return {
+            warnings: data.warnings,
+            pagination: data?.pagination || null,
+          };
+        }
+        if (Array.isArray(data?.rows)) {
+          return { warnings: data.rows, pagination: data?.pagination || null };
+        }
+
+        return { warnings: [], pagination: null };
       },
 
       providesTags: ["Warnings"],

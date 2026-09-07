@@ -20,7 +20,8 @@ export default function GiftBottomSheet({
   visible,
   onClose,
   onSendGift,
-  userBalance = 1000,
+  onRecharge,
+  userBalance = 0,
 }) {
   const insets = useSafeAreaInsets();
 
@@ -48,14 +49,28 @@ export default function GiftBottomSheet({
                 <Ionicons name="gift" size={RF(18)} color={ORANGE} />
                 <Text style={styles.title}>Send a Gift</Text>
               </View>
-              <Text style={styles.sub}>Support your astrologer during live</Text>
+              <Text style={styles.sub}>
+                Support your astrologer during live
+              </Text>
             </View>
 
             <View style={styles.rightRow}>
-              <View style={styles.coinBox}>
+              <TouchableOpacity
+                style={styles.coinBox}
+                onPress={() => {
+                  if (onRecharge) onRecharge();
+                }}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.coin}>🪙</Text>
-                <Text style={styles.coinText}>{userBalance}</Text>
-              </View>
+                <Text style={styles.coinText}>₹{userBalance}</Text>
+                <Ionicons
+                  name="add-circle"
+                  size={RF(13)}
+                  color={ORANGE}
+                  style={{ marginLeft: wp(1) }}
+                />
+              </TouchableOpacity>
 
               <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
                 <Ionicons name="close" size={RF(20)} color="#777" />

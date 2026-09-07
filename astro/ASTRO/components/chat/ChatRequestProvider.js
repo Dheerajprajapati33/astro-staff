@@ -75,13 +75,11 @@ export default function ChatRequestProvider({ children }) {
       (c) => c.consultationType === "chat",
     );
 
-    console.log(
-      LOG_TAG,
-      "waiting-requests poll result count:",
-      waitingList.length,
+    // Agar astrologer live broadcast ya call par hai toh chat popup block karein
+    const isBusyOnScreen = segments.some(
+      (s) => s === "golive" || s === "call" || s === "chat",
     );
-
-    if (incomingRequest) return; // already showing one, don't interrupt
+    if (isBusyOnScreen || incomingRequest) return;
 
     const next = waitingList.find((c) => !dismissedIdsRef.current.has(c.id));
 
