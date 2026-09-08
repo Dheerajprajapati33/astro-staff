@@ -1,39 +1,96 @@
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useState } from "react";
-
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  RefreshControl,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import * as ImagePicker from "expo-image-picker";
-
+import { BASE_URL } from "../../config/api";
 import Typography from "../../constants/Typography";
-import { hp, RF, wp } from "../../utils/responsive";
-
 import {
+  useDeleteGalleryMutation,
   useGetGalleryQuery,
   useUploadGalleryMutation,
 } from "../../redux/GalleryApi";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const ORANGE = "#ff6a00";
 
+const getImageUri = (item) => {
+  const uri =
+    typeof item === "string"
+      ? item
+      : item?.image || item?.imageUrl || item?.url || item?.photo;
+  if (!uri) return null;
+  if (uri.startsWith("http://") || uri.startsWith("https://")) {
+    return uri;
+  }
+  const cleanPath = uri.startsWith("/") ? uri.slice(1) : uri;
+  return `${BASE_URL}/${cleanPath}`;
+};
+
 export default function Gallery() {
   const [showInfo, setShowInfo] = useState(false);
+  const [astrologerId, setAstrologerId] = useState(null);
 
-  const { data: galleryData, isLoading, refetch } = useGetGalleryQuery();
+  useEffect(() => {
+    const getSavedUser = async () => {
+      try {
+        const savedUser = await AsyncStorage.getItem("userData");
+        if (savedUser) {
+          const parsedUser = JSON.parse(savedUser);
+          const id =
+            parsedUser?.id ||
+            parsedUser?._id ||
+            parsedUser?.astrologerId ||
+            parsedUser?.user?.id;
+          if (id) {
+            setAstrologerId(id);
+          }
+        }
+      } catch (error) {
+        console.log("GET USER ERROR:", error);
+      }
+    };
+
+    getSavedUser();
+  }, []);
+
+  const {
+    data: galleryData,
+    isLoading,
+    isFetching,
+    refetch,
+  } = useGetGalleryQuery(
+    astrologerId ? { astrologerId, page: 1, limit: 20 } : undefined,
+  );
 
   const [uploadGallery, { isLoading: uploading }] = useUploadGalleryMutation();
+  const [deleteGallery, { isLoading: deleting }] = useDeleteGalleryMutation();
 
-  const galleryImages = galleryData?.gallery || [];
+  const galleryImages = Array.isArray(galleryData?.gallery)
+    ? galleryData.gallery
+    : Array.isArray(galleryData?.images)
+      ? galleryData.images
+      : Array.isArray(galleryData?.photos)
+        ? galleryData.photos
+        : Array.isArray(galleryData)
+          ? galleryData
+          : [];
+
+  const totalCount =
+    galleryData?.totalImages || galleryData?.total || galleryImages.length;
 
   const pickImageFromGallery = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -61,10 +118,42 @@ export default function Gallery() {
     }
   };
 
+  const handleDeletePhoto = (item) => {
+    const photoId = item?.id || item?._id;
+    if (!photoId) {
+      Alert.alert("Error", "Unable to identify photo ID");
+      return;
+    }
+
+    Alert.alert(
+      "Delete Photo",
+      "Are you sure you want to remove this photo from your gallery?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteGallery(photoId).unwrap();
+              Alert.alert("Success", "Photo deleted successfully");
+              refetch();
+            } catch (err) {
+              console.log("DELETE ERROR:", err);
+              Alert.alert(
+                "Delete Failed",
+                err?.data?.message || "Cannot delete photo",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       {/* HEADER */}
-
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={RF(24)} color={ORANGE} />
@@ -73,14 +162,6 @@ export default function Gallery() {
         <Text style={styles.headerTitle}>Gallery</Text>
 
         <View style={styles.headerActions}>
-          {/* <TouchableOpacity onPress={pickImageFromGallery} disabled={uploading}>
-            <Ionicons
-              name="cloud-upload-outline"
-              size={RF(22)}
-              color={ORANGE}
-            />
-          </TouchableOpacity> */}
-
           <TouchableOpacity onPress={() => setShowInfo((prev) => !prev)}>
             <Ionicons name="help-circle-outline" size={RF(22)} color={ORANGE} />
           </TouchableOpacity>
@@ -107,106 +188,106 @@ export default function Gallery() {
         </View>
       )}
 
-      <FlatList
-        data={[...galleryImages, "add"]}
-        keyExtractor={(item, index) =>
-          item === "add" ? "add" : item.id.toString()
-        }
-        numColumns={3}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        columnWrapperStyle={styles.gridRow}
-        ListHeaderComponent={
-          <>
+      {isLoading && !galleryImages.length ? (
+        <View style={styles.centerLoading}>
+          <ActivityIndicator size="large" color={ORANGE} />
+        </View>
+      ) : (
+        <FlatList
+          data={[...galleryImages, "add"]}
+          keyExtractor={(item, index) =>
+            item === "add" ? "add" : (item?.id || item?._id || index).toString()
+          }
+          numColumns={3}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          columnWrapperStyle={styles.gridRow}
+          refreshControl={
+            <RefreshControl
+              refreshing={isFetching}
+              onRefresh={refetch}
+              tintColor={ORANGE}
+              colors={[ORANGE]}
+            />
+          }
+          ListHeaderComponent={
             <View style={styles.tabBox}>
               <View style={styles.tabLeft}>
                 <Ionicons name="images" size={RF(16)} color={ORANGE} />
-
-                <Text style={styles.tabText}>
-                  Photos ({galleryData?.totalImages || 0})
-                </Text>
+                <Text style={styles.tabText}>Photos ({totalCount})</Text>
               </View>
-
-              {/* <TouchableOpacity style={styles.reorderBtn}>
-                <Ionicons
-                  name="reorder-three-outline"
-                  size={RF(22)}
-                  color={ORANGE}
-                />
-
-                <Text style={styles.reorderText}>Reorder</Text>
-              </TouchableOpacity> */}
             </View>
-
-            <View style={styles.actionRow}>
-              {/* <TouchableOpacity
-                style={styles.addBtn}
+          }
+          renderItem={({ item }) =>
+            item === "add" ? (
+              <TouchableOpacity
+                style={styles.addMoreCard}
                 onPress={pickImageFromGallery}
                 disabled={uploading}
               >
-                <Ionicons name="add" size={RF(18)} color={ORANGE} />
+                <View style={styles.plusCircle}>
+                  {uploading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Ionicons name="add" size={RF(25)} color="#fff" />
+                  )}
+                </View>
 
-                <Text style={styles.addText}>
-                  {uploading ? "Uploading..." : "Add Photos"}
+                <Text style={styles.addMoreText}>
+                  {uploading ? "Uploading..." : "Add More\nPhotos"}
                 </Text>
-              </TouchableOpacity> */}
-            </View>
-          </>
-        }
-        renderItem={({ item }) =>
-          item === "add" ? (
-            <TouchableOpacity
-              style={styles.addMoreCard}
-              onPress={pickImageFromGallery}
-            >
-              <View style={styles.plusCircle}>
-                <Ionicons name="add" size={RF(25)} color="#fff" />
-              </View>
-
-              <Text style={styles.addMoreText}>Add More{"\n"}Photos</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity activeOpacity={0.8} style={styles.photoCard}>
-              <Image
-                source={{
-                  uri: item.image,
-                }}
-                style={styles.photo}
-              />
-
-              <View style={styles.moreDot}>
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={RF(14)}
-                  color="#fff"
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.photoCard}
+                onPress={() => handleDeletePhoto(item)}
+              >
+                <Image
+                  source={{
+                    uri: getImageUri(item),
+                  }}
+                  style={styles.photo}
                 />
+
+                <TouchableOpacity
+                  style={styles.moreDot}
+                  onPress={() => handleDeletePhoto(item)}
+                >
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={RF(14)}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )
+          }
+          ListFooterComponent={
+            <View style={styles.footerCard}>
+              <View style={styles.shield}>
+                <Ionicons name="shield-checkmark" size={RF(20)} color="#fff" />
               </View>
-            </TouchableOpacity>
-          )
-        }
-        ListFooterComponent={
-          <View style={styles.footerCard}>
-            <View style={styles.shield}>
-              <Ionicons name="shield-checkmark" size={RF(20)} color="#fff" />
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.footerTitle}>
+                  Upload clear, professional photos to build trust.
+                </Text>
+
+                <Text style={styles.footerSub}>
+                  You can add up to 20 photos.
+                </Text>
+              </View>
+
+              <Text style={styles.countText}>{totalCount} / 20 Photos</Text>
             </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.footerTitle}>
-                Upload clear, professional photos to build trust.
-              </Text>
-
-              <Text style={styles.footerSub}>You can add up to 20 photos.</Text>
-            </View>
-
-            <Text style={styles.countText}>
-              {galleryData?.totalImages || 0} / 20 Photos
-            </Text>
-          </View>
-        }
-      />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -472,5 +553,12 @@ const styles = StyleSheet.create({
     fontSize: RF(10),
     fontWeight: "900",
     fontFamily: Typography?.bold,
+  },
+
+  centerLoading: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: hp(40),
   },
 });

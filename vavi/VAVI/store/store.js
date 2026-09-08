@@ -14,8 +14,10 @@ import { consultationApi } from "../redux/consultationApi";
 import { followerApi } from "../redux/followerApi";
 import { liveApi } from "../redux/liveApi";
 import { numerologyApi } from "../redux/numerologyApi";
+import { offerApi } from "../redux/offerApi";
 import { updateApi } from "../redux/updateApi";
 import { walletApi } from "../redux/walletApi";
+import { referralApi } from "../redux/referralApi";
 
 import { performClientLogoutVavi } from "../utils/auth";
 
@@ -71,6 +73,7 @@ export const store = configureStore({
     [updateApi.reducerPath]: updateApi.reducer,
     [AstroApi.reducerPath]: AstroApi.reducer,
     [walletApi.reducerPath]: walletApi.reducer,
+    [offerApi.reducerPath]: offerApi.reducer,
     [PalmApi.reducerPath]: PalmApi.reducer,
     [numerologyApi.reducerPath]: numerologyApi.reducer,
     [PanchangApi.reducerPath]: PanchangApi.reducer,
@@ -81,6 +84,7 @@ export const store = configureStore({
     [appContentApi.reducerPath]: appContentApi.reducer,
     [consultationApi.reducerPath]: consultationApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
+    [referralApi.reducerPath]: referralApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -90,6 +94,7 @@ export const store = configureStore({
       updateApi.middleware,
       AstroApi.middleware,
       walletApi.middleware,
+      offerApi.middleware,
       PalmApi.middleware,
       numerologyApi.middleware,
       PanchangApi.middleware,
@@ -100,5 +105,6 @@ export const store = configureStore({
       appContentApi.middleware,
       consultationApi.middleware,
       liveApi.middleware,
+      referralApi.middleware,
     ),
 });

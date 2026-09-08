@@ -34,6 +34,10 @@ export default function Otp() {
     ? params.role[0]
     : params?.role || "user";
 
+  const referralCode = Array.isArray(params?.referralCode)
+    ? params.referralCode[0]
+    : params?.referralCode || "";
+
   const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(30);
 
@@ -75,7 +79,10 @@ export default function Otp() {
       }).unwrap();
 
       if (response?.success) {
-        Alert.alert("OTP Sent", "A new OTP code has been sent to your phone number.");
+        Alert.alert(
+          "OTP Sent",
+          "A new OTP code has been sent to your phone number.",
+        );
         setTimer(30);
         const emptyOtp = ["", "", "", "", "", ""];
         setOtpValues(emptyOtp);
@@ -194,6 +201,7 @@ export default function Otp() {
         phone,
         otp: enteredOtp,
         role: role || "user",
+        ...(referralCode ? { referredByCode: referralCode } : {}),
       }).unwrap();
 
       console.log("Verify OTP Response:", response);

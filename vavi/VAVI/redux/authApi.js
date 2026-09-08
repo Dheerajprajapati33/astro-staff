@@ -31,13 +31,14 @@ export const authApi = createApi({
 
     // Verify OTP API
     verifyOtp: builder.mutation({
-      query: ({ phone, otp, role = "user" }) => ({
+      query: ({ phone, otp, role = "user", referredByCode }) => ({
         url: "/auth/verify-otp",
         method: "POST",
         body: {
           phone,
           role,
           otp,
+          ...(referredByCode ? { referredByCode } : {}),
         },
       }),
     }),

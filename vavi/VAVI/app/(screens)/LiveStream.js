@@ -93,6 +93,24 @@ export default function LiveStream() {
     0;
   const currentBalance = Number(rawBalance) || 0;
 
+  // Local Wallet Balance State (Instant frontend deduction ke liye)
+  const [localWalletBalance, setLocalWalletBalance] = useState(null);
+
+  useEffect(() => {
+    if (walletData) {
+      const b =
+        walletData?.data?.balance ??
+        walletData?.balance ??
+        walletData?.data?.walletBalance ??
+        0;
+      setLocalWalletBalance(Number(b) || 0);
+    }
+  }, [walletData]);
+
+  const activeBalance =
+    localWalletBalance !== null ? localWalletBalance : currentBalance;
+
+
   const agoraEngineRef = useRef(null);
   const giftAnim = useRef(new Animated.Value(0)).current;
   const commentsListRef = useRef(null);
@@ -597,10 +615,10 @@ export default function LiveStream() {
     const giftCost = Number(gift?.coins) || 0;
 
     // 1. Check if user has sufficient wallet balance
-    if (currentBalance < giftCost) {
+    if (activeBalance < giftCost) {
       Alert.alert(
         "Insufficient Balance",
-        `You need ₹${giftCost} to send this gift. Your current wallet balance is ₹${currentBalance}.`,
+        `You need ₹${giftCost} to send this gift. Your current wallet balance is ₹${activeBalance}.`,
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -614,6 +632,9 @@ export default function LiveStream() {
       );
       return;
     }
+
+     // 2. Instant Deduct Balance on Screen
+    setLocalWalletBalance((prev) => Math.max(0, (prev ?? activeBalance) - giftCost));
 
     setShowGiftSheet(false);
     const socket = getChatSocket();
@@ -632,6 +653,8 @@ export default function LiveStream() {
       userName: userObj?.name || "Devotee",
       message: `${emoji} Sent ${giftName} (${coins} coins)`,
       isGift: true,
+      amount: giftCost,
+      coins: giftCost,
       gift: {
         id: gift.id,
         name: giftName,
@@ -669,7 +692,7 @@ export default function LiveStream() {
     if (typeof refetchWallet === "function") {
       setTimeout(() => {
         refetchWallet();
-      }, 500);
+      }, 1000);
     }
   };
 
@@ -1048,7 +1071,7 @@ export default function LiveStream() {
             setShowGiftSheet(false);
             router.push("/Recharge");
           }}
-          userBalance={currentBalance}
+          userBalance={activeBalance}
         />
       </SafeAreaView>
     </View>

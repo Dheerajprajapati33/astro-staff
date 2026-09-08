@@ -797,6 +797,13 @@ export default function GoLive() {
     <View style={styles.container}>
       {/* Camera Video View / Background */}
       <View style={styles.cameraBackground}>
+      {/* 1. Base Layer: bg.png (Hamesha background mein permanent rahegi) */}
+        <Image
+            source={require("../../assets/images/bg.png")}
+            resizeMode="cover"
+            style={StyleSheet.absoluteFillObject}
+        />
+
         {Platform.OS === "web" && isLive && !isCameraOff ? (
           <video
             ref={videoRefCallback}
@@ -813,7 +820,9 @@ export default function GoLive() {
               transform: isFrontCamera ? "scaleX(-1)" : "none",
             }}
           />
-        ) : Platform.OS !== "web" &&
+        ) : null }
+        
+        { Platform.OS !== "web" &&
           isLive &&
           !isCameraOff &&
           RtcSurfaceView ? (
@@ -821,13 +830,8 @@ export default function GoLive() {
             canvas={{ uid: 0 }}
             style={StyleSheet.absoluteFillObject}
           />
-        ) : (
-          <Image
-            source={require("../../assets/images/bg.png")}
-            resizeMode="cover"
-            style={StyleSheet.absoluteFillObject}
-          />
-        )}
+        ) : null }
+        
         <View style={styles.overlayTint} />
       </View>
 

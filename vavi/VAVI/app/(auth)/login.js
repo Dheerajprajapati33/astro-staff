@@ -21,6 +21,8 @@ import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Login() {
   const [phone, setPhone] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [showReferralInput, setShowReferralInput] = useState(false);
 
   const [login, { isLoading }] = useLoginMutation();
 
@@ -73,6 +75,9 @@ export default function Login() {
           params: {
             phone: cleanPhone,
             role: "user",
+            ...(referralCode.trim()
+              ? { referralCode: referralCode.trim().toUpperCase() }
+              : {}),
           },
         });
       } else {
@@ -150,6 +155,54 @@ export default function Login() {
               )}
             </View>
 
+            {/* Optional Referral Code Toggle & Input */}
+            {!showReferralInput ? (
+              <TouchableOpacity
+                onPress={() => setShowReferralInput(true)}
+                style={styles.referralToggle}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="gift-outline"
+                  size={RF(15)}
+                  color={Colors.primary}
+                />
+                <Text style={styles.referralToggleText}>
+                  Have a referral code?
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.referralInputContainer}>
+                <Ionicons
+                  name="gift-outline"
+                  size={RF(18)}
+                  color={Colors.primary}
+                  style={{ marginRight: wp(2) }}
+                />
+                <TextInput
+                  value={referralCode}
+                  onChangeText={(val) => setReferralCode(val.toUpperCase())}
+                  placeholder="Enter referral code (Optional)"
+                  placeholderTextColor={Colors.textGray}
+                  autoCapitalize="characters"
+                  maxLength={12}
+                  style={styles.referralInput}
+                />
+                {referralCode.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setReferralCode("")}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={RF(18)}
+                      color={Colors.textGray}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
             {/* Login Button */}
             <TouchableOpacity
               style={[styles.phoneButton, isLoading && styles.disabledButton]}
@@ -177,7 +230,6 @@ export default function Login() {
                 />
               )}
             </TouchableOpacity>
-
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -251,6 +303,43 @@ const styles = StyleSheet.create({
     fontSize: RF(16),
     color: Colors.darkBrown,
     fontWeight: "400",
+    paddingVertical: 0,
+  },
+
+  referralToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    marginTop: hp(1),
+    marginBottom: hp(0.5),
+    paddingVertical: hp(0.5),
+  },
+
+  referralToggleText: {
+    fontSize: RF(13),
+    color: Colors.primary,
+    fontWeight: "600",
+    marginLeft: wp(1.5),
+  },
+
+  referralInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.lightPeach,
+    borderRadius: wp(3),
+    paddingHorizontal: wp(4),
+    height: hp(6),
+    marginTop: hp(1.5),
+  },
+
+  referralInput: {
+    flex: 1,
+    fontSize: RF(14),
+    color: Colors.darkBrown,
+    fontWeight: "600",
+    letterSpacing: 1,
     paddingVertical: 0,
   },
 

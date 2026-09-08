@@ -80,10 +80,10 @@ export const walletApi = createApi({
     // ==========================
 
     createPaymentOrder: builder.mutation({
-      query: ({ amount }) => ({
+      query: (data) => ({
         url: "/payment/create-order",
         method: "POST",
-        body: { amount },
+        body: data,
       }),
     }),
 
@@ -92,15 +92,10 @@ export const walletApi = createApi({
     // ==========================
 
     verifyPayment: builder.mutation({
-      query: ({ razorpayOrderId, razorpayPaymentId, razorpaySignature, amount }) => ({
+      query: (data) => ({
         url: "/payment/verify",
         method: "POST",
-        body: {
-          razorpayOrderId,
-          razorpayPaymentId,
-          razorpaySignature,
-          amount,
-        },
+        body: data,
       }),
 
       invalidatesTags: ["Wallet"],
@@ -115,4 +110,3 @@ export const {
   useCreatePaymentOrderMutation,
   useVerifyPaymentMutation,
 } = walletApi;
-

@@ -1,7 +1,6 @@
 import {
   FlatList,
   Image,
- 
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,7 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/home/Header";
 
 import Colors from "../../constants/Colors";
-import ServicesData from "../../constants/Services";import { hp, RF, wp } from "../../utils/responsive";
+import ServicesData from "../../constants/Services";
+import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Services() {
   const renderItem = ({ item }) => (

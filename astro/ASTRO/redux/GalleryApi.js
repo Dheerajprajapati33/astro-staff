@@ -33,7 +33,6 @@ export const galleryApi = createApi({
 
   endpoints: (builder) => ({
     // Upload Gallery Images
-
     uploadGallery: builder.mutation({
       query: (images) => {
         const formData = new FormData();
@@ -41,18 +40,14 @@ export const galleryApi = createApi({
         images.forEach((image, index) => {
           formData.append("images", {
             uri: image.uri,
-
             name: image.fileName || `gallery_${index}.jpg`,
-
             type: image.mimeType || "image/jpeg",
           });
         });
 
         return {
           url: "/gallery/upload",
-
           method: "POST",
-
           body: formData,
         };
       },
@@ -69,13 +64,26 @@ export const galleryApi = createApi({
     }),
 
     // Get Gallery Data
-
     getGallery: builder.query({
-      query: () => ({
-        url: "/gallery/get-gallery",
+      query: (params) => {
+        let url = "/gallery/get-gallery";
+        if (params) {
+          const queryParams = new URLSearchParams();
+          if (params.astrologerId)
+            queryParams.append("astrologerId", params.astrologerId);
+          if (params.page) queryParams.append("page", params.page);
+          if (params.limit) queryParams.append("limit", params.limit);
+          const queryString = queryParams.toString();
+          if (queryString) {
+            url += `?${queryString}`;
+          }
+        }
 
-        method: "GET",
-      }),
+        return {
+          url,
+          method: "GET",
+        };
+      },
 
       transformResponse: (response) => {
         if (!response?.success) {
@@ -87,11 +95,49 @@ export const galleryApi = createApi({
 
       providesTags: ["Gallery"],
     }),
+
+    // Delete Gallery Photo
+    deleteGallery: builder.mutation({
+      query: (photoId) => ({
+        url: `/gallery/${photoId}/delete`,
+        method: "DELETE",
+      }),
+
+      transformResponse: (response) => {
+        if (!response?.success) {
+          return null;
+        }
+
+        return response?.data || response;
+      },
+
+      invalidatesTags: ["Gallery"],
+    }),
+
+    // Reorder Gallery Images
+    reorderGallery: builder.mutation({
+      query: (body) => ({
+        url: "/gallery/reorder",
+        method: "PATCH",
+        body,
+      }),
+
+      transformResponse: (response) => {
+        if (!response?.success) {
+          return null;
+        }
+
+        return response?.data || response;
+      },
+
+      invalidatesTags: ["Gallery"],
+    }),
   }),
 });
 
 export const {
   useUploadGalleryMutation,
-
   useGetGalleryQuery,
+  useDeleteGalleryMutation,
+  useReorderGalleryMutation,
 } = galleryApi;
