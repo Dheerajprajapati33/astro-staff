@@ -110,7 +110,6 @@ export default function LiveStream() {
   const activeBalance =
     localWalletBalance !== null ? localWalletBalance : currentBalance;
 
-
   const agoraEngineRef = useRef(null);
   const giftAnim = useRef(new Animated.Value(0)).current;
   const commentsListRef = useRef(null);
@@ -378,19 +377,20 @@ export default function LiveStream() {
           }
 
           // Handle viewer count updates
-          const handleAudienceCount = (data) => {
-            const count =
-              typeof data === "number"
-                ? data
-                : Number(
-                    data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 1,
-                  );
-            if (!isNaN(count) && isMounted) {
-              console.log(LOG_TAG, "Audience viewer count update:", count);
-              setViewersCount(Math.max(1, count));
-            }
-          };
-
+      const handleAudienceCount = (data) => {
+        const rawCount =
+          typeof data === "number"
+            ? data
+            : Number(
+                data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 1,
+              );
+        if (!isNaN(rawCount)) {
+          // Agar backend Host ko jod kar bhej raha hai (e.g. 2), toh audience 1 dikhegi
+          const count = rawCount > 1 ? rawCount - 1 : 1;
+          setViewersCount(count);
+        }
+      };
+      
           socket.on("viewer_count_update", handleAudienceCount);
           socket.on("viewers_count_update", handleAudienceCount);
           socket.on("live_viewers_count", handleAudienceCount);
@@ -613,35 +613,44 @@ export default function LiveStream() {
   // Send Gift Handler
   const handleSendGift = (gift) => {
     const giftCost = Number(gift?.coins) || 0;
+    const isFree = giftCost === 0 || gift?.isFree;
 
-    // 1. Check if user has sufficient wallet balance
-    if (activeBalance < giftCost) {
-      Alert.alert(
-        "Insufficient Balance",
-        `You need ₹${giftCost} to send this gift. Your current wallet balance is ₹${activeBalance}.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Recharge",
-            onPress: () => {
-              setShowGiftSheet(false);
-              router.push("/Recharge");
+    // 1. Agar Paid Gift hai toh wallet check & deduct karein
+    if (!isFree) {
+      if (activeBalance < giftCost) {
+        Alert.alert(
+          "Insufficient Balance",
+          `You need ₹${giftCost} to send this gift. Your current wallet balance is ₹${activeBalance}.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Recharge",
+              onPress: () => {
+                setShowGiftSheet(false);
+                router.push("/Recharge");
+              },
             },
-          },
-        ],
-      );
-      return;
-    }
+          ],
+        );
+        return;
+      }
 
-     // 2. Instant Deduct Balance on Screen
-    setLocalWalletBalance((prev) => Math.max(0, (prev ?? activeBalance) - giftCost));
+      // Sirf paid gifts par hi balance deduct karein
+      setLocalWalletBalance((prev) =>
+        Math.max(0, (prev ?? activeBalance) - giftCost),
+      );
+    }
 
     setShowGiftSheet(false);
     const socket = getChatSocket();
     const userObj = currentUser || { id: "user", name: "Devotee" };
     const giftName = gift?.name || "Gift";
-    const coins = giftCost || 10;
+    const coins = giftCost;
     const emoji = gift?.emoji || "🎁";
+
+    const messageText = isFree
+      ? `${emoji} Sent Free ${giftName}!`
+      : `${emoji} Sent ${giftName} (${coins} coins)`;
 
     const payload = {
       liveSessionId: String(liveSessionId),
@@ -651,10 +660,11 @@ export default function LiveStream() {
         name: userObj?.name || "Devotee",
       },
       userName: userObj?.name || "Devotee",
-      message: `${emoji} Sent ${giftName} (${coins} coins)`,
+      message: messageText,
       isGift: true,
       amount: giftCost,
       coins: giftCost,
+      isFree: isFree,
       gift: {
         id: gift.id,
         name: giftName,
@@ -939,13 +949,14 @@ export default function LiveStream() {
             </Text>
             <View>
               <Text style={styles.giftToastSender}>
-                {recentGift?.user?.name || "Viewer"} sent{" "}
-                {recentGift?.gift?.name || "a Gift"}!
+                {`${recentGift?.user?.name || "Viewer"} sent
+                ${recentGift?.gift?.name || "a Gift"}!`}
               </Text>
               <Text style={styles.giftToastCoins}>
-                {recentGift?.gift?.coins || 10} Coins 🪙
-              </Text>
-            </View>
+                {recentGift?.gift?.coins > 0
+                  ? `+${recentGift.gift.coins} Coins 🪙`
+                  : "Free Gift 🎁"}
+              </Text>            </View>
           </Animated.View>
         )}
 

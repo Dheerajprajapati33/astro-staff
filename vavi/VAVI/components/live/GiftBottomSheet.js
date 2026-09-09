@@ -95,11 +95,20 @@ export default function GiftBottomSheet({
                   {item.name}
                 </Text>
 
+{/* coins  */}
                 <View style={styles.coinRow}>
-                  <Text style={styles.smallCoin}>🪙</Text>
-                  <Text style={styles.giftCoin}>{item.coins}</Text>
+                  {item.coins === 0 || item.isFree ? (
+                    <Text style={[styles.giftCoin, { color: "#4CAF50", fontWeight: "800" }]}>
+                      FREE
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={styles.smallCoin}>🪙</Text>
+                      <Text style={styles.giftCoin}>{item.coins}</Text>
+                    </>
+                  )}
                 </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
             )}
           />
         </TouchableOpacity>

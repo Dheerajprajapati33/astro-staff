@@ -13,6 +13,7 @@ import { authApi } from "../redux/authApi";
 import { consultationApi } from "../redux/consultationApi";
 import { followerApi } from "../redux/followerApi";
 import { liveApi } from "../redux/liveApi";
+import { notificationApi } from "../redux/notificationApi";
 import { numerologyApi } from "../redux/numerologyApi";
 import { offerApi } from "../redux/offerApi";
 import { updateApi } from "../redux/updateApi";
@@ -85,6 +86,7 @@ export const store = configureStore({
     [consultationApi.reducerPath]: consultationApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
     [referralApi.reducerPath]: referralApi.reducer,
+    [notificationApi.reducerPath]: notificationApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -106,5 +108,6 @@ export const store = configureStore({
       consultationApi.middleware,
       liveApi.middleware,
       referralApi.middleware,
+      notificationApi.middleware,
     ),
 });

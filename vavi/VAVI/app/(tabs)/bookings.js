@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -145,6 +146,15 @@ export default function Bookings() {
     };
   }, [isFocused]);
 
+  // useFocusEffect to refetch consultation history when the Bookings tab is focused
+   useFocusEffect(
+    React.useCallback(() => {
+      if (hasToken && typeof refetch === "function") {
+        refetch();
+      }
+    }, [hasToken, refetch])
+  );
+
   const rawConsultations = useMemo(() => {
     if (!historyData) return [];
     if (Array.isArray(historyData)) return historyData;
@@ -162,10 +172,7 @@ export default function Bookings() {
 
   // If backend returns consultations, show them. Otherwise show rich sample preview consultations!
   const bookingsList = useMemo(() => {
-    if (rawConsultations && rawConsultations.length > 0) {
-      return rawConsultations;
-    }
-    return DEFAULT_SAMPLE_BOOKINGS;
+      return rawConsultations || [];
   }, [rawConsultations]);
 
   // Calculate Consultation Stats Metrics

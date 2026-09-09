@@ -486,18 +486,21 @@ export default function GoLive() {
 
       // Handler to update count
       const handleCount = (data) => {
-        const count =
+        const rawCount =
           typeof data === "number"
             ? data
             : Number(
                 data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 0,
               );
-        if (!isNaN(count)) {
-          console.log(LOG_TAG, "Host viewer count update:", count);
-          setViewersCount(count);
-          setPeakViewers((prev) => Math.max(prev, count));
+        if (!isNaN(rawCount)) {
+          // Agar count >= 2 hai (Host + 1 Viewer), toh Viewer 1 dikhega
+          const audienceCount = rawCount > 0 ? rawCount - 1 : 0;
+          console.log(LOG_TAG, "Host audience viewer count:", audienceCount);
+          setViewersCount(audienceCount);
+          setPeakViewers((prev) => Math.max(prev, audienceCount));
         }
       };
+
 
       socket.on("viewer_count_update", handleCount);
       socket.on("viewers_count_update", handleCount);
@@ -604,25 +607,29 @@ export default function GoLive() {
           };
         const senderName = userObj?.name || "Devotee";
         const giftName = giftObj?.name || "Gift 🎁";
-        const coins = giftObj?.coins || 10;
+        const coins = Number(giftObj?.coins ?? 0);
         const emoji = giftObj?.emoji || "🎁";
-
+        const isFree = coins === 0 || data?.isFree || giftObj?.isFree;
         showGiftToast({
           user: userObj,
           gift: {
             name: giftName,
             emoji: emoji,
             coins: coins,
+            isFree: isFree,
           },
         });
 
         // Also add gift directly to live comments stream
+         const commentText = isFree
+          ? `${emoji} Sent Free ${giftName}!`
+          : `${emoji} Sent ${giftName} (${coins} coins)`;
         setComments((prev) => [
           ...prev.slice(-40),
           {
             id: data?.id || `gift_${Date.now()}_${Math.random()}`,
             userName: senderName,
-            message: `${emoji} Sent ${giftName} (${coins} coins)`,
+            message: commentText,
             isGift: true,
           },
         ]);
@@ -962,11 +969,13 @@ export default function GoLive() {
                 </Text>
                 <View>
                   <Text style={styles.giftToastSender}>
-                    {recentGift?.user?.name || "Viewer"} sent{" "}
-                    {recentGift?.gift?.name || "a Gift"}!
+                    {`${recentGift?.user?.name || "Viewer"} sent
+                    ${recentGift?.gift?.name || "a Gift"}!`}
                   </Text>
                   <Text style={styles.giftToastCoins}>
-                    +{recentGift?.gift?.coins || 10} Coins 🪙
+                    {recentGift?.gift?.coins > 0
+                      ? `+${recentGift.gift.coins} Coins 🪙`
+                      : "Free Gift 🎁"}
                   </Text>
                 </View>
               </Animated.View>

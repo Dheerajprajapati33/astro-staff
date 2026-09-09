@@ -68,10 +68,15 @@ export const consultationApi = createApi({
     // ==========================
 
     getConsultationHistory: builder.query({
-      query: ({ page = 1, limit = 50 } = {}) => ({
-        url: `/consultation/history?page=${page}&limit=${limit}`,
-        method: "GET",
-      }),
+      query: ({ page = 1, limit = 50, type } = {}) => {
+        let url = `/consultation/history?page=${page}&limit=${limit}`;
+        if (type) url += `&type=${type}`;
+        return {
+          url,
+          method: "GET",
+        };
+      },
+      
       transformResponse: (response) => {
         const list = Array.isArray(response)
           ? response
@@ -112,6 +117,19 @@ export const consultationApi = createApi({
     }),
 
     // ==========================
+    // END CONSULTATION CALL
+    // ==========================
+
+    endConsultationCall: builder.mutation({
+      query: ({ consultationId, reason = "user_disconnected" }) => ({
+        url: `/consultation/${consultationId}/end-call`,
+        method: "POST",
+        body: { reason },
+      }),
+      invalidatesTags: ["ConsultationHistory"],
+    }),
+
+    // ==========================
     // CREATE / SUBMIT CONSULTATION REVIEW
     // ==========================
 
@@ -136,5 +154,6 @@ export const {
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useGetCallTokenMutation,
+  useEndConsultationCallMutation,
   useCreateReviewMutation,
 } = consultationApi;

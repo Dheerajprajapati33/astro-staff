@@ -27,6 +27,7 @@ import { AGORA_APP_ID } from "../../constants/AgoraConfig";
 import {
   useCreateReviewMutation,
   useGetCallTokenMutation,
+  useEndConsultationCallMutation,
   useGetConsultationHistoryQuery,
 } from "../../redux/consultationApi";
 import PostConsultationReviewModal from "../../components/review/PostConsultationReviewModal";
@@ -84,6 +85,7 @@ export default function CallConsultation() {
   const [localStream, setLocalStream] = useState(null);
 
   const [getCallToken] = useGetCallTokenMutation();
+  const [endConsultationCall] = useEndConsultationCallMutation();
   const [createReviewMutation] = useCreateReviewMutation();
 
   const agoraEngineRef = useRef(null);
@@ -677,7 +679,7 @@ export default function CallConsultation() {
   };
 
   // End Call Handler
-  const handleEndCall = (reason = "completed") => {
+  const handleEndCall = async (reason = "completed") => {
     console.log(LOG_TAG, "Client ending call:", reason);
     if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
@@ -688,10 +690,20 @@ export default function CallConsultation() {
       } catch (e) {}
     }
 
+    try {
+      await endConsultationCall({
+        consultationId,
+        reason: "user_disconnected",
+      }).unwrap();
+    } catch (e) {
+      console.log("End call API error:", e);
+    }
+
     endCallConsultation({ consultationId, reason });
     cleanupAgora();
     setCallStatus("ended");
 
+    
     const mins = Math.max(1, Math.ceil(callDurationSeconds / 60));
     const rate = Number(ratePerMinute) || 25;
     setAmountDeducted(mins * rate);
