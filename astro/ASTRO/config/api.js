@@ -1,7 +1,7 @@
 // app/_config/api.js
 
 export const BASE_URL =
-  "https://noncompulsory-augustine-unbewilderingly.ngrok-free.dev";
+  "https://tissue-relay-reptile.ngrok-free.dev";
 
 export const resolveImageUri = (uri) => {
   if (!uri) return null;

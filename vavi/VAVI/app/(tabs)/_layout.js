@@ -39,18 +39,18 @@ export default function TabLayout() {
         },
       }}
     >
-
-
       {/* TAB 1 → CONSULT */}
       <Tabs.Screen
         name="consult"
         options={{
           title: "Discover",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={size}
+              name={
+                focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"
+              }
+              size={RF(22)}
               color={color}
             />
           ),
@@ -63,10 +63,10 @@ export default function TabLayout() {
         options={{
           title: "Consult",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name="compass-outline"
-              size={size}
+              name={focused ? "compass" : "compass-outline"}
+              size={RF(22)}
               color={color}
             />
           ),
@@ -79,10 +79,10 @@ export default function TabLayout() {
         options={{
           title: "Bookings",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name="calendar-outline"
-              size={size}
+              name={focused ? "calendar" : "calendar-outline"}
+              size={RF(22)}
               color={color}
             />
           ),
@@ -95,10 +95,10 @@ export default function TabLayout() {
         options={{
           title: "Profile",
 
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name="person-outline"
-              size={size}
+              name={focused ? "person" : "person-outline"}
+              size={RF(22)}
               color={color}
             />
           ),

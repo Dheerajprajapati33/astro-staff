@@ -17,6 +17,9 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import DatePickerModal from "../../components/common/DatePickerModal";
+import TimePickerModal from "../../components/common/TimePickerModal";
+import StatePickerModal from "../../components/common/StatePickerModal";
 import { resolveImageUri } from "../../config/api";
 import Colors from "../../constants/Colors";
 import {
@@ -64,14 +67,23 @@ const ProfileRow = ({
 
 export default function Profile() {
   const segments = useSegments();
+
   const [hasToken, setHasToken] = useState(false);
+
   const [fullName, setFullName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+
+  // DOB, Time & Place Pickers
   const [dob, setDob] = useState("");
+  const [showDobPicker, setShowDobPicker] = useState(false);
+
   const [birthTime, setBirthTime] = useState("");
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const [birthPlace, setBirthPlace] = useState("");
+  const [showPlacePicker, setShowPlacePicker] = useState(false);
 
   const [city, setCity] = useState("");
   const [stateName, setStateName] = useState("");
@@ -82,16 +94,24 @@ export default function Profile() {
 
   useEffect(() => {
     let isMounted = true;
+
     const checkToken = async () => {
       try {
         const raw = await AsyncStorage.getItem("userData");
         const parsed = raw ? JSON.parse(raw) : null;
-        if (isMounted) setHasToken(!!parsed?.token);
+
+        if (isMounted) {
+          setHasToken(!!parsed?.token);
+        }
       } catch (_e) {
-        if (isMounted) setHasToken(false);
+        if (isMounted) {
+          setHasToken(false);
+        }
       }
     };
+
     checkToken();
+
     return () => {
       isMounted = false;
     };
@@ -130,6 +150,23 @@ export default function Profile() {
 
     setHasFilledProfile(true);
   }, [profile]);
+
+  const formatTimeTo12Hr = (timeStr) => {
+    if (!timeStr || !/^\d{2}:\d{2}(:\d{2})?$/.test(timeStr.trim())) {
+      return timeStr || "Select Birth Time";
+    }
+    const parts = timeStr.trim().split(":");
+    let h = Number(parts[0]);
+    const m = parts[1];
+    const period = h >= 12 ? "PM" : "AM";
+    if (h > 12) h -= 12;
+    else if (h === 0) h = 12;
+    return `${String(h).padStart(2, "0")}:${m} ${period}`;
+  };
+
+  // ============================================================
+  // IMAGE PICKER
+  // ============================================================
 
   const handlePickImage = async () => {
     try {
@@ -179,6 +216,10 @@ export default function Profile() {
     }
   };
 
+  // ============================================================
+  // VALIDATION
+  // ============================================================
+
   const validateProfile = () => {
     if (!fullName.trim()) {
       Alert.alert("Name Required", "Please enter your full name.");
@@ -222,12 +263,20 @@ export default function Profile() {
     return true;
   };
 
+  // ============================================================
+  // FORM DATA
+  // ============================================================
+
   const appendFormValue = (formData, fieldName, value) => {
     const cleanValue =
       value === null || value === undefined ? "" : String(value).trim();
 
     formData.append(fieldName, cleanValue);
   };
+
+  // ============================================================
+  // UPDATE PROFILE
+  // ============================================================
 
   const handleUpdateProfile = async () => {
     if (!validateProfile()) {
@@ -244,10 +293,12 @@ export default function Profile() {
       appendFormValue(formData, "email", email);
 
       /*
-       * Phone login identity hoti hai, isliye ise normally
-       * update request me bhejna avoid kiya gaya hai.
+       * Phone login identity hoti hai,
+       * isliye ise normally update request me
+       * bhejna avoid kiya gaya hai.
        *
-       * Backend phone update support karta ho to ye uncomment karo:
+       * Backend phone update support karta ho
+       * to ye uncomment karo:
        *
        * appendFormValue(formData, "phone", phone);
        */
@@ -273,14 +324,19 @@ export default function Profile() {
       }
 
       console.log("Submitting profile update...");
+
       const res = await updateProfile(formData).unwrap();
+
       console.log("Profile update response:", res);
 
       Alert.alert("Success", "Profile updated successfully!");
+
       setSelectedImage(null);
+
       refetch();
     } catch (error) {
       console.log("Profile update error:", error);
+
       const errorMessage =
         error?.data?.message ||
         error?.data?.error ||
@@ -290,6 +346,10 @@ export default function Profile() {
       Alert.alert("Update Failed", errorMessage);
     }
   };
+
+  // ============================================================
+  // LOGOUT
+  // ============================================================
 
   const performLogout = async () => {
     try {
@@ -315,6 +375,10 @@ export default function Profile() {
     ]);
   };
 
+  // ============================================================
+  // PROFILE IMAGE
+  // ============================================================
+
   const getProfileImageSource = () => {
     if (selectedImage?.uri) {
       return {
@@ -331,9 +395,13 @@ export default function Profile() {
 
   const profileImageSource = getProfileImageSource();
 
+  // ============================================================
+  // LOADING
+  // ============================================================
+
   if (isProfileLoading && !hasFilledProfile) {
     return (
-      <SafeAreaView style={styles.loaderScreen}>
+      <SafeAreaView style={styles.loaderScreen} edges={["top"]}>
         <ActivityIndicator size="large" color={Colors.primary} />
 
         <Text style={styles.loaderText}>Loading profile...</Text>
@@ -341,9 +409,13 @@ export default function Profile() {
     );
   }
 
+  // ============================================================
+  // ERROR
+  // ============================================================
+
   if (isProfileError && !hasFilledProfile) {
     return (
-      <SafeAreaView style={styles.errorScreen}>
+      <SafeAreaView style={styles.errorScreen} edges={["top"]}>
         <Ionicons
           name="alert-circle-outline"
           size={RF(45)}
@@ -365,8 +437,12 @@ export default function Profile() {
     );
   }
 
+  // ============================================================
+  // UI
+  // ============================================================
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAwareScrollView
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -382,6 +458,7 @@ export default function Profile() {
         }
       >
         {/* Header */}
+
         <View style={styles.header}>
           <Ionicons size={RF(22)} color={Colors.darkBrown} />
 
@@ -395,6 +472,7 @@ export default function Profile() {
         </View>
 
         {/* Profile picture */}
+
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
             {profileImageSource ? (
@@ -429,11 +507,14 @@ export default function Profile() {
         <Text style={styles.profilePhone}>{phone ? `+91 ${phone}` : ""}</Text>
 
         {/* Personal information */}
+
         <View style={styles.sectionHeader}>
           <View style={styles.orangeBar} />
 
           <Text style={styles.sectionTitle}>Personal Information</Text>
         </View>
+
+        {/* Full Name */}
 
         <ProfileRow
           icon="person-outline"
@@ -441,6 +522,8 @@ export default function Profile() {
           value={fullName}
           onChangeText={setFullName}
         />
+
+        {/* Username */}
 
         <ProfileRow
           icon="at-outline"
@@ -450,6 +533,8 @@ export default function Profile() {
           autoCapitalize="none"
         />
 
+        {/* Email */}
+
         <ProfileRow
           icon="mail-outline"
           label="Email"
@@ -458,6 +543,8 @@ export default function Profile() {
           keyboardType="email-address"
           autoCapitalize="none"
         />
+
+        {/* Phone */}
 
         <ProfileRow
           icon="call-outline"
@@ -476,69 +563,108 @@ export default function Profile() {
           }
         />
 
-        <ProfileRow
-          icon="calendar-outline"
-          label="Date of Birth"
-          value={dob}
-          onChangeText={setDob}
-          keyboardType="numbers-and-punctuation"
-          rightIcon={
-            <Ionicons name="calendar-outline" size={RF(16)} color="#999999" />
-          }
-        />
+        {/* ====================================================
+            DOB DATE PICKER
+            ==================================================== */}
 
-        <Text style={styles.fieldHint}>Date format: YYYY-MM-DD</Text>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowDobPicker(true)}
+          disabled={isUpdating}
+        >
+          <View style={styles.row}>
+            <View style={styles.leftSection}>
+              <Ionicons
+                name="calendar-outline"
+                size={RF(16)}
+                color={Colors.primary}
+              />
 
-        <ProfileRow
-          icon="time-outline"
-          label="Birth Time"
-          value={birthTime}
-          onChangeText={setBirthTime}
-          keyboardType="numbers-and-punctuation"
-          rightIcon={
-            <Ionicons name="time-outline" size={RF(16)} color="#999999" />
-          }
-        />
+              <Text style={styles.label}>DOB</Text>
+            </View>
 
-        <Text style={styles.fieldHint}>Time format: HH:MM:SS</Text>
+            <Text style={[styles.input, !dob && styles.placeholderText]}>
+              {dob || "Select Date"}
+            </Text>
 
-        <ProfileRow
-          icon="location-outline"
-          label="Birth Place"
-          value={birthPlace}
-          onChangeText={setBirthPlace}
-        />
+            <View style={styles.rightIcon}>
+              <Ionicons name="calendar-outline" size={RF(16)} color="#999999" />
+            </View>
+          </View>
+        </TouchableOpacity>
 
-        {/* Address information */}
+        <Text style={styles.fieldHint}>Select your date of birth</Text>
 
-        <View style={styles.sectionHeader}>
-          <View style={styles.orangeBar} />
+        {/* ====================================================
+            BIRTH TIME PICKER (12 Hour Cycle)
+            ==================================================== */}
 
-          <Text style={styles.sectionTitle}>Address Information</Text>
-        </View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowTimePicker(true)}
+          disabled={isUpdating}
+        >
+          <View style={styles.row}>
+            <View style={styles.leftSection}>
+              <Ionicons
+                name="time-outline"
+                size={RF(16)}
+                color={Colors.primary}
+              />
 
-        <ProfileRow
-          icon="business-outline"
-          label="City"
-          value={city}
-          onChangeText={setCity}
-        />
+              <Text style={styles.label}>Birth Time</Text>
+            </View>
 
-        <ProfileRow
-          icon="map-outline"
-          label="State"
-          value={stateName}
-          onChangeText={setStateName}
-        />
+            <Text style={[styles.input, !birthTime && styles.placeholderText]}>
+              {birthTime ? formatTimeTo12Hr(birthTime) : "Select Birth Time"}
+            </Text>
 
-        <ProfileRow
-          icon="earth-outline"
-          label="Country"
-          value={country}
-          onChangeText={setCountry}
-        />
+            <View style={styles.rightIcon}>
+              <Ionicons name="time-outline" size={RF(16)} color="#999999" />
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        <Text style={styles.fieldHint}>
+          Select your birth time (12-Hr AM/PM)
+        </Text>
+
+        {/* ====================================================
+            BIRTH PLACE PICKER (States / UTs List)
+            ==================================================== */}
+
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => setShowPlacePicker(true)}
+          disabled={isUpdating}
+        >
+          <View style={styles.row}>
+            <View style={styles.leftSection}>
+              <Ionicons
+                name="location-outline"
+                size={RF(16)}
+                color={Colors.primary}
+              />
+
+              <Text style={styles.label}>Birth Place</Text>
+            </View>
+
+            <Text style={[styles.input, !birthPlace && styles.placeholderText]}>
+              {birthPlace || "Select State"}
+            </Text>
+
+            <View style={styles.rightIcon}>
+              <Ionicons
+                name="chevron-down-outline"
+                size={RF(16)}
+                color="#999999"
+              />
+            </View>
+          </View>
+        </TouchableOpacity>
 
         {/* Save button */}
+
         <TouchableOpacity
           style={[styles.saveBtn, isUpdating && styles.disabledButton]}
           onPress={handleUpdateProfile}
@@ -561,6 +687,7 @@ export default function Profile() {
         </TouchableOpacity>
 
         {/* Logout button */}
+
         <TouchableOpacity
           style={styles.logoutBtn}
           onPress={handleLogout}
@@ -576,9 +703,37 @@ export default function Profile() {
           <Text style={styles.logoutText}>LOG OUT</Text>
         </TouchableOpacity>
       </KeyboardAwareScrollView>
+
+      {/* Built-in Calendar Modal */}
+      <DatePickerModal
+        visible={showDobPicker}
+        onClose={() => setShowDobPicker(false)}
+        onSelectDate={(formattedDate) => setDob(formattedDate)}
+        initialDate={dob}
+      />
+
+      {/* Built-in Time Picker Modal (12-Hr AM/PM) */}
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSelectTime={(formattedTime) => setBirthTime(formattedTime)}
+        initialTime={birthTime}
+      />
+
+      {/* Built-in State / Birth Place Picker Modal */}
+      <StatePickerModal
+        visible={showPlacePicker}
+        onClose={() => setShowPlacePicker(false)}
+        onSelectState={(selectedState) => setBirthPlace(selectedState)}
+        selectedState={birthPlace}
+      />
     </SafeAreaView>
   );
 }
+
+// ============================================================
+// STYLES
+// ============================================================
 
 const styles = StyleSheet.create({
   container: {
@@ -589,7 +744,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: wp(3),
-    paddingBottom: hp(3),
+    paddingBottom: hp(12),
   },
 
   header: {
@@ -708,7 +863,7 @@ const styles = StyleSheet.create({
 
   label: {
     marginLeft: wp(2),
-    fontSize: RF(16),
+    fontSize: RF(14),
     color: "#999999",
     fontWeight: "600",
   },
@@ -720,6 +875,12 @@ const styles = StyleSheet.create({
     fontSize: RF(14),
     color: Colors.darkBrown,
     fontWeight: "600",
+    textAlignVertical: "center",
+  },
+
+  placeholderText: {
+    color: "#999999",
+    fontWeight: "400",
   },
 
   disabledInput: {

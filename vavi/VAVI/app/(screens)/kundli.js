@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,29 +9,75 @@ import BasicTab from "../../components/kundli/BasicTab";
 import ChartsTab from "../../components/kundli/ChartsTab";
 import DashaTab from "../../components/kundli/DashaTab";
 import KPTab from "../../components/kundli/KPTab";
-import ReportTab from "../../components/kundli/ReportTab";import { hp, RF, wp } from "../../utils/responsive";
+import ReportTab from "../../components/kundli/ReportTab";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const tabs = ["Basic", "Charts", "KP", "AC", "Dasha", "Report"];
 
 const KundliScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState("Basic");
+  const params = useLocalSearchParams();
+
+  const kundliData = useMemo(() => {
+    if (!params?.data) return null;
+    try {
+      return typeof params.data === "string"
+        ? JSON.parse(params.data)
+        : params.data;
+    } catch (e) {
+      console.log("Error parsing kundli data param:", e);
+      return null;
+    }
+  }, [params?.data]);
 
   const renderTab = () => {
     switch (activeTab) {
       case "Basic":
-        return <BasicTab />;
+        return (
+          <BasicTab
+            data={kundliData?.basic || kundliData}
+            fullData={kundliData}
+          />
+        );
       case "Charts":
-        return <ChartsTab />;
+        return (
+          <ChartsTab
+            data={kundliData?.charts || kundliData}
+            fullData={kundliData}
+          />
+        );
       case "KP":
-        return <KPTab />;
+        return (
+          <KPTab data={kundliData?.kp || kundliData} fullData={kundliData} />
+        );
       case "AC":
-        return <ACTab />;
+        return (
+          <ACTab
+            data={kundliData?.ashtakvarga || kundliData?.ac || kundliData}
+            fullData={kundliData}
+          />
+        );
       case "Dasha":
-        return <DashaTab />;
+        return (
+          <DashaTab
+            data={kundliData?.dasha || kundliData}
+            fullData={kundliData}
+          />
+        );
       case "Report":
-        return <ReportTab />;
+        return (
+          <ReportTab
+            data={kundliData?.doshas || kundliData?.report || kundliData}
+            fullData={kundliData}
+          />
+        );
       default:
-        return <BasicTab />;
+        return (
+          <BasicTab
+            data={kundliData?.basic || kundliData}
+            fullData={kundliData}
+          />
+        );
     }
   };
 

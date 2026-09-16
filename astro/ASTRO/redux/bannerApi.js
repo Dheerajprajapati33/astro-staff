@@ -31,14 +31,18 @@ export const getBanners = async () => {
     console.log("BANNER RESPONSE:", result);
 
     if (result.success) {
-      return result.data.map((item) => ({
-        ...item,
-
-        imageUrl: item.image.startsWith("http")
-          ? item.image
-          : `${BASE_URL}/${item.image}`,
-      }));
-    }
+       return (result.data || []).map((item) => {
+         const rawImg = item?.image || item?.imageUrl || "";
+         const cleanImg = rawImg.replace(/^\/+/, "");
+         const imageUrl = rawImg.startsWith("http")
+           ? rawImg
+           : `${BASE_URL}/${cleanImg}`;
+         return {
+           ...item,
+           imageUrl,
+         };
+       });
+     }
 
     return [];
   } catch (error) {

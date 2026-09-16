@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";import { hp, RF, wp } from "../../utils/responsive";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
@@ -34,10 +35,31 @@ const yoginiData = [
   ["Pingala", "23-03-2050", "23-03-2052"],
 ];
 
-const DashaTab = () => {
+const DashaTab = ({ data, fullData }) => {
   const [activeTab, setActiveTab] = useState("Major dasha");
 
   const isYogini = activeTab === "Yogini";
+
+  const dynamicMajorData = useMemo(() => {
+    const raw =
+      data?.vimshottari || data?.majorDasha || fullData?.dasha?.vimshottari;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return majorData;
+    return raw.map((d) => [
+      d.planet || d.name || "Planet",
+      d.startDate || d.start || "Start",
+      d.endDate || d.end || "End",
+    ]);
+  }, [data, fullData]);
+
+  const dynamicYoginiData = useMemo(() => {
+    const raw = data?.yogini || fullData?.dasha?.yogini;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return yoginiData;
+    return raw.map((d) => [
+      d.name || d.dasha || "Dasha",
+      d.startDate || d.start || "Start",
+      d.endDate || d.end || "End",
+    ]);
+  }, [data, fullData]);
 
   return (
     <View>
@@ -82,9 +104,9 @@ const DashaTab = () => {
         </View>
       )}
 
-      <DashaTable data={isYogini ? yoginiData : majorData} />
+      <DashaTable data={isYogini ? dynamicYoginiData : dynamicMajorData} />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
         <Text style={styles.buttonText}>☏ Consult An Expert</Text>
       </TouchableOpacity>
     </View>

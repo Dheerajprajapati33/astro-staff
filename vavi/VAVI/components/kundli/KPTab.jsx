@@ -1,10 +1,12 @@
+import { useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from "react-native";import { hp, RF, wp } from "../../utils/responsive";
+} from "react-native";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
@@ -41,9 +43,47 @@ const cuspsData = [
     "PurvaShadha",
     "Venus",
   ],
+  ["10", `0° 47' 37.20"`, "Capricorn", "Saturn", "Sun", "UttaraShadha", "Sun"],
+  [
+    "11",
+    `26° 43' 27.72"`,
+    "Aquarius",
+    "Saturn",
+    "Jupiter",
+    "PurvaBhadra",
+    "Jupiter",
+  ],
+  ["12", `26° 57' 23.16"`, "Pisces", "Jupiter", "Mercury", "Revati", "Mercury"],
 ];
 
-const KPTab = () => {
+const KPTab = ({ data, fullData }) => {
+  const dynamicPlanetData = useMemo(() => {
+    const raw = data?.planets || fullData?.kp?.planets;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return planetData;
+    return raw.map((p) => [
+      p.name || p.planet || "Planet",
+      String(p.house || p.cusp || "1"),
+      p.sign || p.rasi || "Aries",
+      p.signLord || p.lord || "Mars",
+      p.starLord || p.nakshatraLord || "Rahu",
+      p.subLord || "Jupiter",
+    ]);
+  }, [data, fullData]);
+
+  const dynamicCuspsData = useMemo(() => {
+    const raw = data?.cusps || fullData?.kp?.cusps;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return cuspsData;
+    return raw.map((c, i) => [
+      String(c.cusp || i + 1),
+      c.degree || `0° 0' 0"`,
+      c.sign || c.rasi || "Aries",
+      c.signLord || c.lord || "Mars",
+      c.subLord || c.cuspSub || "Rahu",
+      c.nakshatra || "Ashwini",
+      c.nakshatraLord || c.starLord || "Ketu",
+    ]);
+  }, [data, fullData]);
+
   return (
     <View>
       <Text style={styles.title}>Planets</Text>
@@ -57,7 +97,7 @@ const KPTab = () => {
           "Star Lord",
           "Sub Lord",
         ]}
-        data={planetData}
+        data={dynamicPlanetData}
         cellWidth={wp(15.5)}
       />
 
@@ -73,11 +113,11 @@ const KPTab = () => {
           "Nakshtra",
           "Naks Lord",
         ]}
-        data={cuspsData}
+        data={dynamicCuspsData}
         cellWidth={wp(16)}
       />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
         <Text style={styles.buttonText}>☏ Consult An Expert</Text>
       </TouchableOpacity>
     </View>

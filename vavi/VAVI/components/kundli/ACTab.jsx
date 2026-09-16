@@ -1,12 +1,26 @@
-import { useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";import { hp, RF, wp } from "../../utils/responsive";
+import { useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const ORANGE = "#ff5a00";
 
 const tabs = ["Sarv", "Sun", "Moon", "Mercury", "Venus"];
 
-const ACTab = () => {
+const defaultScores = [21, 26, 27, 35, 30, 36, 25, 20, 28, 29, 27, 33];
+
+const ACTab = ({ data, fullData }) => {
   const [active, setActive] = useState("Sarv");
+
+  const scores = useMemo(() => {
+    const rawScores =
+      data?.scores ||
+      data?.[active.toLowerCase()] ||
+      fullData?.ashtakvarga?.[active.toLowerCase()];
+    if (rawScores && Array.isArray(rawScores) && rawScores.length >= 12) {
+      return rawScores;
+    }
+    return defaultScores;
+  }, [data, fullData, active]);
 
   return (
     <View>
@@ -36,24 +50,42 @@ const ACTab = () => {
         <View style={[styles.line, styles.d5]} />
         <View style={[styles.line, styles.d6]} />
 
-        <Text style={[styles.greenText, { top: "7%", left: "22%" }]}>21</Text>
-        <Text style={[styles.greenText, { top: "7%", right: "23%" }]}>26</Text>
-        <Text style={[styles.greenText, { top: "17%", left: "4%" }]}>27</Text>
-        <Text style={[styles.greenText, { top: "17%", right: "4%" }]}>35</Text>
-        <Text style={[styles.greenText, { top: "42%", left: "22%" }]}>30</Text>
-        <Text style={[styles.greenText, { top: "42%", right: "22%" }]}>36</Text>
-        <Text style={[styles.greenText, { top: "65%", left: "4%" }]}>25</Text>
-        <Text style={[styles.greenText, { top: "65%", right: "4%" }]}>20</Text>
+        <Text style={[styles.greenText, { top: "7%", left: "22%" }]}>
+          {scores[0]}
+        </Text>
+        <Text style={[styles.greenText, { top: "7%", right: "23%" }]}>
+          {scores[1]}
+        </Text>
+        <Text style={[styles.greenText, { top: "17%", left: "4%" }]}>
+          {scores[2]}
+        </Text>
+        <Text style={[styles.greenText, { top: "17%", right: "4%" }]}>
+          {scores[3]}
+        </Text>
+        <Text style={[styles.greenText, { top: "42%", left: "22%" }]}>
+          {scores[4]}
+        </Text>
+        <Text style={[styles.greenText, { top: "42%", right: "22%" }]}>
+          {scores[5]}
+        </Text>
+        <Text style={[styles.greenText, { top: "65%", left: "4%" }]}>
+          {scores[6]}
+        </Text>
+        <Text style={[styles.greenText, { top: "65%", right: "4%" }]}>
+          {scores[7]}
+        </Text>
         <Text style={[styles.greenText, { bottom: "7%", left: "22%" }]}>
-          28
+          {scores[8]}
         </Text>
         <Text style={[styles.greenText, { bottom: "7%", right: "23%" }]}>
-          29
+          {scores[9]}
         </Text>
         <Text style={[styles.greenText, { bottom: "22%", left: "48%" }]}>
-          27
+          {scores[10]}
         </Text>
-        <Text style={[styles.greenText, { top: "28%", left: "48%" }]}>33</Text>
+        <Text style={[styles.greenText, { top: "28%", left: "48%" }]}>
+          {scores[11]}
+        </Text>
 
         {[
           ["1", "25%", "20%"],

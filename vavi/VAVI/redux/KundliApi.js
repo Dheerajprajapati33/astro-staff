@@ -11,7 +11,7 @@ export const kundliApi = createApi({
 
     prepareHeaders: async (headers) => {
       headers.set("Accept", "application/json");
-
+      headers.set("Content-Type", "application/json");
       headers.set("ngrok-skip-browser-warning", "true");
 
       const userData = await AsyncStorage.getItem("userData");
@@ -32,21 +32,81 @@ export const kundliApi = createApi({
 
   endpoints: (builder) => ({
     // =========================
-    // GENERATE KUNDLI
+    // GENERATE KUNDLI (BASIC)
     // =========================
-
     generateKundli: builder.mutation({
       query: (data) => ({
         url: "/kundli/generate",
-
         method: "POST",
-
         body: data,
       }),
-
       invalidatesTags: ["Kundli"],
+    }),
+
+    // =========================
+    // FULL KUNDLI (6 FIGMA TABS)
+    // =========================
+    getFullKundli: builder.mutation({
+      query: (data) => ({
+        url: "/kundli/full",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Kundli"],
+    }),
+
+    // =========================
+    // ADVANCED KUNDLI
+    // =========================
+    getAdvancedKundli: builder.mutation({
+      query: (data) => ({
+        url: "/kundli/advanced",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Kundli"],
+    }),
+
+    // =========================
+    // KUNDLI CHART (SVG / JSON)
+    // =========================
+    getKundliChart: builder.mutation({
+      query: (data) => ({
+        url: "/kundli/chart",
+        method: "POST",
+        body: data,
+      }),
+    }),
+
+    // =========================
+    // KUNDLI MATCH (GUN MILAN)
+    // =========================
+    matchKundli: builder.mutation({
+      query: (data) => ({
+        url: "/kundli/match",
+        method: "POST",
+        body: data,
+      }),
+    }),
+
+    // =========================
+    // ADVANCED KUNDLI MATCH
+    // =========================
+    matchKundliAdvanced: builder.mutation({
+      query: (data) => ({
+        url: "/kundli/match/advanced",
+        method: "POST",
+        body: data,
+      }),
     }),
   }),
 });
 
-export const { useGenerateKundliMutation } = kundliApi;
+export const {
+  useGenerateKundliMutation,
+  useGetFullKundliMutation,
+  useGetAdvancedKundliMutation,
+  useGetKundliChartMutation,
+  useMatchKundliMutation,
+  useMatchKundliAdvancedMutation,
+} = kundliApi;

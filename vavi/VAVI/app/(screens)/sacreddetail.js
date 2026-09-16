@@ -21,16 +21,18 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useState } from "react";
 
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
 import { useGetNumerologyMutation } from "../../redux/numerologyApi";
+import DatePickerModal from "../../components/common/DatePickerModal";
 
 const SacredDetail = () => {
   const router = useRouter();
 
   const [fullName, setFullName] = useState("");
-
   const [dob, setDob] = useState("");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [getNumerology, { isLoading }] = useGetNumerologyMutation();
 
@@ -55,23 +57,25 @@ const SacredDetail = () => {
       }).unwrap();
 
       console.log("Numerology Result", response);
-
       if (response?.success) {
+        const lifePathData = response?.data?.life_path_number;
+        const number =
+          lifePathData?.number ?? response?.data?.lifePathNumber ?? "";
+        const title =
+          lifePathData?.name ?? response?.data?.title ?? "Life Path Number";
+        const description =
+          lifePathData?.description ?? response?.data?.description ?? "";
+        const aiInsight = response?.data?.aiInsight || description;
+
         router.push({
           pathname: "/yournumber",
-
           params: {
-            fullName: response.data.fullName,
-
-            dob: response.data.dob,
-
-            lifePathNumber: response.data.lifePathNumber.toString(),
-
-            title: response.data.title,
-
-            description: response.data.description,
-
-            aiInsight: response.data.aiInsight,
+            fullName: fullName,
+            dob: dob,
+            lifePathNumber: String(number),
+            title: title,
+            description: description,
+            aiInsight: aiInsight,
           },
         });
       }
@@ -162,13 +166,29 @@ const SacredDetail = () => {
                 <Text style={styles.label}>Date of Birth</Text>
               </View>
 
-              <TextInput
-                value={dob}
-                onChangeText={setDob}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#999"
-                style={styles.textInput}
-              />
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={styles.input}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text
+                  style={
+                    dob
+                      ? [
+                          styles.placeholderText,
+                          { color: "#333", fontWeight: "500" },
+                        ]
+                      : styles.placeholderText
+                  }
+                >
+                  {dob || "YYYY-MM-DD"}
+                </Text>
+                <Ionicons
+                  name="calendar-outline"
+                  size={RF(18)}
+                  color={Colors.primary}
+                />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.featureContainer}>
@@ -254,6 +274,13 @@ const SacredDetail = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DatePickerModal
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelectDate={(date) => setDob(date)}
+        initialDate={dob}
+      />
     </SafeAreaView>
   );
 };

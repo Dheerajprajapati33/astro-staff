@@ -1,5 +1,4 @@
 import { useState } from "react";
-
 import {
   FlatList,
   StyleSheet,
@@ -8,16 +7,24 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
-import { useGenerateKundliMutation } from "../../redux/KundliApi";
+import DatePickerModal from "../../components/common/DatePickerModal";
+import TimePickerModal from "../../components/common/TimePickerModal";
+import StatePickerModal from "../../components/common/StatePickerModal";
 
 import {
+  useGenerateKundliMutation,
+  useGetFullKundliMutation,
+} from "../../redux/KundliApi";
+
+import {
+  useDeleteSavedKundliMutation,
   useGetSavedKundliQuery,
   useSaveKundliMutation,
 } from "../../redux/SaveKundliApi";
@@ -26,67 +33,129 @@ export default function FreeKundli() {
   const [activeTab, setActiveTab] = useState("new");
 
   const [name, setName] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState("MALE");
   const [dob, setDob] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
 
   const [unknownTime, setUnknownTime] = useState(false);
 
+  // Modals state
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showPlacePicker, setShowPlacePicker] = useState(false);
+
+  const [getFullKundli, { isLoading: fullGenerating }] =
+    useGetFullKundliMutation();
   const [generateKundli, { isLoading: generating }] =
     useGenerateKundliMutation();
 
   const [saveKundli] = useSaveKundliMutation();
+  const [deleteSavedKundli] = useDeleteSavedKundliMutation();
 
   const { data: savedData, isLoading: savedLoading } = useGetSavedKundliQuery();
 
-  const handleGenerateKundli = async () => {
+  const formatTimeTo12Hr = (time24) => {
+    if (!time24) return "";
+    const parts = time24.split(":");
+    let hour = parseInt(parts[0], 10);
+    const min = parts[1] || "00";
+    if (isNaN(hour)) return time24;
+    const ampm = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
+    return `${hour}:${min} ${ampm}`;
+  };
+
+  const handleGenerateKundli = async (customPayload) => {
     try {
-      const payload = {
-        name: name,
+      // Guard against React Native onPress event being passed as customPayload
+      const isCustomData =
+        customPayload &&
+        typeof customPayload === "object" &&
+        !customPayload.nativeEvent &&
+        customPayload.name;
 
-        gender: gender,
+      const payload = isCustomData
+        ? customPayload
+        : {
+            name: name || "User",
+            gender: gender || "MALE",
+            dob: dob || "2000-01-01",
+            tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
+            city: birthPlace || "Delhi",
+            birthPlace: birthPlace || "Delhi",
+            la: "en",
+          };
 
-        dob: dob,
+      let response;
+      try {
+        response = await getFullKundli(payload).unwrap();
+      } catch (err) {
+        // Fallback to basic generate endpoint if full kundli fails
+        response = await generateKundli(payload).unwrap();
+      }
 
-        tob: birthTime,
+      if (!customPayload) {
+        try {
+          await saveKundli({
+            name: name || "User",
+            relation: "Self",
+            gender: gender || "MALE",
+            dob: dob || "2000-01-01",
+            tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
+            city: birthPlace || "Delhi",
+            birthPlace: birthPlace || "Delhi",
+            latitude: "19.0760",
+            longitude: "72.8777",
+            timezone: "5.5",
+          }).unwrap();
+        } catch (saveErr) {
+          console.log("save kundli err", saveErr);
+        }
+      }
 
-        birthPlace: birthPlace,
+      const basePayload = response?.data || response;
+      const kundliPayload = {
+        ...basePayload,
+        dob: basePayload?.dob || payload.dob,
+        tob: basePayload?.tob || payload.tob,
+        city: basePayload?.city || payload.city,
+        birthPlace: basePayload?.birthPlace || payload.birthPlace,
+        gender: basePayload?.gender || payload.gender,
+        name: basePayload?.name || payload.name,
       };
-
-      const response = await generateKundli(payload).unwrap();
-
-      await saveKundli({
-        name: name,
-
-        relation: "Self",
-
-        gender: gender,
-
-        dob: dob,
-
-        tob: birthTime,
-
-        birthPlace: birthPlace,
-
-        latitude: "19.0760",
-
-        longitude: "72.8777",
-
-        timezone: "5.5",
-      }).unwrap();
 
       router.push({
         pathname: "/kundli",
-
         params: {
-          data: JSON.stringify(response.data),
+          data: JSON.stringify(kundliPayload),
         },
       });
     } catch (error) {
       console.log("kundli error", error);
     }
   };
+
+  const handleOpenSavedKundli = (item) => {
+    handleGenerateKundli({
+      name: item.name,
+      gender: item.gender ? item.gender.toUpperCase() : "MALE",
+      dob: item.dob,
+      tob: item.tob,
+      city: item.city || item.birthPlace,
+      birthPlace: item.birthPlace || item.city,
+      la: "en",
+    });
+  };
+
+  const handleDeleteSaved = async (id) => {
+    try {
+      await deleteSavedKundli(id).unwrap();
+    } catch (err) {
+      console.log("delete saved kundli err", err);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAwareScrollView
@@ -98,7 +167,6 @@ export default function FreeKundli() {
         contentContainerStyle={styles.content}
       >
         {/* Header */}
-
         <View style={styles.header}>
           <TouchableOpacity activeOpacity={0.8} onPress={() => router.back()}>
             <Ionicons
@@ -123,11 +191,9 @@ export default function FreeKundli() {
         </View>
 
         {/* Heading */}
-
         <Text style={styles.heading}>Free Kundli Online</Text>
 
         {/* Tabs */}
-
         <View style={styles.tabContainer}>
           <TouchableOpacity
             activeOpacity={0.8}
@@ -163,11 +229,9 @@ export default function FreeKundli() {
         {/* ========================= */}
         {/* NEW KUNDLI TAB */}
         {/* ========================= */}
-
         {activeTab === "new" && (
           <View style={styles.formCard}>
             {/* Card Heading */}
-
             <View style={styles.cardHeader}>
               <Ionicons
                 name="document-text-outline"
@@ -177,7 +241,6 @@ export default function FreeKundli() {
 
               <View style={{ marginLeft: wp(2) }}>
                 <Text style={styles.cardTitle}>Enter Details</Text>
-
                 <Text style={styles.cardSubtitle}>
                   Please enter your birth details to generate Kundli
                 </Text>
@@ -185,16 +248,13 @@ export default function FreeKundli() {
             </View>
 
             {/* Name */}
-
             <Text style={styles.label}>Name</Text>
-
             <View style={styles.inputContainer}>
               <Ionicons
                 name="person-outline"
                 size={RF(18)}
                 color={Colors.primary}
               />
-
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -205,113 +265,160 @@ export default function FreeKundli() {
             </View>
 
             {/* Gender */}
-
             <Text style={styles.label}>Gender</Text>
-
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="male-female-outline"
-                size={RF(18)}
-                color={Colors.primary}
-              />
-
-              <TextInput
-                value={gender}
-                onChangeText={setGender}
-                placeholder="Enter Gender"
-                placeholderTextColor="#999"
-                style={styles.input}
-              />
+            <View style={styles.genderRow}>
+              {[
+                { label: "Male", value: "MALE", icon: "male" },
+                { label: "Female", value: "FEMALE", icon: "female" },
+                { label: "Others", value: "OTHER", icon: "person" },
+              ].map((item) => {
+                const isSelected = gender === item.value;
+                return (
+                  <TouchableOpacity
+                    key={item.value}
+                    activeOpacity={0.8}
+                    style={[
+                      styles.genderOption,
+                      isSelected && styles.genderOptionActive,
+                    ]}
+                    onPress={() => setGender(item.value)}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={RF(16)}
+                      color={isSelected ? "#FFF" : Colors.darkBrown}
+                    />
+                    <Text
+                      style={[
+                        styles.genderOptionText,
+                        isSelected && styles.genderOptionTextActive,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Date of Birth */}
-
             <Text style={styles.label}>Date of Birth</Text>
-
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="calendar-outline"
-                size={RF(18)}
-                color={Colors.primary}
-              />
-
-              <TextInput
-                value={dob}
-                onChangeText={setDob}
-                placeholder="dd-mm-yyyy"
-                placeholderTextColor="#999"
-                style={styles.input}
-              />
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.pickerInputContainer}
+              onPress={() => setShowDobPicker(true)}
+            >
+              <View style={styles.pickerInputLeft}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={RF(18)}
+                  color={Colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.pickerInputText,
+                    !dob && styles.placeholderText,
+                  ]}
+                >
+                  {dob || "Select Date of Birth"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={RF(16)} color="#888" />
+            </TouchableOpacity>
 
             {/* Birth Time */}
-
             <Text style={styles.label}>Birth Time</Text>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.pickerInputContainer,
+                unknownTime && styles.disabledPicker,
+              ]}
+              disabled={unknownTime}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <View style={styles.pickerInputLeft}>
+                <Ionicons
+                  name="time-outline"
+                  size={RF(18)}
+                  color={unknownTime ? "#BBB" : Colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.pickerInputText,
+                    (!birthTime || unknownTime) && styles.placeholderText,
+                  ]}
+                >
+                  {unknownTime
+                    ? "Time Unknown (12:00 PM default)"
+                    : birthTime
+                      ? formatTimeTo12Hr(birthTime)
+                      : "Select Birth Time"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-down" size={RF(16)} color="#888" />
+            </TouchableOpacity>
 
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="time-outline"
-                size={RF(18)}
-                color={Colors.primary}
-              />
-
-              <TextInput
-                value={birthTime}
-                onChangeText={setBirthTime}
-                placeholder="HH:MM"
-                placeholderTextColor="#999"
-                style={styles.input}
-              />
-            </View>
-
-            {/* Unknown Time */}
-
+            {/* Unknown Time Checkbox */}
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.checkboxRow}
-              onPress={() => setUnknownTime(!unknownTime)}
+              onPress={() => {
+                const next = !unknownTime;
+                setUnknownTime(next);
+                if (next) {
+                  setBirthTime("12:00:00");
+                }
+              }}
             >
               <Ionicons
                 name={unknownTime ? "checkbox" : "square-outline"}
                 size={RF(20)}
                 color={Colors.primary}
               />
-
               <Text style={styles.checkboxText}>
                 I don't know my exact time of birth
               </Text>
             </TouchableOpacity>
 
             {/* Birth Place */}
-
             <Text style={styles.label}>Birth Place</Text>
-
-            <View style={styles.inputContainer}>
-              <Ionicons
-                name="location-outline"
-                size={RF(18)}
-                color={Colors.primary}
-              />
-
-              <TextInput
-                value={birthPlace}
-                onChangeText={setBirthPlace}
-                placeholder="Enter your birth place"
-                placeholderTextColor="#999"
-                style={styles.input}
-              />
-
-              <Ionicons name="search-outline" size={RF(18)} color="#888" />
-            </View>
-
-            {/* Continue Button */}
-
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.continueButton}
-              onPress={handleGenerateKundli}
+              style={styles.pickerInputContainer}
+              onPress={() => setShowPlacePicker(true)}
             >
-              <Text style={styles.continueText}>Continue</Text>
+              <View style={styles.pickerInputLeft}>
+                <Ionicons
+                  name="location-outline"
+                  size={RF(18)}
+                  color={Colors.primary}
+                />
+                <Text
+                  style={[
+                    styles.pickerInputText,
+                    !birthPlace && styles.placeholderText,
+                  ]}
+                >
+                  {birthPlace || "Select Birth Place / State"}
+                </Text>
+              </View>
+              <Ionicons name="search-outline" size={RF(18)} color="#888" />
+            </TouchableOpacity>
+
+            {/* Continue Button */}
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.continueButton,
+                (generating || fullGenerating) && { opacity: 0.7 },
+              ]}
+              disabled={generating || fullGenerating}
+              onPress={() => handleGenerateKundli()}
+            >
+              <Text style={styles.continueText}>
+                {generating || fullGenerating ? "Generating..." : "Continue"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
@@ -319,16 +426,18 @@ export default function FreeKundli() {
         {/* ========================= */}
         {/* SAVED KUNDLI TAB */}
         {/* ========================= */}
-
         {activeTab === "saved" && (
           <FlatList
             data={savedData?.data || []}
             keyExtractor={(item) => item.id.toString()}
             scrollEnabled={false}
             renderItem={({ item }) => (
-              <View style={styles.savedCard}>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => handleOpenSavedKundli(item)}
+                style={styles.savedCard}
+              >
                 {/* Top Row */}
-
                 <View style={styles.savedTopRow}>
                   <View style={styles.userSection}>
                     <View style={styles.avatar}>
@@ -338,7 +447,6 @@ export default function FreeKundli() {
                     <View style={styles.userInfo}>
                       <Text style={styles.userName}>
                         {item.name}
-
                         <Text style={styles.gender}> ({item.gender})</Text>
                       </Text>
 
@@ -346,19 +454,21 @@ export default function FreeKundli() {
                         {item.dob}, {item.tob}
                       </Text>
 
-                      <Text style={styles.placeText}>{item.birthPlace}</Text>
+                      <Text style={styles.placeText}>
+                        {item.birthPlace || item.city}
+                      </Text>
                     </View>
                   </View>
 
                   {/* Action Buttons */}
-
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       activeOpacity={0.8}
                       style={styles.actionButton}
+                      onPress={() => handleOpenSavedKundli(item)}
                     >
                       <Ionicons
-                        name="create-outline"
+                        name="eye-outline"
                         size={RF(16)}
                         color={Colors.primary}
                       />
@@ -367,6 +477,7 @@ export default function FreeKundli() {
                     <TouchableOpacity
                       activeOpacity={0.8}
                       style={styles.actionButton}
+                      onPress={() => handleDeleteSaved(item.id)}
                     >
                       <Ionicons
                         name="trash-outline"
@@ -378,11 +489,9 @@ export default function FreeKundli() {
                 </View>
 
                 {/* Divider */}
-
                 <View style={styles.divider} />
 
                 {/* Bottom Details */}
-
                 <View style={styles.detailRow}>
                   <View style={styles.detailItem}>
                     <Ionicons
@@ -390,9 +499,7 @@ export default function FreeKundli() {
                       size={RF(17)}
                       color={Colors.primary}
                     />
-
                     <Text style={styles.detailLabel}>Date</Text>
-
                     <Text style={styles.detailValue}>{item.dob}</Text>
                   </View>
 
@@ -402,9 +509,7 @@ export default function FreeKundli() {
                       size={RF(17)}
                       color={Colors.primary}
                     />
-
                     <Text style={styles.detailLabel}>Time</Text>
-
                     <Text style={styles.detailValue}>{item.tob}</Text>
                   </View>
 
@@ -414,9 +519,7 @@ export default function FreeKundli() {
                       size={RF(17)}
                       color={Colors.primary}
                     />
-
                     <Text style={styles.detailLabel}>Place</Text>
-
                     <Text style={styles.detailValue}>{item.birthPlace}</Text>
                   </View>
 
@@ -426,17 +529,40 @@ export default function FreeKundli() {
                       size={RF(17)}
                       color={Colors.primary}
                     />
-
                     <Text style={styles.detailLabel}>Gender</Text>
-
                     <Text style={styles.detailValue}>{item.gender}</Text>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
           />
         )}
       </KeyboardAwareScrollView>
+
+      {/* Date of Birth Picker Modal */}
+      <DatePickerModal
+        visible={showDobPicker}
+        onClose={() => setShowDobPicker(false)}
+        onSelectDate={(date) => setDob(date)}
+        initialDate={dob}
+      />
+
+      {/* Time of Birth Picker Modal */}
+      <TimePickerModal
+        visible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSelectTime={(time) => setBirthTime(time)}
+        initialTime={birthTime}
+      />
+
+      {/* Birth Place / State Picker Modal */}
+      <StatePickerModal
+        visible={showPlacePicker}
+        onClose={() => setShowPlacePicker(false)}
+        onSelectState={(place) => setBirthPlace(place)}
+        selectedState={birthPlace}
+        title="Select Birth Place"
+      />
     </SafeAreaView>
   );
 }
@@ -453,7 +579,6 @@ const styles = StyleSheet.create({
   },
 
   /* ================= HEADER ================= */
-
   header: {
     marginTop: hp(1),
     flexDirection: "row",
@@ -477,7 +602,6 @@ const styles = StyleSheet.create({
   },
 
   /* ================= TABS ================= */
-
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#FFF",
@@ -512,12 +636,10 @@ const styles = StyleSheet.create({
   },
 
   /* ================= FORM CARD ================= */
-
   formCard: {
     backgroundColor: "#FFF",
     borderRadius: wp(4),
     padding: wp(4),
-
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 10,
@@ -525,7 +647,6 @@ const styles = StyleSheet.create({
       width: 0,
       height: 3,
     },
-
     elevation: 3,
   },
 
@@ -548,8 +669,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
 
-  /* ================= INPUT ================= */
-
+  /* ================= INPUT & GENDER ================= */
   label: {
     marginBottom: hp(0.8),
     marginTop: hp(1.4),
@@ -560,37 +680,103 @@ const styles = StyleSheet.create({
 
   inputContainer: {
     height: hp(6.5),
-
     borderWidth: 1,
     borderColor: "#E7E7E7",
-
     borderRadius: wp(3),
-
     backgroundColor: "#FFF",
-
     flexDirection: "row",
     alignItems: "center",
-
     paddingHorizontal: wp(3),
   },
 
   input: {
     flex: 1,
     marginLeft: wp(3),
-
     color: Colors.darkBrown,
-
     fontSize: RF(14),
-
     fontWeight: "400",
   },
 
-  /* ================= CHECKBOX ================= */
+  genderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: hp(0.5),
+  },
 
+  genderOption: {
+    flex: 1,
+    height: hp(5.5),
+    marginHorizontal: wp(1),
+    borderRadius: wp(2.5),
+    borderWidth: 1.2,
+    borderColor: "#E7E7E7",
+    backgroundColor: "#FAFAFA",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: wp(2),
+  },
+
+  genderOptionActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+
+  genderOptionText: {
+    marginLeft: wp(1.5),
+    fontSize: RF(13),
+    fontWeight: "500",
+    color: Colors.darkBrown,
+  },
+
+  genderOptionTextActive: {
+    color: "#FFF",
+    fontWeight: "700",
+  },
+
+  /* ================= PICKER INPUTS ================= */
+  pickerInputContainer: {
+    height: hp(6.5),
+    borderWidth: 1,
+    borderColor: "#E7E7E7",
+    borderRadius: wp(3),
+    backgroundColor: "#FFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: wp(3),
+  },
+
+  pickerInputLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+
+  pickerInputText: {
+    marginLeft: wp(3),
+    color: Colors.darkBrown,
+    fontSize: RF(14),
+    fontWeight: "500",
+  },
+
+  placeholderText: {
+    color: "#999",
+    fontWeight: "400",
+  },
+
+  disabledPicker: {
+    backgroundColor: "#F7F7F7",
+    borderColor: "#EFEFEF",
+    opacity: 0.6,
+  },
+
+  /* ================= CHECKBOX ================= */
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: hp(2),
+    marginTop: hp(1.8),
   },
 
   checkboxText: {
@@ -601,17 +787,12 @@ const styles = StyleSheet.create({
   },
 
   /* ================= BUTTON ================= */
-
   continueButton: {
     height: hp(6),
-
     backgroundColor: Colors.primary,
-
     borderRadius: wp(3),
-
     justifyContent: "center",
     alignItems: "center",
-
     marginTop: hp(3),
   },
 
@@ -620,28 +801,20 @@ const styles = StyleSheet.create({
     fontSize: RF(15),
     fontWeight: "600",
   },
-  /* ================= SAVED KUNDLI CARD ================= */
 
+  /* ================= SAVED KUNDLI CARD ================= */
   savedCard: {
     backgroundColor: "#FFF",
-
     borderRadius: wp(4),
-
     padding: wp(4),
-
     marginBottom: hp(2),
-
     shadowColor: "#000",
-
     shadowOpacity: 0.06,
-
     shadowRadius: 10,
-
     shadowOffset: {
       width: 0,
       height: 3,
     },
-
     elevation: 3,
   },
 
@@ -660,11 +833,8 @@ const styles = StyleSheet.create({
   avatar: {
     width: wp(16),
     height: wp(16),
-
     borderRadius: wp(8),
-
     backgroundColor: Colors.primary,
-
     justifyContent: "center",
     alignItems: "center",
   },
@@ -688,26 +858,19 @@ const styles = StyleSheet.create({
 
   dateText: {
     marginTop: hp(0.4),
-
     color: "#666",
-
     fontSize: RF(12),
-
     fontWeight: "400",
   },
 
   placeText: {
     marginTop: hp(0.3),
-
     color: "#888",
-
     fontSize: RF(12),
-
     fontWeight: "400",
   },
 
   /* ================= ACTION BUTTONS ================= */
-
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -716,29 +879,21 @@ const styles = StyleSheet.create({
   actionButton: {
     width: wp(10),
     height: wp(10),
-
     borderRadius: wp(5),
-
     backgroundColor: "#FFF5EF",
-
     justifyContent: "center",
     alignItems: "center",
-
     marginLeft: wp(2),
   },
 
   /* ================= DIVIDER ================= */
-
   divider: {
     height: 1,
-
     backgroundColor: "#EEEEEE",
-
     marginVertical: hp(2),
   },
 
   /* ================= DETAILS ================= */
-
   detailRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -748,33 +903,23 @@ const styles = StyleSheet.create({
   detailItem: {
     width: "48%",
     backgroundColor: "#FAFAFA",
-
     borderRadius: wp(3),
-
     paddingVertical: hp(1.3),
-
     paddingHorizontal: wp(3),
-
     marginBottom: hp(1.5),
   },
 
   detailLabel: {
     marginTop: hp(0.6),
-
     color: "#888",
-
     fontSize: RF(11),
-
     fontWeight: "500",
   },
 
   detailValue: {
     marginTop: hp(0.4),
-
     color: Colors.darkBrown,
-
     fontSize: RF(13),
-
     fontWeight: "600",
   },
 });

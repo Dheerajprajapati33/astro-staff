@@ -1,4 +1,4 @@
-// app/(screens)/golive.js
+// app/(screens)/GoLive.js may hai
 // Broadcaster (Host) Live Streaming screen for Astrologer App.
 // Follows Section B of Realtime Live Streaming Guide (2_realtime_live_streaming_guide.md).
 
@@ -493,7 +493,7 @@ export default function GoLive() {
                 data?.viewersCount ?? data?.count ?? data?.viewerCount ?? 0,
               );
         if (!isNaN(rawCount)) {
-          // Agar count >= 2 hai (Host + 1 Viewer), toh Viewer 1 dikhega
+          // Agar count >= 2 hai (Host + 1 Viewer), toh Viewer 1 will be shown
           const audienceCount = rawCount > 0 ? rawCount - 1 : 0;
           console.log(LOG_TAG, "Host audience viewer count:", audienceCount);
           setViewersCount(audienceCount);
@@ -549,7 +549,8 @@ export default function GoLive() {
       // 1. Live Comments Listener (Catches all event variations from Backend)
       const handleIncomingComment = (data) => {
         console.log(LOG_TAG, "Live comment received on socket:", data);
-         // Agar gift aaya hai toh use comment mein duplicate na karein (Gifts alag listener handle karega)
+
+         // If any gift is coming then it can't be re-use again (Gifts listener will be handle itself)
         if (data?.isGift || data?.gift) 
           return;
         const author =
@@ -672,6 +673,7 @@ export default function GoLive() {
         console.log(LOG_TAG, "endLiveMutation error:", e);
       }
 
+      
       const socket = getSocket();
       if (socket && liveSessionId) {
         socket.emit("end_live_stream", { liveSessionId });
@@ -686,6 +688,7 @@ export default function GoLive() {
         socket.off("audience_joined");
         socket.off("user_left_live");
         socket.off("audience_left");
+
         socket.off("live_chat_message");
         socket.off("live_gift_received");
         socket.off("live_emoji_received");
@@ -804,12 +807,25 @@ export default function GoLive() {
     <View style={styles.container}>
       {/* Camera Video View / Background */}
       <View style={styles.cameraBackground}>
-      {/* 1. Base Layer: bg.png (Hamesha background mein permanent rahegi) */}
-        <Image
+        
+      {/* 1. Base Layer: bg.png (It's will be permanently fixed in background but here I'm using camera off icon) */}
+        {/* <Image
             source={require("../../assets/images/bg.png")}
             resizeMode="cover"
             style={StyleSheet.absoluteFillObject}
         />
+ */}
+
+         {/* Camera Off Placeholder */}
+        {isCameraOff && (
+          <View style={styles.cameraOffPlaceholder}>
+            <View style={styles.cameraOffIconCircle}>
+              <Ionicons name="videocam-off" size={RF(44)} color="#ffffff" />
+            </View>
+            <Text style={styles.cameraOffTitle}>Camera is Off</Text>
+            <Text style={styles.cameraOffSubtitle}>Audio is still broadcasting</Text>
+          </View>
+        )}
 
         {Platform.OS === "web" && isLive && !isCameraOff ? (
           <video
@@ -839,7 +855,7 @@ export default function GoLive() {
           />
         ) : null }
         
-        <View style={styles.overlayTint} />
+        {/* <View style={styles.overlayTint} /> */}
       </View>
 
       <SafeAreaView style={styles.safeArea}>
@@ -1171,9 +1187,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#111",
   },
-  cameraBackground: {
+  // cameraBackground: {
+  //   ...StyleSheet.absoluteFillObject,
+  //   backgroundColor: "#1c1427",
+  // },
+    cameraBackground: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#1c1427",
+    backgroundColor: "#160d27",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraOffPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraOffIconCircle: {
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: hp(1.5),
+  },
+  cameraOffTitle: {
+    color: "#ffffff",
+    fontSize: RF(17),
+    fontWeight: "700",
+  },
+  cameraOffSubtitle: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: RF(11.5),
+    marginTop: hp(0.4),
   },
   overlayTint: {
     ...StyleSheet.absoluteFillObject,

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";import { hp, RF, wp } from "../../utils/responsive";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const InfoTable = ({ title, data }) => {
   return (
@@ -24,58 +25,74 @@ const InfoTable = ({ title, data }) => {
   );
 };
 
-const BasicTab = () => {
+const BasicTab = ({ data, fullData }) => {
+  const sunrise = data?.sunrise || data?.basicDetails?.sunrise || "6:06:24 AM";
+  const sunset = data?.sunset || data?.basicDetails?.sunset || "6:43:29 PM";
+  const ayanamsha =
+    data?.ayanamsha || data?.basicDetails?.ayanamsha || `23° 53' 56"`;
+
+  const isManglik = data?.manglik?.isManglik ?? data?.isManglik ?? true;
+  const manglikPercentage =
+    data?.manglik?.percentage || data?.manglikPercentage || "23%";
+  const manglikDesc =
+    data?.manglik?.description ||
+    data?.manglikDescription ||
+    `You are ${manglikPercentage} manglik, a little bit of manglik is good in today's world`;
+
+  const panchang = data?.panchang || fullData?.panchang || {};
+  const avakhada = data?.avakhada || fullData?.avakhada || {};
+
+  const panchangRows = [
+    { label: "Tithi", value: panchang?.tithi || "Panchami" },
+    { label: "Karana", value: panchang?.karana || "Balava" },
+    { label: "Yoga", value: panchang?.yoga || "Saubhagya" },
+    { label: "Nakshatra", value: panchang?.nakshatra || "Rohini" },
+    { label: "SunRise", value: sunrise },
+    { label: "SunSet", value: sunset },
+  ];
+
+  const avakhadaRows = [
+    { label: "Varna", value: avakhada?.varna || "Brahmin" },
+    { label: "Vashya", value: avakhada?.vashya || "Chatushpada" },
+    { label: "Yoni", value: avakhada?.yoni || "Sarpa" },
+    { label: "Gana", value: avakhada?.gana || "Deva" },
+    { label: "Nadi", value: avakhada?.nadi || "Antya" },
+    { label: "Sign Lord", value: avakhada?.signLord || "Venus" },
+  ];
+
   return (
     <View>
       <InfoTable
         data={[
-          { label: "Sunrise", value: "6:06:24 AM" },
-          { label: "Sunset", value: "6:43:29 PM" },
-          { label: "Ayanamsha", value: `23 53'56"` },
+          { label: "Sunrise", value: sunrise },
+          { label: "Sunset", value: sunset },
+          { label: "Ayanamsha", value: ayanamsha },
         ]}
       />
 
       <Text style={styles.sectionTitle}>Manglik Analysis</Text>
 
       <View style={styles.manglikCard}>
-        <View style={styles.yesCircle}>
-          <Text style={styles.yesText}>Yes</Text>
+        <View
+          style={[
+            styles.yesCircle,
+            !isManglik && { backgroundColor: "#4CAF50" },
+          ]}
+        >
+          <Text style={styles.yesText}>{isManglik ? "Yes" : "No"}</Text>
         </View>
 
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>Aryan Bansal</Text>
-          <Text style={styles.desc}>
-            You are 23% manglik, a little bit of manglik is good in today's
-            world
-          </Text>
+          <Text style={styles.name}>{fullData?.name || "User Profile"}</Text>
+          <Text style={styles.desc}>{manglikDesc}</Text>
         </View>
       </View>
 
-      <InfoTable
-        title="Panchang Details"
-        data={[
-          { label: "Tithi", value: "Panchami" },
-          { label: "Karana", value: "Balava" },
-          { label: "Yoga", value: "Saubhagya" },
-          { label: "Nakshatra", value: "Rohini" },
-          { label: "SunRise", value: "6:06:24 AM" },
-          { label: "SunSet", value: "6:43:29 PM" },
-        ]}
-      />
+      <InfoTable title="Panchang Details" data={panchangRows} />
 
-      <InfoTable
-        title="Avakhada Details"
-        data={[
-          { label: "Tithi", value: "Panchami" },
-          { label: "Karana", value: "Balava" },
-          { label: "Yoga", value: "Saubhagya" },
-          { label: "Nakshatra", value: "Rohini" },
-          { label: "SunRise", value: "6:06:24 AM" },
-          { label: "SunSet", value: "6:43:29 PM" },
-        ]}
-      />
+      <InfoTable title="Avakhada Details" data={avakhadaRows} />
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
         <Text style={styles.buttonText}>Consult An Expert</Text>
       </TouchableOpacity>
     </View>

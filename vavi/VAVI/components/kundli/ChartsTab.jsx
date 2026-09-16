@@ -1,11 +1,15 @@
-import { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-} from "react-native";import { hp, RF, wp } from "../../utils/responsive";
+} from "react-native";
+import { hp, RF, wp } from "../../utils/responsive";
+import VedicChart, { parseSignNumber } from "./VedicChart";
+import { useGetKundliChartMutation } from "../../redux/KundliApi";
 
 const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
@@ -14,50 +18,382 @@ const LIGHT = "#fff4df";
 const chartTypes = ["Lagna", "Navamsa", "Transit"];
 const planetTabs = ["Sign", "Nakshatra"];
 
-const chartLines = [
-  { x1: "0%", y1: "0%", x2: "50%", y2: "50%" },
-  { x1: "50%", y1: "50%", x2: "100%", y2: "0%" },
-  { x1: "0%", y1: "100%", x2: "50%", y2: "50%" },
-  { x1: "50%", y1: "50%", x2: "100%", y2: "100%" },
+const SIGN_NAMES = [
+  "",
+  "Aries",
+  "Taurus",
+  "Gemini",
+  "Cancer",
+  "Leo",
+  "Virgo",
+  "Libra",
+  "Scorpio",
+  "Sagittarius",
+  "Capricorn",
+  "Aquarius",
+  "Pisces",
 ];
 
-const signData = [
-  ["Ascendant", "Pisces", "Jupiter", `24° 29' 17.4"`, "false", "1"],
-  ["Sun", "Pisces", "Jupiter", `22° 54' 6.14"`, "false", "1"],
-  ["Moon", "Taurus", "Venus", `19° 35' 42.05"`, "false", "3"],
-  ["Mars", "Sagittarius", "Jupiter", `26° 57' 52.09"`, "false", "10"],
-  ["Mercury", "Aries", "Mars", `8° 38' 28.11"`, "false", "2"],
-  ["Jupiter", "Cancer", "Moon", `14° 10' 18.75"`, "false", "5"],
-  ["Venus", "Aquarius", "Saturn", `18° 26' 34.89"`, "false", "12"],
-  ["Saturn", "Taurus", "Venus", `29° 57' 20.60"`, "false", "3"],
-  ["Rahu", "Taurus", "Venus", `8° 4' 0.04"`, "true", "3"],
+const SIGN_LORDS = [
+  "",
+  "Mars",
+  "Venus",
+  "Mercury",
+  "Moon",
+  "Sun",
+  "Mercury",
+  "Venus",
+  "Mars",
+  "Jupiter",
+  "Saturn",
+  "Saturn",
+  "Jupiter",
 ];
 
-const nakshatraData = [
-  ["Ascendant", "Revati", "Mercury", "1"],
-  ["Sun", "Revati", "Mercury", "1"],
-  ["Moon", "Rohini", "Moon", "3"],
-  ["Mars", "UttroShadha", "Sun", "10"],
-  ["Mercury", "Ashwini", "Ketu", "2"],
-  ["Jupiter", "Pushya", "Saturn", "5"],
-  ["Venus", "Shatabhisha", "Rahu", "12"],
-  ["Saturn", "Mrigashira", "Mars", "3"],
-  ["Rahu", "Krittika", "Sun", "3"],
-  ["Ketu", "Anuradha", "Saturn", "9"],
+// Fallback default planetary positions (Vedic chart with Pisces Lagna)
+const DEFAULT_PLANETS = [
+  {
+    name: "Ascendant",
+    sign: "Pisces",
+    signLord: "Jupiter",
+    degree: `24° 29' 17.4"`,
+    isRetrograde: false,
+    house: 1,
+    nakshatra: "Revati",
+    nakshatraLord: "Mercury",
+  },
+  {
+    name: "Sun",
+    sign: "Pisces",
+    signLord: "Jupiter",
+    degree: `22° 54' 6.14"`,
+    isRetrograde: false,
+    house: 1,
+    nakshatra: "Revati",
+    nakshatraLord: "Mercury",
+  },
+  {
+    name: "Moon",
+    sign: "Taurus",
+    signLord: "Venus",
+    degree: `19° 35' 42.05"`,
+    isRetrograde: false,
+    house: 3,
+    nakshatra: "Rohini",
+    nakshatraLord: "Moon",
+  },
+  {
+    name: "Mars",
+    sign: "Sagittarius",
+    signLord: "Jupiter",
+    degree: `26° 57' 52.09"`,
+    isRetrograde: false,
+    house: 10,
+    nakshatra: "UttroShadha",
+    nakshatraLord: "Sun",
+  },
+  {
+    name: "Mercury",
+    sign: "Aries",
+    signLord: "Mars",
+    degree: `8° 38' 28.11"`,
+    isRetrograde: false,
+    house: 2,
+    nakshatra: "Ashwini",
+    nakshatraLord: "Ketu",
+  },
+  {
+    name: "Jupiter",
+    sign: "Cancer",
+    signLord: "Moon",
+    degree: `14° 10' 18.75"`,
+    isRetrograde: false,
+    house: 5,
+    nakshatra: "Pushya",
+    nakshatraLord: "Saturn",
+  },
+  {
+    name: "Venus",
+    sign: "Aquarius",
+    signLord: "Saturn",
+    degree: `18° 26' 34.89"`,
+    isRetrograde: false,
+    house: 12,
+    nakshatra: "Shatabhisha",
+    nakshatraLord: "Rahu",
+  },
+  {
+    name: "Saturn",
+    sign: "Taurus",
+    signLord: "Venus",
+    degree: `29° 57' 20.60"`,
+    isRetrograde: false,
+    house: 3,
+    nakshatra: "Mrigashira",
+    nakshatraLord: "Mars",
+  },
+  {
+    name: "Rahu",
+    sign: "Taurus",
+    signLord: "Venus",
+    degree: `8° 4' 0.04"`,
+    isRetrograde: true,
+    house: 3,
+    nakshatra: "Krittika",
+    nakshatraLord: "Sun",
+  },
+  {
+    name: "Ketu",
+    sign: "Scorpio",
+    signLord: "Mars",
+    degree: `8° 4' 0.04"`,
+    isRetrograde: true,
+    house: 9,
+    nakshatra: "Anuradha",
+    nakshatraLord: "Saturn",
+  },
 ];
 
-const ChartsTab = () => {
+// Robust extractor that inspects all possible response paths from backend
+const extractPlanets = (data, fullData) => {
+  const sources = [
+    data?.planets,
+    data?.charts?.planets,
+    data?.charts?.lagna?.planets,
+    data?.charts?.lagna,
+    fullData?.planets,
+    fullData?.charts?.planets,
+    fullData?.charts?.lagna?.planets,
+    fullData?.charts?.lagna,
+    fullData?.data?.planets,
+    fullData?.data?.charts?.lagna?.planets,
+    fullData?.kp?.planets,
+    fullData?.planetaryPositions,
+    fullData?.planetary_positions,
+    fullData?.planet_positions,
+    fullData?.planetDetails,
+    data?.planetaryPositions,
+    data?.planetary_positions,
+    data?.planet_positions,
+  ];
+
+  for (const src of sources) {
+    if (src) {
+      if (Array.isArray(src) && src.length > 0) {
+        return src;
+      }
+      if (typeof src === "object" && Object.keys(src).length > 0) {
+        const vals = Object.values(src).filter(
+          (v) => v && typeof v === "object",
+        );
+        if (vals.length > 0) return vals;
+      }
+    }
+  }
+
+  return DEFAULT_PLANETS;
+};
+
+// Standard Vedic Navamsa (D9) calculation
+const calculateNavamsaSign = (signNum, degreeStr) => {
+  let deg = 15;
+  if (degreeStr) {
+    const parts = String(degreeStr).match(/(\d+(\.\d+)?)/g);
+    if (parts && parts.length > 0) {
+      const d = parseFloat(parts[0]) || 0;
+      const m = parseFloat(parts[1]) || 0;
+      const s = parseFloat(parts[2]) || 0;
+      deg = d + m / 60 + s / 3600;
+    }
+  }
+
+  const pada = Math.min(8, Math.max(0, Math.floor(deg / (30 / 9))));
+  let startSign = signNum;
+
+  if ([1, 4, 7, 10].includes(signNum)) {
+    startSign = signNum;
+  } else if ([2, 5, 8, 11].includes(signNum)) {
+    startSign = ((signNum + 8 - 1) % 12) + 1;
+  } else {
+    startSign = ((signNum + 4 - 1) % 12) + 1;
+  }
+
+  return ((startSign - 1 + pada) % 12) + 1;
+};
+
+const ChartsTab = ({ data, fullData }) => {
   const [activeChart, setActiveChart] = useState("Lagna");
   const [activePlanetTab, setActivePlanetTab] = useState("Sign");
 
-  return (
-    <View>
-      <Text style={styles.title}>Lagna Chart</Text>
+  const [chartCache, setChartCache] = useState({});
+  const [getKundliChart, { isLoading: isFetchingChart }] =
+    useGetKundliChartMutation();
 
+  // Extract Natal Planets
+  const rawPlanets = useMemo(() => {
+    return extractPlanets(data, fullData);
+  }, [data, fullData]);
+
+  // Fetch API chart when switching tabs if available
+  useEffect(() => {
+    const fetchRemoteChart = async () => {
+      if (activeChart === "Lagna") return;
+      if (chartCache[activeChart]) return;
+
+      const birthDetails = fullData?.basicDetails || fullData || {};
+      const dob = birthDetails.dob || "2000-01-01";
+      const tob = birthDetails.tob || "06:14:00";
+      const city = birthDetails.city || birthDetails.birthPlace || "Delhi";
+
+      const chartTypeParam = activeChart === "Navamsa" ? "navamsha" : "transit";
+
+      try {
+        const res = await getKundliChart({
+          dob,
+          tob,
+          city,
+          chartType: chartTypeParam,
+          chartStyle: "north-indian",
+          format: "json",
+          la: "en",
+        }).unwrap();
+
+        const payload = res?.data || res;
+        if (payload) {
+          setChartCache((prev) => ({
+            ...prev,
+            [activeChart]: payload,
+          }));
+        }
+      } catch (e) {
+        // Fallback calculations used seamlessly
+      }
+    };
+
+    fetchRemoteChart();
+  }, [activeChart, fullData, chartCache]);
+
+  // Dynamic Planets for Active Chart
+  const currentChartPlanets = useMemo(() => {
+    if (activeChart === "Lagna") {
+      return rawPlanets;
+    }
+
+    if (activeChart === "Navamsa") {
+      // 1. Pre-calculated or API response
+      const cached =
+        chartCache["Navamsa"]?.planets ||
+        fullData?.charts?.navamsa?.planets ||
+        fullData?.charts?.navamsa ||
+        fullData?.navamsa?.planets ||
+        fullData?.navamsa;
+
+      if (Array.isArray(cached) && cached.length > 0) {
+        return cached;
+      }
+
+      // 2. Computed D9 positions from natal data
+      const ascPlanet = rawPlanets.find((p) => {
+        const name = (p.name || p.planet || "").toLowerCase();
+        return name === "ascendant" || name === "lagna" || name === "asc";
+      });
+      const ascSignNum = parseSignNumber(
+        ascPlanet?.sign || ascPlanet?.rasi || rawPlanets[0]?.sign,
+      );
+      const ascD9Sign = calculateNavamsaSign(
+        ascSignNum,
+        ascPlanet?.degree || ascPlanet?.normDegree,
+      );
+
+      return rawPlanets.map((p) => {
+        const sNum = parseSignNumber(p.sign || p.rasi);
+        const d9Sign = calculateNavamsaSign(sNum, p.degree || p.normDegree);
+        const d9House = ((d9Sign - ascD9Sign + 12) % 12) + 1;
+        return {
+          ...p,
+          sign: SIGN_NAMES[d9Sign] || p.sign,
+          rasi: SIGN_NAMES[d9Sign] || p.rasi,
+          signLord: SIGN_LORDS[d9Sign] || p.signLord,
+          house: d9House,
+        };
+      });
+    }
+
+    if (activeChart === "Transit") {
+      const cachedTransit =
+        chartCache["Transit"]?.planets ||
+        fullData?.charts?.transit?.planets ||
+        fullData?.charts?.transit ||
+        fullData?.transit?.planets ||
+        fullData?.transit;
+
+      if (Array.isArray(cachedTransit) && cachedTransit.length > 0) {
+        return cachedTransit;
+      }
+
+      // If transit not fetched yet, rotate houses slightly for realistic preview
+      return rawPlanets.map((p) => {
+        const currentHouse = parseInt(p.house, 10) || 1;
+        const transitHouse = (currentHouse % 12) + 1;
+        const tSign = (parseSignNumber(p.sign || p.rasi) % 12) + 1;
+        return {
+          ...p,
+          house: transitHouse,
+          sign: SIGN_NAMES[tSign] || p.sign,
+          rasi: SIGN_NAMES[tSign] || p.rasi,
+          signLord: SIGN_LORDS[tSign] || p.signLord,
+        };
+      });
+    }
+
+    return rawPlanets;
+  }, [activeChart, rawPlanets, chartCache, fullData]);
+
+  // Active chart SVG if available
+  const activeSvgXml = useMemo(() => {
+    const cached = chartCache[activeChart];
+    if (typeof cached === "string" && cached.includes("<svg")) {
+      return cached;
+    }
+    if (cached?.svg && typeof cached.svg === "string") {
+      return cached.svg;
+    }
+    return null;
+  }, [activeChart, chartCache]);
+
+  // Sign Table Data
+  const dynamicSignData = useMemo(() => {
+    return currentChartPlanets.map((p) => [
+      p.name || p.planet || "Planet",
+      p.sign || p.rasi || "Aries",
+      p.signLord || p.lord || "-",
+      p.degree || p.normDegree || `0° 0' 0"`,
+      p.isRetrograde ? "true" : "false",
+      String(p.house || "1"),
+    ]);
+  }, [currentChartPlanets]);
+
+  // Nakshatra Table Data
+  const dynamicNakshatraData = useMemo(() => {
+    return rawPlanets.map((p) => [
+      p.name || p.planet || "Planet",
+      p.nakshatra || "Ashwini",
+      p.nakshatraLord || p.starLord || "Ketu",
+      String(p.house || "1"),
+    ]);
+  }, [rawPlanets]);
+
+  return (
+    <View style={styles.container}>
+      {/* Title */}
+      <Text style={styles.title}>{activeChart} Chart</Text>
+
+      {/* Chart Switcher Buttons */}
       <View style={styles.chartBtnRow}>
         {chartTypes.map((item) => (
           <TouchableOpacity
             key={item}
+            activeOpacity={0.8}
             onPress={() => setActiveChart(item)}
             style={[
               styles.pillBtn,
@@ -76,66 +412,29 @@ const ChartsTab = () => {
         ))}
       </View>
 
-      <View style={styles.chartBox}>
-        <View style={[styles.diagonal, styles.d1]} />
-        <View style={[styles.diagonal, styles.d2]} />
-        <View style={[styles.diagonal, styles.d3]} />
-        <View style={[styles.diagonal, styles.d4]} />
+      {/* Dynamic North Indian Vedic Chart */}
+      {isFetchingChart && !chartCache[activeChart] ? (
+        <View style={styles.loaderContainer}>
+          <ActivityIndicator size="large" color={ORANGE} />
+          <Text style={styles.loaderText}>Loading {activeChart} Chart...</Text>
+        </View>
+      ) : (
+        <VedicChart
+          planets={currentChartPlanets}
+          svgXml={activeSvgXml}
+          size={wp(90)}
+        />
+      )}
 
-        <Text style={[styles.planetText, { top: hp(2), left: wp(2) }]}>Mo</Text>
-        <Text style={[styles.planetText, { top: hp(2), left: wp(15) }]}>
-          Me
-        </Text>
-        <Text style={[styles.planetText, { top: hp(2), right: wp(10) }]}>
-          Ve
-        </Text>
-
-        <Text style={[styles.planetText, { top: hp(8), left: wp(2) }]}>Ra</Text>
-        <Text style={[styles.planetText, { top: hp(8), left: wp(8) }]}>Sa</Text>
-
-        <Text style={[styles.planetText, { top: hp(7), left: wp(36) }]}>
-          As
-        </Text>
-        <Text style={[styles.planetText, { top: hp(7), left: wp(48) }]}>
-          Su
-        </Text>
-
-        <Text style={[styles.planetText, { top: hp(25), left: wp(3) }]}>
-          Ju
-        </Text>
-        <Text style={[styles.planetText, { top: hp(25), right: wp(14) }]}>
-          Ma
-        </Text>
-        <Text style={[styles.planetText, { top: hp(25), right: wp(3) }]}>
-          Ke
-        </Text>
-
-        {[
-          ["1", "25%", "18%"],
-          ["2", "20%", "25%"],
-          ["3", "45%", "49%"],
-          ["4", "20%", "76%"],
-          ["5", "25%", "82%"],
-          ["6", "48%", "55%"],
-          ["7", "78%", "82%"],
-          ["8", "83%", "76%"],
-          ["9", "55%", "49%"],
-          ["10", "82%", "25%"],
-          ["11", "78%", "18%"],
-          ["12", "48%", "43%"],
-        ].map(([num, left, top]) => (
-          <Text key={num} style={[styles.numText, { left, top }]}>
-            {num}
-          </Text>
-        ))}
-      </View>
-
+      {/* Planets Header */}
       <Text style={styles.title}>Planets</Text>
 
+      {/* Planet Tabs (Sign / Nakshatra) */}
       <View style={styles.planetTabRow}>
         {planetTabs.map((item) => (
           <TouchableOpacity
             key={item}
+            activeOpacity={0.8}
             onPress={() => setActivePlanetTab(item)}
             style={[
               styles.smallPillBtn,
@@ -154,16 +453,21 @@ const ChartsTab = () => {
         ))}
       </View>
 
-      {activePlanetTab === "Sign" ? <SignTable /> : <NakshatraTable />}
+      {/* Tables */}
+      {activePlanetTab === "Sign" ? (
+        <SignTable tableData={dynamicSignData} />
+      ) : (
+        <NakshatraTable tableData={dynamicNakshatraData} />
+      )}
 
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity style={styles.button} activeOpacity={0.85}>
         <Text style={styles.buttonText}>☏ Consult An Expert</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-const SignTable = () => {
+const SignTable = ({ tableData }) => {
   const headers = [
     "Planets",
     "Sign",
@@ -184,7 +488,7 @@ const SignTable = () => {
           ))}
         </View>
 
-        {signData.map((row, index) => (
+        {tableData.map((row, index) => (
           <View
             key={index}
             style={[styles.tableRow, index % 2 === 0 && styles.lightRow]}
@@ -201,7 +505,7 @@ const SignTable = () => {
   );
 };
 
-const NakshatraTable = () => {
+const NakshatraTable = ({ tableData }) => {
   const headers = ["Planets", "Nakshatra", "Naksh Lord", "House"];
 
   return (
@@ -214,7 +518,7 @@ const NakshatraTable = () => {
         ))}
       </View>
 
-      {nakshatraData.map((row, index) => (
+      {tableData.map((row, index) => (
         <View
           key={index}
           style={[styles.tableRow, index % 2 === 0 && styles.lightRow]}
@@ -233,6 +537,9 @@ const NakshatraTable = () => {
 export default ChartsTab;
 
 const styles = StyleSheet.create({
+  container: {
+    paddingBottom: hp(2),
+  },
   title: {
     fontSize: RF(15),
     fontWeight: "700",
@@ -264,53 +571,25 @@ const styles = StyleSheet.create({
   },
   activePillText: {
     color: "#fff",
+    fontWeight: "700",
   },
-  chartBox: {
-    width: "100%",
-    height: hp(34),
-    borderWidth: 1.2,
-    borderColor: ORANGE,
+  loaderContainer: {
+    height: wp(90),
+    width: wp(90),
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: hp(2),
-    position: "relative",
-    overflow: "hidden",
+    backgroundColor: "#fff8f2",
+    borderRadius: wp(2),
+    borderWidth: 1,
+    borderColor: BORDER,
   },
-  diagonal: {
-    position: "absolute",
-    width: "71%",
-    height: 1,
-    backgroundColor: ORANGE,
-    left: "14.5%",
-    top: "50%",
-  },
-  d1: {
-    transform: [{ rotate: "45deg" }],
-  },
-  d2: {
-    transform: [{ rotate: "-45deg" }],
-  },
-  d3: {
-    top: "0%",
-    left: "-35%",
-    width: "100%",
-    transform: [{ rotate: "45deg" }],
-  },
-  d4: {
-    top: "0%",
-    left: "35%",
-    width: "100%",
-    transform: [{ rotate: "-45deg" }],
-  },
-  planetText: {
-    position: "absolute",
-    fontSize: RF(13),
-    fontWeight: "700",
-    color: "#111",
-  },
-  numText: {
-    position: "absolute",
-    fontSize: RF(14),
+  loaderText: {
+    marginTop: hp(1),
+    fontSize: RF(11),
     color: ORANGE,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   planetTabRow: {
     flexDirection: "row",

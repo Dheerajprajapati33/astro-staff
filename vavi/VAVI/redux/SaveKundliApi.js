@@ -52,21 +52,30 @@ export const saveKundliApi = createApi({
     // GET SAVED KUNDLI
     // GET /kundli/saved
     // =================================
-
     getSavedKundli: builder.query({
       query: () => ({
         url: "/kundli/saved",
-
         method: "GET",
       }),
-
       providesTags: ["SavedKundli"],
+    }),
+
+    // =================================
+    // DELETE SAVED KUNDLI
+    // DELETE /kundli/saved/:id
+    // =================================
+    deleteSavedKundli: builder.mutation({
+      query: (id) => ({
+        url: `/kundli/saved/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["SavedKundli"],
     }),
   }),
 });
 
 export const {
   useSaveKundliMutation,
-
   useGetSavedKundliQuery,
+  useDeleteSavedKundliMutation,
 } = saveKundliApi;

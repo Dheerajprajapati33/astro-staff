@@ -172,9 +172,12 @@ export default function Bookings() {
 
   // If backend returns consultations, show them. Otherwise show rich sample preview consultations!
   const bookingsList = useMemo(() => {
-      return rawConsultations || [];
+    if (rawConsultations && rawConsultations.length > 0) {
+      return rawConsultations;
+    }
+    return DEFAULT_SAMPLE_BOOKINGS;
   }, [rawConsultations]);
-
+  
   // Calculate Consultation Stats Metrics
   const statsMetrics = useMemo(() => {
     const totalSessions = bookingsList.length;

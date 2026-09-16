@@ -13,10 +13,10 @@ import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 
 const routeMap = {
-  1: "/kundli",
+  1: "/FreeKundli",
   2: "/(tabs)",
   3: "/Tarotreading",
-  4: "/love",
+  4: { pathname: "/(tabs)", params: { category: "Love" } },
   5: "/DiscoverNumbar",
   6: "/Palm",
   7: "/Kundlimatching",

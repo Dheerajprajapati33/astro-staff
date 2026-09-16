@@ -2,7 +2,8 @@ import React from "react";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useGetAppContentQuery } from "../../redux/appContentApi";
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
 export default function PrivacyScreen() {
   // Change type to "privacy_policy", "terms", "about_us" as needed
@@ -20,6 +21,7 @@ export default function PrivacyScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background || "#FFF8F4" },

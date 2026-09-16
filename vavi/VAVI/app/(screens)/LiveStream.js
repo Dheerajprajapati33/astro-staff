@@ -78,7 +78,7 @@ export default function LiveStream() {
   const [isMicMuted, setIsMicMuted] = useState(true);
   const [liveVideoFrame, setLiveVideoFrame] = useState(null);
   const [remoteUid, setRemoteUid] = useState(1); // 👈 Host astrologer ka UID
-  const [imageLoadError, setImageLoadError] = useState(false); // 👈 Yeh naya state add karein
+  const [imageLoadError, setImageLoadError] = useState(false); // 👈 Yeh new state added
   const [floatingEmojis, setFloatingEmojis] = useState([]);
 
   const [joinLiveMutation] = useJoinLiveSessionMutation();
@@ -93,7 +93,7 @@ export default function LiveStream() {
     0;
   const currentBalance = Number(rawBalance) || 0;
 
-  // Local Wallet Balance State (Instant frontend deduction ke liye)
+  // Local Wallet Balance State (Instant frontend deduction check)
   const [localWalletBalance, setLocalWalletBalance] = useState(null);
 
   useEffect(() => {
@@ -301,7 +301,7 @@ export default function LiveStream() {
               engine.enableVideo();
               engine.setDefaultAudioRouteToSpeakerphone(true);
 
-              // Host join hone par remoteUid set karein
+              // Host join hone par remoteUid set will be done here
               if (engine.registerEventHandler) {
                 engine.registerEventHandler({
                   onUserJoined: (_conn, rUid) => {
@@ -327,7 +327,7 @@ export default function LiveStream() {
                 publishCameraTrack: false,
                 publishMicrophoneTrack: false,
                 autoSubscribeAudio: true,
-                autoSubscribeVideo: true, // 👈 Host ka video automatically play karega
+                autoSubscribeVideo: true, // 👈 Host ka video automatically play will be work
               });
               console.log(
                 LOG_TAG,
@@ -467,6 +467,7 @@ export default function LiveStream() {
               const author = data?.user?.name || data?.userName || "Audience";
 
               setComments((prev) => {
+
                 // Prevent duplicate rendering if recently added locally or via echo
                 const isDuplicate = prev.some(
                   (c) =>
@@ -615,7 +616,7 @@ export default function LiveStream() {
     const giftCost = Number(gift?.coins) || 0;
     const isFree = giftCost === 0 || gift?.isFree;
 
-    // 1. Agar Paid Gift hai toh wallet check & deduct karein
+    // 1. Agar Paid Gift hai toh wallet check & deduct here
     if (!isFree) {
       if (activeBalance < giftCost) {
         Alert.alert(
@@ -635,7 +636,7 @@ export default function LiveStream() {
         return;
       }
 
-      // Sirf paid gifts par hi balance deduct karein
+      // Only paid gifts par hi balance deduct here
       setLocalWalletBalance((prev) =>
         Math.max(0, (prev ?? activeBalance) - giftCost),
       );
@@ -736,11 +737,10 @@ export default function LiveStream() {
   };
 
   // Toggle Client Microphone (Talk to Astrologer)
-  // Toggle Client Microphone (Talk to Astrologer)
   const handleToggleMic = async () => {
     const next = !isMicMuted;
 
-    // 1. Agar Unmute kar rahe hain toh Android Mic Permission ensure karein
+    // 1. Agar Unmute kre toh Android Mic Permission ensure here
     if (!next && Platform.OS === "android") {
       try {
         const granted = await PermissionsAndroid.request(
@@ -758,7 +758,7 @@ export default function LiveStream() {
 
     setIsMicMuted(next);
 
-    // 2. Agora RTC mein Role & Audio Track update karein
+    // 2. Agora RTC mein Role & Audio Track update here
     if (agoraEngineRef.current) {
       try {
         if (!next) {
@@ -816,7 +816,7 @@ export default function LiveStream() {
     return () => sub.remove();
   }, []);
 
-  // Pehle:
+  // before rendering the image:
   const hasValidImage =
     typeof astrologerImage === "string" &&
     astrologerImage.trim() !== "" &&
@@ -841,7 +841,6 @@ export default function LiveStream() {
     <View style={styles.container}>
       {/* Live Video Broadcast Feed / Background */}
 
-      {/* Live Video Broadcast Feed / Background */}
       <View style={styles.videoSurface}>
         {/* Base Layer: Astrologer Profile Picture (Always visible in background) */}
         <Image
@@ -949,14 +948,15 @@ export default function LiveStream() {
             </Text>
             <View>
               <Text style={styles.giftToastSender}>
-                {`${recentGift?.user?.name || "Viewer"} sent
-                ${recentGift?.gift?.name || "a Gift"}!`}
+                {(recentGift?.user?.name || "Viewer") + " sent " +
+                (recentGift?.gift?.name || "a Gift") + "!" }
               </Text>
               <Text style={styles.giftToastCoins}>
                 {recentGift?.gift?.coins > 0
                   ? `+${recentGift.gift.coins} Coins 🪙`
                   : "Free Gift 🎁"}
-              </Text>            </View>
+              </Text>
+              </View>
           </Animated.View>
         )}
 

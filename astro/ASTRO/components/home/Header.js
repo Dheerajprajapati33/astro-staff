@@ -3,14 +3,16 @@ import { StyleSheet, Text, View } from "react-native";
 
 import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
+import { useGetProfileQuery } from "../../redux/ProfileApi";
 
 const Header = () => {
-   console.log("HEADER RENDER");
+  //  console.log("HEADER RENDER");
+   const { data: profile } = useGetProfileQuery();
   return (
     <View style={styles.header}>
       <View>
         <View style={styles.nameRow}>
-          <Text style={styles.name}>Astro.Vavi</Text>
+          <Text style={styles.name}>{profile?.name|| "Astro.Vavi"}</Text>
           <Ionicons name="checkmark-circle" size={RF(14)} color="#22c55e" />
         </View>
         <Text style={styles.role}>Astrologer</Text>

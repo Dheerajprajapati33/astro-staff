@@ -15,7 +15,7 @@ import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
 
 const Slider = () => {
-   console.log("SLIDER RENDER");
+  console.log("SLIDER RENDER");
   const [activeIndex, setActiveIndex] = useState(0);
   const [sliderData, setSliderData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,6 +24,24 @@ const Slider = () => {
   useEffect(() => {
     fetchBannerData();
   }, []);
+
+  // useEffect add for auto-slide functionality:
+useEffect(() => {
+  if (!sliderData || sliderData.length <= 1) return;
+
+  const timer = setInterval(() => {
+    setActiveIndex((prevIndex) => {
+      const nextIndex = (prevIndex + 1) % sliderData.length;
+      flatListRef.current?.scrollToIndex({
+        index: nextIndex,
+        animated: true,
+      });
+      return nextIndex;
+    });
+  }, 3500); // 3.5 seconds mein auto-slide will be done
+
+  return () => clearInterval(timer);
+}, [sliderData]);
 
   const fetchBannerData = async () => {
     setLoading(true);
@@ -54,13 +72,32 @@ const Slider = () => {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) =>
+          item?.id?.toString() || item?._id?.toString() || index.toString()
+        }
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+
+         /* --- Yeh 2 props will be added mandatory --- */
+  getItemLayout={(data, index) => ({
+    length: wp(90),
+    offset: wp(90) * index,
+    index,
+  })}
+  onScrollToIndexFailed={(info) => {
+    const wait = new Promise((resolve) => setTimeout(resolve, 500));
+    wait.then(() => {
+      flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+    });
+  }}
+
+  /* ------------------------------------- */
+
+
         renderItem={({ item }) => (
           <View style={styles.slideItem}>
             <ImageBackground
-              source={{ uri: item.imageUrl }}
+              source={{ uri: item.imageUrl, headers: { "ngrok-skip-browser-warning": "true" },}}
               resizeMode="cover"
               style={styles.banner}
               imageStyle={styles.bannerImage}

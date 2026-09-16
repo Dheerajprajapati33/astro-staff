@@ -1,14 +1,10 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React from "react";
+import { Redirect } from "expo-router";
 
-const love = () => {
+const Love = () => {
   return (
-    <View>
-      <Text>love</Text>
-    </View>
-  )
-}
+    <Redirect href={{ pathname: "/(tabs)", params: { category: "Love" } }} />
+  );
+};
 
-export default love
-
-const styles = StyleSheet.create({})
+export default Love;

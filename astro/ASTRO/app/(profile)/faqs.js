@@ -12,3 +12,4 @@ const faqs = () => {
 export default faqs;
 
 const styles = StyleSheet.create({});
+
