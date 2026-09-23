@@ -58,29 +58,39 @@ const cuspsData = [
 
 const KPTab = ({ data, fullData }) => {
   const dynamicPlanetData = useMemo(() => {
-    const raw = data?.planets || fullData?.kp?.planets;
+    const raw =
+      data?.planets ||
+      fullData?.kp?.planets ||
+      fullData?.kp_planets ||
+      fullData?.kpPlanets ||
+      fullData?.kp?.planetary_positions;
     if (!raw || !Array.isArray(raw) || raw.length === 0) return planetData;
     return raw.map((p) => [
-      p.name || p.planet || "Planet",
+      p.name || p.planet || p.planet_name || "Planet",
       String(p.house || p.cusp || "1"),
       p.sign || p.rasi || "Aries",
-      p.signLord || p.lord || "Mars",
-      p.starLord || p.nakshatraLord || "Rahu",
-      p.subLord || "Jupiter",
+      p.signLord || p.lord || p.sign_lord || "Mars",
+      p.starLord || p.nakshatraLord || p.star_lord || "Rahu",
+      p.subLord || p.sub_lord || "Jupiter",
     ]);
   }, [data, fullData]);
 
   const dynamicCuspsData = useMemo(() => {
-    const raw = data?.cusps || fullData?.kp?.cusps;
+    const raw =
+      data?.cusps ||
+      fullData?.kp?.cusps ||
+      fullData?.kp_cusps ||
+      fullData?.kpCusps ||
+      fullData?.cusps;
     if (!raw || !Array.isArray(raw) || raw.length === 0) return cuspsData;
     return raw.map((c, i) => [
-      String(c.cusp || i + 1),
-      c.degree || `0° 0' 0"`,
+      String(c.cusp || c.house || i + 1),
+      c.degree || c.normDegree || `0° 0' 0"`,
       c.sign || c.rasi || "Aries",
-      c.signLord || c.lord || "Mars",
-      c.subLord || c.cuspSub || "Rahu",
-      c.nakshatra || "Ashwini",
-      c.nakshatraLord || c.starLord || "Ketu",
+      c.signLord || c.lord || c.sign_lord || "Mars",
+      c.subLord || c.sub_lord || c.cuspSub || "Rahu",
+      c.nakshatra || c.star || "Ashwini",
+      c.nakshatraLord || c.starLord || c.star_lord || "Ketu",
     ]);
   }, [data, fullData]);
 

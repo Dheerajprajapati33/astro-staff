@@ -29,6 +29,11 @@ import {
   useSaveKundliMutation,
 } from "../../redux/SaveKundliApi";
 
+import {
+  DEFAULT_COORDINATES,
+  getCoordinatesForPlace,
+} from "../../utils/cityCoordinates";
+
 export default function FreeKundli() {
   const [activeTab, setActiveTab] = useState("new");
 
@@ -37,6 +42,7 @@ export default function FreeKundli() {
   const [dob, setDob] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
+  const [coordinates, setCoordinates] = useState(DEFAULT_COORDINATES);
 
   const [unknownTime, setUnknownTime] = useState(false);
 
@@ -55,17 +61,6 @@ export default function FreeKundli() {
 
   const { data: savedData, isLoading: savedLoading } = useGetSavedKundliQuery();
 
-  const formatTimeTo12Hr = (time24) => {
-    if (!time24) return "";
-    const parts = time24.split(":");
-    let hour = parseInt(parts[0], 10);
-    const min = parts[1] || "00";
-    if (isNaN(hour)) return time24;
-    const ampm = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-    return `${hour}:${min} ${ampm}`;
-  };
-
   const handleGenerateKundli = async (customPayload) => {
     try {
       // Guard against React Native onPress event being passed as customPayload
@@ -75,8 +70,31 @@ export default function FreeKundli() {
         !customPayload.nativeEvent &&
         customPayload.name;
 
+      const resolvedCoords = isCustomData
+        ? {
+            latitude:
+              customPayload.latitude ||
+              getCoordinatesForPlace(
+                customPayload.city || customPayload.birthPlace,
+              ).latitude,
+            longitude:
+              customPayload.longitude ||
+              getCoordinatesForPlace(
+                customPayload.city || customPayload.birthPlace,
+              ).longitude,
+            timezone: customPayload.timezone || "5.5",
+          }
+        : coordinates?.latitude
+          ? coordinates
+          : getCoordinatesForPlace(birthPlace || "Delhi");
+
       const payload = isCustomData
-        ? customPayload
+        ? {
+            ...customPayload,
+            latitude: resolvedCoords.latitude,
+            longitude: resolvedCoords.longitude,
+            timezone: resolvedCoords.timezone,
+          }
         : {
             name: name || "User",
             gender: gender || "MALE",
@@ -84,7 +102,10 @@ export default function FreeKundli() {
             tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
             city: birthPlace || "Delhi",
             birthPlace: birthPlace || "Delhi",
-            la: "en",
+            latitude: resolvedCoords.latitude,
+            longitude: resolvedCoords.longitude,
+            timezone: resolvedCoords.timezone,
+            la: "hi",
           };
 
       let response;
@@ -105,22 +126,31 @@ export default function FreeKundli() {
             tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
             city: birthPlace || "Delhi",
             birthPlace: birthPlace || "Delhi",
-            latitude: "19.0760",
-            longitude: "72.8777",
-            timezone: "5.5",
+            latitude: resolvedCoords.latitude,
+            longitude: resolvedCoords.longitude,
+            timezone: resolvedCoords.timezone,
           }).unwrap();
         } catch (saveErr) {
           console.log("save kundli err", saveErr);
         }
       }
 
-      const basePayload = response?.data || response;
+      const basePayload =
+        response && typeof response === "object"
+          ? response?.data && typeof response.data === "object"
+            ? { ...response, ...response.data }
+            : response
+          : {};
+
       const kundliPayload = {
         ...basePayload,
         dob: basePayload?.dob || payload.dob,
         tob: basePayload?.tob || payload.tob,
         city: basePayload?.city || payload.city,
         birthPlace: basePayload?.birthPlace || payload.birthPlace,
+        latitude: resolvedCoords.latitude,
+        longitude: resolvedCoords.longitude,
+        timezone: resolvedCoords.timezone,
         gender: basePayload?.gender || payload.gender,
         name: basePayload?.name || payload.name,
       };
@@ -144,7 +174,7 @@ export default function FreeKundli() {
       tob: item.tob,
       city: item.city || item.birthPlace,
       birthPlace: item.birthPlace || item.city,
-      la: "en",
+      la: "hi",
     });
   };
 
@@ -350,10 +380,12 @@ export default function FreeKundli() {
                   ]}
                 >
                   {unknownTime
-                    ? "Time Unknown (12:00 PM default)"
+                    ? "Time Unknown (12:00:00)"
                     : birthTime
-                      ? formatTimeTo12Hr(birthTime)
-                      : "Select Birth Time"}
+                      ? birthTime.length === 5
+                        ? `${birthTime}:00`
+                        : birthTime
+                      : "Select Birth Time (HH:MM:SS)"}
                 </Text>
               </View>
               <Ionicons name="chevron-down" size={RF(16)} color="#888" />
@@ -559,7 +591,14 @@ export default function FreeKundli() {
       <StatePickerModal
         visible={showPlacePicker}
         onClose={() => setShowPlacePicker(false)}
-        onSelectState={(place) => setBirthPlace(place)}
+        onSelectState={(place, item) => {
+          setBirthPlace(place);
+          if (item && item.latitude) {
+            setCoordinates(item);
+          } else {
+            setCoordinates(getCoordinatesForPlace(place));
+          }
+        }}
         selectedState={birthPlace}
         title="Select Birth Place"
       />

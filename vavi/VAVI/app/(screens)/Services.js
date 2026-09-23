@@ -16,19 +16,34 @@ import Colors from "../../constants/Colors";
 import ServicesData from "../../constants/Services";
 import { hp, RF, wp } from "../../utils/responsive";
 
+const serviceRoutes = {
+  1: "/FreeKundli",
+  2: "/Tarotreading",
+  3: "/DiscoverNumbar",
+  5: "/Kundlimatching",
+  6: "/Panchang",
+  7: "/Horoscope",
+  8: "/AajKaMahaUpaya",
+};
+
 export default function Services() {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       activeOpacity={0.85}
       style={styles.card}
-      onPress={() =>
-        router.push({
-          pathname: "/ServiceDetail",
-          params: {
-            id: item.id,
-          },
-        })
-      }
+      onPress={() => {
+        const route = serviceRoutes[item.id];
+        if (route) {
+          router.push(route);
+        } else {
+          router.push({
+            pathname: "/ServiceDetail",
+            params: {
+              id: item.id,
+            },
+          });
+        }
+      }}
     >
       {/* Top Decorative Stars */}
 

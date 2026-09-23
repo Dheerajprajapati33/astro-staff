@@ -35,13 +35,6 @@ const AstroServices = [
   },
 
   {
-    id: 6,
-    title: "Palm Reading",
-    subtitle: "Hand Insights",
-    icon: "hand-left-outline",
-  },
-
-  {
     id: 7,
     title: "Match Making",
     subtitle: "Kundli Match",
@@ -53,6 +46,20 @@ const AstroServices = [
     title: "Panchang",
     subtitle: "Calendar",
     icon: "calendar-outline",
+  },
+
+  {
+    id: 9,
+    title: "Horoscope",
+    subtitle: "Daily Insights",
+    icon: "planet-outline",
+  },
+
+  {
+    id: 10,
+    title: "Aaj Ka Maha Upaya",
+    subtitle: "Daily Remedy",
+    icon: "flame-outline",
   },
 ];
 

@@ -18,9 +18,10 @@ const routeMap = {
   3: "/Tarotreading",
   4: { pathname: "/(tabs)", params: { category: "Love" } },
   5: "/DiscoverNumbar",
-  6: "/Palm",
   7: "/Kundlimatching",
   8: "/Panchang",
+  9: "/Horoscope",
+  10: "/AajKaMahaUpaya",
 };
 
 export default function AstroServiceGrid() {

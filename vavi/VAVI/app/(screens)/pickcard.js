@@ -1,9 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-
-import { useState } from "react";
-
-import { router, useLocalSearchParams } from "expo-router";
-
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-
-import { SafeAreaView } from "react-native-safe-area-context";import { hp, RF, wp } from "../../utils/responsive";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const cardBack = require("../../assets/images/tarot-card.png");
 
@@ -23,10 +20,15 @@ const PickCard = () => {
 
   const [selectedCards, setSelectedCards] = useState([]);
 
+  useFocusEffect(
+    useCallback(() => {
+      setSelectedCards([]);
+    }, []),
+  );
+
   const toggleCard = (index) => {
     if (selectedCards.includes(index)) {
       setSelectedCards(selectedCards.filter((item) => item !== index));
-
       return;
     }
 

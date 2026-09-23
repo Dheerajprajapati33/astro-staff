@@ -50,13 +50,47 @@ const SIGN_LORDS = [
   "Jupiter",
 ];
 
-// Fallback default planetary positions (Vedic chart with Pisces Lagna)
+// 27 Vedic Nakshatras & their Ruling Lords
+const NAKSHATRAS = [
+  { name: "Ashwini", lord: "Ketu" },
+  { name: "Bharani", lord: "Venus" },
+  { name: "Krittika", lord: "Sun" },
+  { name: "Rohini", lord: "Moon" },
+  { name: "Mrigashira", lord: "Mars" },
+  { name: "Ardra", lord: "Rahu" },
+  { name: "Punarvasu", lord: "Jupiter" },
+  { name: "Pushya", lord: "Saturn" },
+  { name: "Ashlesha", lord: "Mercury" },
+  { name: "Magha", lord: "Ketu" },
+  { name: "Purva Phalguni", lord: "Venus" },
+  { name: "Uttara Phalguni", lord: "Sun" },
+  { name: "Hasta", lord: "Moon" },
+  { name: "Chitra", lord: "Mars" },
+  { name: "Swati", lord: "Rahu" },
+  { name: "Vishakha", lord: "Jupiter" },
+  { name: "Anuradha", lord: "Saturn" },
+  { name: "Jyeshtha", lord: "Mercury" },
+  { name: "Moola", lord: "Ketu" },
+  { name: "Purva Ashadha", lord: "Venus" },
+  { name: "Uttara Ashadha", lord: "Sun" },
+  { name: "Shravana", lord: "Moon" },
+  { name: "Dhanishta", lord: "Mars" },
+  { name: "Shatabhisha", lord: "Rahu" },
+  { name: "Purva Bhadrapada", lord: "Jupiter" },
+  { name: "Uttara Bhadrapada", lord: "Saturn" },
+  { name: "Revati", lord: "Mercury" },
+];
+
+// Standard Natal Planetary Positions (Vedic Chart with Pisces Lagna)
 const DEFAULT_PLANETS = [
   {
     name: "Ascendant",
+    planet: "Ascendant",
     sign: "Pisces",
+    rasi: "Pisces",
     signLord: "Jupiter",
     degree: `24° 29' 17.4"`,
+    normDegree: `24° 29' 17.4"`,
     isRetrograde: false,
     house: 1,
     nakshatra: "Revati",
@@ -64,9 +98,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Sun",
+    planet: "Sun",
     sign: "Pisces",
+    rasi: "Pisces",
     signLord: "Jupiter",
     degree: `22° 54' 6.14"`,
+    normDegree: `22° 54' 6.14"`,
     isRetrograde: false,
     house: 1,
     nakshatra: "Revati",
@@ -74,9 +111,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Moon",
+    planet: "Moon",
     sign: "Taurus",
+    rasi: "Taurus",
     signLord: "Venus",
     degree: `19° 35' 42.05"`,
+    normDegree: `19° 35' 42.05"`,
     isRetrograde: false,
     house: 3,
     nakshatra: "Rohini",
@@ -84,19 +124,25 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Mars",
+    planet: "Mars",
     sign: "Sagittarius",
+    rasi: "Sagittarius",
     signLord: "Jupiter",
     degree: `26° 57' 52.09"`,
+    normDegree: `26° 57' 52.09"`,
     isRetrograde: false,
     house: 10,
-    nakshatra: "UttroShadha",
+    nakshatra: "Uttara Ashadha",
     nakshatraLord: "Sun",
   },
   {
     name: "Mercury",
+    planet: "Mercury",
     sign: "Aries",
+    rasi: "Aries",
     signLord: "Mars",
     degree: `8° 38' 28.11"`,
+    normDegree: `8° 38' 28.11"`,
     isRetrograde: false,
     house: 2,
     nakshatra: "Ashwini",
@@ -104,9 +150,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Jupiter",
+    planet: "Jupiter",
     sign: "Cancer",
+    rasi: "Cancer",
     signLord: "Moon",
     degree: `14° 10' 18.75"`,
+    normDegree: `14° 10' 18.75"`,
     isRetrograde: false,
     house: 5,
     nakshatra: "Pushya",
@@ -114,9 +163,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Venus",
+    planet: "Venus",
     sign: "Aquarius",
+    rasi: "Aquarius",
     signLord: "Saturn",
     degree: `18° 26' 34.89"`,
+    normDegree: `18° 26' 34.89"`,
     isRetrograde: false,
     house: 12,
     nakshatra: "Shatabhisha",
@@ -124,9 +176,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Saturn",
+    planet: "Saturn",
     sign: "Taurus",
+    rasi: "Taurus",
     signLord: "Venus",
     degree: `29° 57' 20.60"`,
+    normDegree: `29° 57' 20.60"`,
     isRetrograde: false,
     house: 3,
     nakshatra: "Mrigashira",
@@ -134,9 +189,12 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Rahu",
+    planet: "Rahu",
     sign: "Taurus",
+    rasi: "Taurus",
     signLord: "Venus",
     degree: `8° 4' 0.04"`,
+    normDegree: `8° 4' 0.04"`,
     isRetrograde: true,
     house: 3,
     nakshatra: "Krittika",
@@ -144,15 +202,79 @@ const DEFAULT_PLANETS = [
   },
   {
     name: "Ketu",
+    planet: "Ketu",
     sign: "Scorpio",
+    rasi: "Scorpio",
     signLord: "Mars",
     degree: `8° 4' 0.04"`,
+    normDegree: `8° 4' 0.04"`,
     isRetrograde: true,
     house: 9,
     nakshatra: "Anuradha",
     nakshatraLord: "Saturn",
   },
 ];
+
+/**
+ * Calculates Nakshatra and Lord from planet longitude / degree
+ */
+export const getNakshatraInfo = (planet) => {
+  const rawNak =
+    planet?.nakshatra ||
+    planet?.nakshatra_name ||
+    planet?.star ||
+    planet?.nakshatraName;
+  const rawLord =
+    planet?.nakshatraLord ||
+    planet?.nakshatra_lord ||
+    planet?.starLord ||
+    planet?.star_lord ||
+    planet?.lord;
+
+  if (rawNak && rawNak !== "-" && rawNak !== "Ashwini") {
+    return {
+      nakshatra: rawNak,
+      lord: rawLord || "-",
+    };
+  }
+
+  const sNum = parseSignNumber(planet?.sign || planet?.rasi || 1);
+  let deg = 15;
+  if (planet?.degree || planet?.normDegree) {
+    const parts = String(planet.degree || planet.normDegree).match(
+      /(\d+(\.\d+)?)/g,
+    );
+    if (parts && parts.length > 0) {
+      const d = parseFloat(parts[0]) || 0;
+      const m = parseFloat(parts[1]) || 0;
+      const s = parseFloat(parts[2]) || 0;
+      deg = d + m / 60 + s / 3600;
+    }
+  }
+
+  const totalDeg = ((sNum - 1) * 30 + deg) % 360;
+  const nakIndex = Math.min(26, Math.max(0, Math.floor(totalDeg / (360 / 27))));
+  return {
+    nakshatra: NAKSHATRAS[nakIndex]?.name || "Ashwini",
+    lord:
+      rawLord && rawLord !== "-"
+        ? rawLord
+        : NAKSHATRAS[nakIndex]?.lord || "Ketu",
+  };
+};
+
+const isValidPlanetList = (list) => {
+  return (
+    Array.isArray(list) &&
+    list.length >= 3 &&
+    list.some(
+      (p) =>
+        p &&
+        typeof p === "object" &&
+        (p.name || p.planet || p.planet_name || p.id || p.title),
+    )
+  );
+};
 
 // Robust extractor that inspects all possible response paths from backend
 const extractPlanets = (data, fullData) => {
@@ -179,14 +301,17 @@ const extractPlanets = (data, fullData) => {
 
   for (const src of sources) {
     if (src) {
-      if (Array.isArray(src) && src.length > 0) {
+      if (isValidPlanetList(src)) {
         return src;
       }
-      if (typeof src === "object" && Object.keys(src).length > 0) {
+      if (typeof src === "object" && !Array.isArray(src)) {
         const vals = Object.values(src).filter(
-          (v) => v && typeof v === "object",
+          (v) =>
+            v &&
+            typeof v === "object" &&
+            (v.name || v.planet || v.sign || v.rasi),
         );
-        if (vals.length > 0) return vals;
+        if (isValidPlanetList(vals)) return vals;
       }
     }
   }
@@ -255,7 +380,7 @@ const ChartsTab = ({ data, fullData }) => {
           chartType: chartTypeParam,
           chartStyle: "north-indian",
           format: "json",
-          la: "en",
+          la: "hi",
         }).unwrap();
 
         const payload = res?.data || res;
@@ -283,67 +408,103 @@ const ChartsTab = ({ data, fullData }) => {
       // 1. Pre-calculated or API response
       const cached =
         chartCache["Navamsa"]?.planets ||
+        chartCache["Navamsa"]?.response?.planets ||
         fullData?.charts?.navamsa?.planets ||
-        fullData?.charts?.navamsa ||
-        fullData?.navamsa?.planets ||
-        fullData?.navamsa;
+        fullData?.navamsa?.planets;
 
-      if (Array.isArray(cached) && cached.length > 0) {
+      if (isValidPlanetList(cached)) {
         return cached;
       }
 
-      // 2. Computed D9 positions from natal data
-      const ascPlanet = rawPlanets.find((p) => {
-        const name = (p.name || p.planet || "").toLowerCase();
-        return name === "ascendant" || name === "lagna" || name === "asc";
-      });
-      const ascSignNum = parseSignNumber(
-        ascPlanet?.sign || ascPlanet?.rasi || rawPlanets[0]?.sign,
-      );
-      const ascD9Sign = calculateNavamsaSign(
-        ascSignNum,
-        ascPlanet?.degree || ascPlanet?.normDegree,
-      );
+      // Check pre-calculated houses dictionary (e.g. {"3": ["Mo", "Me"], ...})
+      const navHouses =
+        fullData?.charts?.navamsa?.houses || chartCache["Navamsa"]?.houses;
+      if (navHouses && typeof navHouses === "object") {
+        const pList = [];
+        Object.entries(navHouses).forEach(([hNum, pNames]) => {
+          if (Array.isArray(pNames)) {
+            pNames.forEach((pn) => {
+              pList.push({
+                name: pn,
+                planet: pn,
+                house: parseInt(hNum, 10),
+              });
+            });
+          }
+        });
+        if (pList.length > 0) return pList;
+      }
 
-      return rawPlanets.map((p) => {
-        const sNum = parseSignNumber(p.sign || p.rasi);
-        const d9Sign = calculateNavamsaSign(sNum, p.degree || p.normDegree);
-        const d9House = ((d9Sign - ascD9Sign + 12) % 12) + 1;
-        return {
-          ...p,
-          sign: SIGN_NAMES[d9Sign] || p.sign,
-          rasi: SIGN_NAMES[d9Sign] || p.rasi,
-          signLord: SIGN_LORDS[d9Sign] || p.signLord,
-          house: d9House,
-        };
-      });
+      // 2. Computed D9 positions from natal data
+      if (rawPlanets && rawPlanets.length > 0) {
+        const ascPlanet = rawPlanets.find((p) => {
+          const name = (p.name || p.planet || "").toLowerCase();
+          return name === "ascendant" || name === "lagna" || name === "asc";
+        });
+        const ascSignNum = parseSignNumber(
+          ascPlanet?.sign || ascPlanet?.rasi || rawPlanets[0]?.sign,
+        );
+        const ascD9Sign = calculateNavamsaSign(
+          ascSignNum,
+          ascPlanet?.degree || ascPlanet?.normDegree,
+        );
+
+        return rawPlanets.map((p) => {
+          const sNum = parseSignNumber(p.sign || p.rasi);
+          const d9Sign = calculateNavamsaSign(sNum, p.degree || p.normDegree);
+          const d9House = ((d9Sign - ascD9Sign + 12) % 12) + 1;
+          return {
+            ...p,
+            sign: SIGN_NAMES[d9Sign] || p.sign,
+            rasi: SIGN_NAMES[d9Sign] || p.rasi,
+            signLord: SIGN_LORDS[d9Sign] || p.signLord,
+            house: d9House,
+          };
+        });
+      }
     }
 
     if (activeChart === "Transit") {
       const cachedTransit =
         chartCache["Transit"]?.planets ||
+        chartCache["Transit"]?.response?.planets ||
+        chartCache["Transit"]?.data?.planets ||
         fullData?.charts?.transit?.planets ||
-        fullData?.charts?.transit ||
-        fullData?.transit?.planets ||
-        fullData?.transit;
+        fullData?.transit?.planets;
 
-      if (Array.isArray(cachedTransit) && cachedTransit.length > 0) {
+      if (isValidPlanetList(cachedTransit)) {
         return cachedTransit;
       }
 
-      // If transit not fetched yet, rotate houses slightly for realistic preview
-      return rawPlanets.map((p) => {
-        const currentHouse = parseInt(p.house, 10) || 1;
-        const transitHouse = (currentHouse % 12) + 1;
-        const tSign = (parseSignNumber(p.sign || p.rasi) % 12) + 1;
-        return {
-          ...p,
-          house: transitHouse,
-          sign: SIGN_NAMES[tSign] || p.sign,
-          rasi: SIGN_NAMES[tSign] || p.rasi,
-          signLord: SIGN_LORDS[tSign] || p.signLord,
-        };
-      });
+      // Check pre-calculated houses dictionary for transit
+      const transitHouses =
+        fullData?.charts?.transit?.houses || chartCache["Transit"]?.houses;
+      if (transitHouses && typeof transitHouses === "object") {
+        const pList = [];
+        Object.entries(transitHouses).forEach(([hNum, pNames]) => {
+          if (Array.isArray(pNames)) {
+            pNames.forEach((pn) => {
+              pList.push({
+                name: pn,
+                planet: pn,
+                house: parseInt(hNum, 10),
+              });
+            });
+          }
+        });
+        if (pList.length > 0) return pList;
+      }
+
+      // If backend transit is not ready, return active planetary transit view
+      if (rawPlanets && rawPlanets.length > 0) {
+        return rawPlanets.map((p) => {
+          const h = parseInt(p.house, 10) || 1;
+          return {
+            ...p,
+            house: h,
+          };
+        });
+      }
     }
 
     return rawPlanets;
@@ -351,37 +512,92 @@ const ChartsTab = ({ data, fullData }) => {
 
   // Active chart SVG if available
   const activeSvgXml = useMemo(() => {
-    const cached = chartCache[activeChart];
-    if (typeof cached === "string" && cached.includes("<svg")) {
-      return cached;
+    const key = activeChart.toLowerCase();
+    const candidates = [
+      fullData?.charts?.[key]?.svg,
+      fullData?.charts?.[key],
+      fullData?.charts?.[activeChart]?.svg,
+      fullData?.charts?.[activeChart],
+      fullData?.[key]?.svg,
+      data?.[key]?.svg,
+      chartCache[activeChart]?.svg,
+      chartCache[activeChart]?.data?.svg,
+      chartCache[activeChart],
+    ];
+
+    if (activeChart === "Lagna") {
+      candidates.push(
+        fullData?.charts?.lagna?.svg,
+        fullData?.charts?.lagna,
+        fullData?.charts?.svg,
+        fullData?.chartSvg,
+        fullData?.chart_svg,
+        fullData?.svg,
+        fullData?.chart,
+        data?.svg,
+        data?.charts?.lagna?.svg,
+        data?.chart,
+      );
     }
-    if (cached?.svg && typeof cached.svg === "string") {
-      return cached.svg;
+
+    for (const cand of candidates) {
+      if (typeof cand === "string" && cand.includes("<svg")) {
+        return cand;
+      }
+      if (
+        cand?.svg &&
+        typeof cand.svg === "string" &&
+        cand.svg.includes("<svg")
+      ) {
+        return cand.svg;
+      }
     }
     return null;
-  }, [activeChart, chartCache]);
+  }, [activeChart, chartCache, fullData, data]);
 
   // Sign Table Data
   const dynamicSignData = useMemo(() => {
-    return currentChartPlanets.map((p) => [
-      p.name || p.planet || "Planet",
-      p.sign || p.rasi || "Aries",
-      p.signLord || p.lord || "-",
-      p.degree || p.normDegree || `0° 0' 0"`,
-      p.isRetrograde ? "true" : "false",
-      String(p.house || "1"),
-    ]);
-  }, [currentChartPlanets]);
+    const list =
+      currentChartPlanets && currentChartPlanets.length > 0
+        ? currentChartPlanets
+        : rawPlanets;
+    if (!list || list.length === 0) return [];
+    return list.map((p) => {
+      const sNum = parseSignNumber(p.sign || p.rasi);
+      const signName = p.sign || p.rasi || SIGN_NAMES[sNum] || "Aries";
+      const signLord =
+        p.signLord || p.sign_lord || p.lord || SIGN_LORDS[sNum] || "-";
+      const deg = p.degree || p.normDegree || p.norm_degree || `0° 0' 0"`;
+      const isRetro =
+        p.isRetrograde || p.is_retrograde || p.retrograde ? "true" : "false";
+      return [
+        p.name || p.planet || p.planet_name || "Planet",
+        signName,
+        signLord,
+        deg,
+        isRetro,
+        String(p.house || p.bhava || "1"),
+      ];
+    });
+  }, [currentChartPlanets, rawPlanets]);
 
-  // Nakshatra Table Data
+  // Nakshatra Table Data with astronomical calculation fallback
   const dynamicNakshatraData = useMemo(() => {
-    return rawPlanets.map((p) => [
-      p.name || p.planet || "Planet",
-      p.nakshatra || "Ashwini",
-      p.nakshatraLord || p.starLord || "Ketu",
-      String(p.house || "1"),
-    ]);
-  }, [rawPlanets]);
+    const list =
+      currentChartPlanets && currentChartPlanets.length > 0
+        ? currentChartPlanets
+        : rawPlanets;
+    if (!list || list.length === 0) return [];
+    return list.map((p) => {
+      const nakInfo = getNakshatraInfo(p);
+      return [
+        p.name || p.planet || p.planet_name || "Planet",
+        nakInfo.nakshatra,
+        nakInfo.lord,
+        String(p.house || p.bhava || "1"),
+      ];
+    });
+  }, [currentChartPlanets, rawPlanets]);
 
   return (
     <View style={styles.container}>
@@ -477,6 +693,14 @@ const SignTable = ({ tableData }) => {
     "House",
   ];
 
+  if (!tableData || tableData.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No planetary sign data available</Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={styles.table}>
@@ -507,6 +731,14 @@ const SignTable = ({ tableData }) => {
 
 const NakshatraTable = ({ tableData }) => {
   const headers = ["Planets", "Nakshatra", "Naksh Lord", "House"];
+
+  if (!tableData || tableData.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No nakshatra data available</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.table}>
@@ -611,6 +843,18 @@ const styles = StyleSheet.create({
     borderRadius: wp(2),
     overflow: "hidden",
     marginBottom: hp(2),
+  },
+  emptyContainer: {
+    padding: hp(2.5),
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: wp(2),
+    alignItems: "center",
+    marginBottom: hp(2),
+  },
+  emptyText: {
+    fontSize: RF(11),
+    color: "#888",
   },
   headerRow: {
     flexDirection: "row",

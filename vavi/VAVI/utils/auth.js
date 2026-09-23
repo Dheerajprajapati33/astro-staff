@@ -7,7 +7,6 @@ import { getCallSocket } from "../services/callSocketService";
 
 import { AstroApi } from "../redux/AstroApi";
 import { kundliApi } from "../redux/KundliApi";
-import { PalmApi } from "../redux/PalmApi";
 import { PanchangApi } from "../redux/PanchangApi";
 import { saveKundliApi } from "../redux/SaveKundliApi";
 import { TarotApi } from "../redux/TarotApi";
@@ -30,7 +29,6 @@ export const resetAllApiStatesVavi = () => {
     store.dispatch(updateApi.util.resetApiState());
     store.dispatch(AstroApi.util.resetApiState());
     store.dispatch(walletApi.util.resetApiState());
-    store.dispatch(PalmApi.util.resetApiState());
     store.dispatch(numerologyApi.util.resetApiState());
     store.dispatch(PanchangApi.util.resetApiState());
     store.dispatch(TarotApi.util.resetApiState());
@@ -51,7 +49,9 @@ export const resetAllApiStatesVavi = () => {
  */
 export const performClientLogoutVavi = async () => {
   if (isLoggingOut) {
-    console.log("[VAVI Logout] Logout already in progress, skipping duplicate call...");
+    console.log(
+      "[VAVI Logout] Logout already in progress, skipping duplicate call...",
+    );
     return;
   }
   isLoggingOut = true;

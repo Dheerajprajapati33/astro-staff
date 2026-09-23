@@ -24,6 +24,8 @@ const toSafeString = (val, fallback = "") => {
     if (typeof val.text === "string" && val.text.trim()) return val.text.trim();
     if (typeof val.report === "string" && val.report.trim())
       return val.report.trim();
+    if (typeof val.conclusion === "string" && val.conclusion.trim())
+      return val.conclusion.trim();
     if (typeof val.status === "string" && val.status.trim())
       return val.status.trim();
     if (typeof val.name === "string" && val.name.trim()) return val.name.trim();
@@ -64,30 +66,45 @@ export default function CompatibilityResult() {
   } = useMemo(() => {
     const root = matchData || {};
     const gunMilan =
-      root?.gunMilan ||
       root?.guna_milan ||
+      root?.gunMilan ||
       root?.ashtakoot ||
       root?.gunaMilan ||
       root?.guna ||
       root;
 
-    // Extract total score from API response
-    const total = Number(
-      gunMilan?.total_points ??
-        gunMilan?.totalPoints ??
-        gunMilan?.score ??
-        gunMilan?.points ??
-        root?.score ??
-        root?.total_points ??
-        0,
-    );
+    // Extract total score & max score from API response
+    let total = 0;
+    let max = 36;
 
-    const max = Number(
-      gunMilan?.maximum_points ??
-        gunMilan?.max_points ??
-        gunMilan?.maxScore ??
-        36,
-    );
+    if (
+      root?.compatibilityScore &&
+      typeof root.compatibilityScore === "string" &&
+      root.compatibilityScore.includes("/")
+    ) {
+      const parts = root.compatibilityScore.split("/");
+      total = parseFloat(parts[0]) || 0;
+      max = parseFloat(parts[1]) || 36;
+    } else {
+      total = Number(
+        gunMilan?.total_points ??
+          gunMilan?.totalPoints ??
+          gunMilan?.score ??
+          gunMilan?.points ??
+          root?.score ??
+          root?.total_points ??
+          root?.totalPoints ??
+          0,
+      );
+
+      max = Number(
+        gunMilan?.maximum_points ??
+          gunMilan?.maxPoints ??
+          gunMilan?.max_points ??
+          gunMilan?.maxScore ??
+          36,
+      );
+    }
 
     // Look for Gunas array in various possible Prokerala & backend keys
     const rawGunaArray =
@@ -97,22 +114,22 @@ export default function CompatibilityResult() {
       (Array.isArray(gunMilan?.ashtakoot) && gunMilan.ashtakoot) ||
       (Array.isArray(gunMilan?.ashtakoota) && gunMilan.ashtakoota) ||
       (Array.isArray(gunMilan?.breakdown) && gunMilan.breakdown) ||
+      (Array.isArray(root?.breakdown) && root.breakdown) ||
       (Array.isArray(root?.guna) && root.guna) ||
       (Array.isArray(root?.gunas) && root.gunas) ||
       (Array.isArray(root?.kootas) && root.kootas) ||
       (Array.isArray(root?.ashtakoot) && root.ashtakoot) ||
       (Array.isArray(root?.ashtakoota) && root.ashtakoota) ||
-      (Array.isArray(root?.breakdown) && root.breakdown) ||
       null;
 
     const extractKoota = (id, defaultMax, searchKeys) => {
-      // 1. Search in array by id or name/koot substring
+      // 1. Search in array by id or name/gun/koot substring
       if (rawGunaArray && rawGunaArray.length > 0) {
         const found = rawGunaArray.find((item) => {
           if (!item || typeof item !== "object") return false;
           if (item.id === id) return true;
           const name = toSafeString(
-            item.name || item.title || item.koot || item.koota,
+            item.name || item.gun || item.title || item.koot || item.koota,
             "",
           ).toLowerCase();
           return searchKeys.some((k) => name.includes(k));
@@ -121,6 +138,7 @@ export default function CompatibilityResult() {
         if (found) {
           const s = Number(
             found.obtained_points ??
+              found.obtainedPoints ??
               found.points ??
               found.score ??
               found.value ??
@@ -129,6 +147,7 @@ export default function CompatibilityResult() {
           );
           const m = Number(
             found.maximum_points ??
+              found.maxPoints ??
               found.max_points ??
               found.max ??
               found.total ??
@@ -148,6 +167,7 @@ export default function CompatibilityResult() {
           if (fallbackItem && typeof fallbackItem === "object") {
             const s = Number(
               fallbackItem.obtained_points ??
+                fallbackItem.obtainedPoints ??
                 fallbackItem.points ??
                 fallbackItem.score ??
                 fallbackItem.value ??
@@ -155,6 +175,7 @@ export default function CompatibilityResult() {
             );
             const m = Number(
               fallbackItem.maximum_points ??
+                fallbackItem.maxPoints ??
                 fallbackItem.max_points ??
                 fallbackItem.max ??
                 defaultMax,
@@ -189,6 +210,7 @@ export default function CompatibilityResult() {
           if (typeof val === "object") {
             const s = Number(
               val.obtained_points ??
+                val.obtainedPoints ??
                 val.points ??
                 val.score ??
                 val.value ??
@@ -197,6 +219,7 @@ export default function CompatibilityResult() {
             );
             const m = Number(
               val.maximum_points ??
+                val.maxPoints ??
                 val.max_points ??
                 val.max ??
                 val.total ??
@@ -215,10 +238,10 @@ export default function CompatibilityResult() {
       return { score: 0, max: defaultMax, description: null };
     };
 
-    const varna = extractKoota(1, 1, ["varna", "varn"]);
-    const vasya = extractKoota(2, 2, ["vasya", "vashya"]);
-    const tara = extractKoota(3, 3, ["tara", "dina"]);
-    const yoni = extractKoota(4, 4, ["yoni"]);
+    const varna = extractKoota(1, 1, ["varna", "वर्ण", "varn"]);
+    const vasya = extractKoota(2, 2, ["vasya", "vashya", "वश्य"]);
+    const tara = extractKoota(3, 3, ["tara", "dina", "तारा"]);
+    const yoni = extractKoota(4, 4, ["yoni", "योनि"]);
     const maitri = extractKoota(5, 5, [
       "graha_maitri",
       "grahamaitri",
@@ -228,16 +251,19 @@ export default function CompatibilityResult() {
       "rashi_adhipati",
       "adhipathi",
       "adhipati",
+      "ग्रह मैत्री",
+      "मैत्री",
     ]);
-    const gana = extractKoota(6, 6, ["gana", "gan"]);
+    const gana = extractKoota(6, 6, ["gana", "gan", "गण"]);
     const bhakoot = extractKoota(7, 7, [
       "bhakoot",
       "bhakut",
       "bhakoota",
       "rashi",
       "rasi",
+      "भकूट",
     ]);
-    const nadi = extractKoota(8, 8, ["nadi"]);
+    const nadi = extractKoota(8, 8, ["nadi", "नाड़ी", "नाडी"]);
 
     const list = [
       {
@@ -378,10 +404,10 @@ export default function CompatibilityResult() {
     const endY = Math.round(cy - needleLength * Math.sin(angleRad));
 
     const rawMsg =
+      root?.conclusion ||
       root?.message ||
       root?.description ||
-      root?.conclusion?.report ||
-      root?.conclusion;
+      root?.conclusion?.report;
     const extractedMsg = toSafeString(rawMsg, "");
 
     return {

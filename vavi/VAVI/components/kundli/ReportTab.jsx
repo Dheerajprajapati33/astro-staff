@@ -17,7 +17,19 @@ const reportTabs = ["Manglik", "Kalsarpa", "Sadesati"];
 const ReportTab = ({ data, fullData }) => {
   const [active, setActive] = useState("Manglik");
 
-  const doshas = data || fullData?.doshas || fullData?.report || {};
+  const doshas =
+    data || fullData?.doshas || fullData?.report || fullData?.dosha || {};
+  const mangalData =
+    fullData?.mangal_dosha ||
+    data?.mangal_dosha ||
+    doshas?.manglik ||
+    doshas?.mangal;
+  const kaalsarpData =
+    fullData?.kaalsarp_dosha ||
+    data?.kaalsarp_dosha ||
+    doshas?.kaalsarp ||
+    doshas?.kalsarpa;
+  const sadesatiData = fullData?.sadesati || data?.sadesati || doshas?.sadesati;
 
   return (
     <View>
@@ -37,11 +49,9 @@ const ReportTab = ({ data, fullData }) => {
         ))}
       </View>
 
-      {active === "Manglik" && <Manglik data={doshas?.manglik} />}
-      {active === "Kalsarpa" && (
-        <Kalsarpa data={doshas?.kaalsarp || doshas?.kalsarpa} />
-      )}
-      {active === "Sadesati" && <Sadesati data={doshas?.sadesati} />}
+      {active === "Manglik" && <Manglik data={mangalData} />}
+      {active === "Kalsarpa" && <Kalsarpa data={kaalsarpData} />}
+      {active === "Sadesati" && <Sadesati data={sadesatiData} />}
 
       <TouchableOpacity style={styles.button} activeOpacity={0.8}>
         <Text style={styles.buttonText}>☏ Consult An Expert</Text>
@@ -51,15 +61,40 @@ const ReportTab = ({ data, fullData }) => {
 };
 
 const Manglik = ({ data }) => {
-  const isMars = data?.isManglikByMars ? "True" : "False";
+  const hasDosha =
+    data?.has_dosha ?? data?.hasDosha ?? data?.isManglik ?? false;
+
+  const isMars = data?.isManglikByMars ?? (hasDosha ? "True" : "False");
   const isSaturn = data?.isManglikBySaturn ? "True" : "False";
   const isRahuKetu = data?.isManglikByRahuKetu ? "True" : "False";
-  const percentage = data?.percentage || "11.5%";
+  const percentage =
+    data?.percentage || data?.score || (hasDosha ? "23%" : "0%");
 
   const items = [
-    [data ? isMars : "True", "Manglik By Mars"],
-    [data ? isSaturn : "False", "Manglik By Saturn"],
-    [data ? isRahuKetu : "False", "Manglik By RahuKetu"],
+    [
+      typeof isMars === "boolean"
+        ? isMars
+          ? "True"
+          : "False"
+        : String(isMars),
+      "Manglik By Mars",
+    ],
+    [
+      typeof isSaturn === "boolean"
+        ? isSaturn
+          ? "True"
+          : "False"
+        : String(isSaturn),
+      "Manglik By Saturn",
+    ],
+    [
+      typeof isRahuKetu === "boolean"
+        ? isRahuKetu
+          ? "True"
+          : "False"
+        : String(isRahuKetu),
+      "Manglik By RahuKetu",
+    ],
   ];
 
   return (

@@ -18,12 +18,6 @@ const Services = [
     icon: require("../assets/images/placeholder.jpeg"),
   },
   {
-    id: 4,
-    title: "Palm Reading",
-    description: "Know your future through palmistry",
-    icon: require("../assets/images/placeholder.jpeg"),
-  },
-  {
     id: 5,
     title: "Match Making",
     description: "Find your perfect match for a happy life",
@@ -33,6 +27,18 @@ const Services = [
     id: 6,
     title: "Panchang",
     description: "View daily panchang and auspicious timings",
+    icon: require("../assets/images/placeholder.jpeg"),
+  },
+  {
+    id: 7,
+    title: "Horoscope",
+    description: "Explore daily predictions and planetary guidance",
+    icon: require("../assets/images/placeholder.jpeg"),
+  },
+  {
+    id: 8,
+    title: "Aaj Ka Maha Upaya",
+    description: "Discover powerful daily Vedic remedies for success",
     icon: require("../assets/images/placeholder.jpeg"),
   },
 ];

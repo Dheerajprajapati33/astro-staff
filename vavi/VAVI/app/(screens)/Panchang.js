@@ -272,6 +272,22 @@ export default function Panchang() {
   // Filter only elements that have valid data (not "--")
   const panchangDetails = rawPanchangRows.filter((row) => row.value !== "--");
 
+  const yesterdayDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return getFormattedDate(d);
+  })();
+  const todayDate = getFormattedDate(new Date());
+  const tomorrowDate = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return getFormattedDate(d);
+  })();
+
+  const isYesterday = date === yesterdayDate;
+  const isToday = date === todayDate;
+  const isTomorrow = date === tomorrowDate;
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
@@ -293,24 +309,43 @@ export default function Panchang() {
         {/* Quick Date Selector */}
         <View style={styles.quickDateRow}>
           <TouchableOpacity
-            style={styles.quickDateBtn}
+            style={[styles.quickDateBtn, isYesterday && styles.quickDateActive]}
             onPress={() => handleQuickDate(-1)}
           >
-            <Text style={styles.quickDateText}>Yesterday</Text>
+            <Text
+              style={[
+                styles.quickDateText,
+                isYesterday && styles.quickDateActiveText,
+              ]}
+            >
+              Yesterday
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.quickDateBtn, styles.quickDateActive]}
+            style={[styles.quickDateBtn, isToday && styles.quickDateActive]}
             onPress={() => handleQuickDate(0)}
           >
-            <Text style={[styles.quickDateText, styles.quickDateActiveText]}>
+            <Text
+              style={[
+                styles.quickDateText,
+                isToday && styles.quickDateActiveText,
+              ]}
+            >
               Today
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.quickDateBtn}
+            style={[styles.quickDateBtn, isTomorrow && styles.quickDateActive]}
             onPress={() => handleQuickDate(1)}
           >
-            <Text style={styles.quickDateText}>Tomorrow</Text>
+            <Text
+              style={[
+                styles.quickDateText,
+                isTomorrow && styles.quickDateActiveText,
+              ]}
+            >
+              Tomorrow
+            </Text>
           </TouchableOpacity>
         </View>
 

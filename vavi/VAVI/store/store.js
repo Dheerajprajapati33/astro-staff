@@ -4,7 +4,6 @@ import { router } from "expo-router";
 
 import { AstroApi } from "../redux/AstroApi";
 import { kundliApi } from "../redux/KundliApi";
-import { PalmApi } from "../redux/PalmApi";
 import { PanchangApi } from "../redux/PanchangApi";
 import { saveKundliApi } from "../redux/SaveKundliApi";
 import { TarotApi } from "../redux/TarotApi";
@@ -19,6 +18,8 @@ import { offerApi } from "../redux/offerApi";
 import { updateApi } from "../redux/updateApi";
 import { walletApi } from "../redux/walletApi";
 import { referralApi } from "../redux/referralApi";
+import { HoroscopeApi } from "../redux/HoroscopeApi";
+import { UpayaApi } from "../redux/UpayaApi";
 
 import { performClientLogoutVavi } from "../utils/auth";
 
@@ -75,7 +76,6 @@ export const store = configureStore({
     [AstroApi.reducerPath]: AstroApi.reducer,
     [walletApi.reducerPath]: walletApi.reducer,
     [offerApi.reducerPath]: offerApi.reducer,
-    [PalmApi.reducerPath]: PalmApi.reducer,
     [numerologyApi.reducerPath]: numerologyApi.reducer,
     [PanchangApi.reducerPath]: PanchangApi.reducer,
     [TarotApi.reducerPath]: TarotApi.reducer,
@@ -87,6 +87,8 @@ export const store = configureStore({
     [liveApi.reducerPath]: liveApi.reducer,
     [referralApi.reducerPath]: referralApi.reducer,
     [notificationApi.reducerPath]: notificationApi.reducer,
+    [HoroscopeApi.reducerPath]: HoroscopeApi.reducer,
+    [UpayaApi.reducerPath]: UpayaApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -97,7 +99,6 @@ export const store = configureStore({
       AstroApi.middleware,
       walletApi.middleware,
       offerApi.middleware,
-      PalmApi.middleware,
       numerologyApi.middleware,
       PanchangApi.middleware,
       TarotApi.middleware,
@@ -109,5 +110,7 @@ export const store = configureStore({
       liveApi.middleware,
       referralApi.middleware,
       notificationApi.middleware,
+      HoroscopeApi.middleware,
+      UpayaApi.middleware,
     ),
 });

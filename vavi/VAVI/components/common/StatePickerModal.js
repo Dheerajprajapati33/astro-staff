@@ -11,61 +11,26 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
-
-const INDIAN_STATES_AND_UTS = [
-  "Andhra Pradesh",
-  "Arunachal Pradesh",
-  "Assam",
-  "Bihar",
-  "Chhattisgarh",
-  "Goa",
-  "Gujarat",
-  "Haryana",
-  "Himachal Pradesh",
-  "Jharkhand",
-  "Karnataka",
-  "Kerala",
-  "Madhya Pradesh",
-  "Maharashtra",
-  "Manipur",
-  "Meghalaya",
-  "Mizoram",
-  "Nagaland",
-  "Odisha",
-  "Punjab",
-  "Rajasthan",
-  "Sikkim",
-  "Tamil Nadu",
-  "Telangana",
-  "Tripura",
-  "Uttar Pradesh",
-  "Uttarakhand",
-  "West Bengal",
-  "Andaman and Nicobar Islands",
-  "Chandigarh",
-  "Dadra and Nagar Haveli and Daman and Diu",
-  "Delhi",
-  "Jammu and Kashmir",
-  "Ladakh",
-  "Lakshadweep",
-  "Puducherry",
-];
+import { INDIAN_PLACES } from "../../utils/cityCoordinates";
 
 export default function StatePickerModal({
   visible,
   onClose,
   onSelectState,
   selectedState,
-  title = "Select Birth Place / State",
+  title = "Select Birth Place / City",
 }) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredStates = INDIAN_STATES_AND_UTS.filter((st) =>
-    st.toLowerCase().includes(searchQuery.trim().toLowerCase())
-  );
+  const filteredPlaces = INDIAN_PLACES.filter((p) => {
+    const q = searchQuery.trim().toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) || p.state.toLowerCase().includes(q)
+    );
+  });
 
-  const handleSelect = (st) => {
-    onSelectState(st);
+  const handleSelect = (item) => {
+    onSelectState(item.name, item);
     setSearchQuery("");
     onClose();
   };
@@ -95,10 +60,15 @@ export default function StatePickerModal({
 
           {/* Search Input */}
           <View style={styles.searchBar}>
-            <Ionicons name="search" size={RF(18)} color="#999" style={styles.searchIcon} />
+            <Ionicons
+              name="search"
+              size={RF(18)}
+              color="#999"
+              style={styles.searchIcon}
+            />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search State or UT..."
+              placeholder="Search City or State (e.g. Delhi, Mumbai)..."
               placeholderTextColor="#999"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -111,21 +81,23 @@ export default function StatePickerModal({
             )}
           </View>
 
-          {/* State List */}
+          {/* Place List */}
           <FlatList
-            data={filteredStates}
-            keyExtractor={(item) => item}
+            data={filteredPlaces}
+            keyExtractor={(item, index) => `${item.name}-${index}`}
             showsVerticalScrollIndicator={true}
             style={styles.list}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="search-outline" size={RF(30)} color="#CCCCCC" />
-                <Text style={styles.emptyText}>No state found</Text>
+                <Text style={styles.emptyText}>No city or state found</Text>
               </View>
             }
             renderItem={({ item }) => {
-              const isSelected = selectedState?.toLowerCase() === item.toLowerCase();
+              const isSelected =
+                selectedState?.toLowerCase() === item.name.toLowerCase() ||
+                selectedState?.toLowerCase() === item.state.toLowerCase();
               return (
                 <TouchableOpacity
                   style={[styles.itemRow, isSelected && styles.selectedItemRow]}
@@ -138,14 +110,26 @@ export default function StatePickerModal({
                       size={RF(18)}
                       color={isSelected ? Colors.primary : "#888888"}
                     />
-                    <Text
-                      style={[styles.itemText, isSelected && styles.selectedItemText]}
-                    >
-                      {item}
-                    </Text>
+                    <View style={styles.textColumn}>
+                      <Text
+                        style={[
+                          styles.itemText,
+                          isSelected && styles.selectedItemText,
+                        ]}
+                      >
+                        {item.name}
+                      </Text>
+                      {item.state !== item.name && (
+                        <Text style={styles.subText}>{item.state}</Text>
+                      )}
+                    </View>
                   </View>
                   {isSelected && (
-                    <Ionicons name="checkmark-circle" size={RF(20)} color={Colors.primary} />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={RF(20)}
+                      color={Colors.primary}
+                    />
                   )}
                 </TouchableOpacity>
               );
@@ -193,48 +177,57 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F7F7F7",
-    borderRadius: wp(3),
+    backgroundColor: "#F6F6F6",
+    borderRadius: wp(2.5),
     paddingHorizontal: wp(3),
-    marginVertical: hp(1.5),
+    height: hp(5.2),
+    marginTop: hp(1.5),
+    marginBottom: hp(1),
     borderWidth: 1,
     borderColor: "#EAEAEA",
-    height: hp(5.5),
   },
   searchIcon: {
     marginRight: wp(2),
   },
   searchInput: {
     flex: 1,
-    fontSize: RF(14),
+    fontSize: RF(13),
     color: Colors.darkBrown,
     paddingVertical: 0,
   },
   list: {
-    maxHeight: hp(50),
+    marginTop: hp(0.5),
   },
   itemRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: hp(1.4),
+    justifyContent: "space-between",
+    paddingVertical: hp(1.2),
     paddingHorizontal: wp(2),
     borderBottomWidth: 1,
-    borderBottomColor: "#F5F5F5",
-    borderRadius: wp(2),
+    borderBottomColor: "#F7F7F7",
+    borderRadius: wp(1.5),
   },
   selectedItemRow: {
-    backgroundColor: "#FFF7F0",
+    backgroundColor: "#FFF5EC",
   },
   itemLeft: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+  },
+  textColumn: {
+    marginLeft: wp(3),
   },
   itemText: {
     fontSize: RF(14),
     color: Colors.darkBrown,
-    marginLeft: wp(3),
     fontWeight: "500",
+  },
+  subText: {
+    fontSize: RF(11),
+    color: "#888",
+    marginTop: hp(0.1),
   },
   selectedItemText: {
     color: Colors.primary,
@@ -242,12 +235,12 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: "center",
-    paddingVertical: hp(4),
+    justifyContent: "center",
+    paddingVertical: hp(5),
   },
   emptyText: {
-    fontSize: RF(14),
-    color: "#999999",
     marginTop: hp(1),
+    fontSize: RF(13),
+    color: "#999999",
   },
 });
-

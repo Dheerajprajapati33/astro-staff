@@ -130,7 +130,7 @@ const KundliMatching = () => {
       girlDob: girlDob,
       girlTob: girlUnknownTime ? "12:00:00" : girlTob || "12:00:00",
       girlCity: girlCity.trim(),
-      la: "en",
+      la: "hi",
       details: true,
     };
 

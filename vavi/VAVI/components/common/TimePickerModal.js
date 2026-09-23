@@ -11,20 +11,9 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 
-const HOURS_12 = [
-  "01",
-  "02",
-  "03",
-  "04",
-  "05",
-  "06",
-  "07",
-  "08",
-  "09",
-  "10",
-  "11",
-  "12",
-];
+const HOURS_24 = Array.from({ length: 24 }, (_, i) =>
+  String(i).padStart(2, "0"),
+);
 const MINUTES = Array.from({ length: 60 }, (_, i) =>
   String(i).padStart(2, "0"),
 );
@@ -35,44 +24,27 @@ export default function TimePickerModal({
   onSelectTime,
   initialTime,
 }) {
-  const [selectedHour, setSelectedHour] = useState("10");
+  const [selectedHour, setSelectedHour] = useState("06");
   const [selectedMinute, setSelectedMinute] = useState("30");
-  const [period, setPeriod] = useState("AM"); // "AM" | "PM"
   const [activeTab, setActiveTab] = useState("hour"); // "hour" | "minute"
 
   useEffect(() => {
-    if (initialTime && /^\d{2}:\d{2}(:\d{2})?$/.test(initialTime.trim())) {
+    if (initialTime && /^\d{1,2}:\d{2}(:\d{2})?$/.test(initialTime.trim())) {
       const parts = initialTime.trim().split(":");
-      let h = Number(parts[0]);
-      const m = parts[1].padStart(2, "0");
+      const h = String(Number(parts[0])).padStart(2, "0");
+      const m = (parts[1] || "00").padStart(2, "0");
 
-      if (h >= 12) {
-        setPeriod("PM");
-        if (h > 12) h -= 12;
-      } else {
-        setPeriod("AM");
-        if (h === 0) h = 12;
-      }
-
-      setSelectedHour(String(h).padStart(2, "0"));
+      setSelectedHour(h);
       setSelectedMinute(m);
     } else {
-      setSelectedHour("10");
+      setSelectedHour("06");
       setSelectedMinute("30");
-      setPeriod("AM");
     }
     setActiveTab("hour");
   }, [visible, initialTime]);
 
   const handleConfirm = () => {
-    let h = Number(selectedHour);
-    if (period === "PM" && h < 12) {
-      h += 12;
-    } else if (period === "AM" && h === 12) {
-      h = 0;
-    }
-
-    const formatted24Hour = `${String(h).padStart(2, "0")}:${selectedMinute}:00`;
+    const formatted24Hour = `${selectedHour}:${selectedMinute}:00`;
     onSelectTime(formatted24Hour);
     onClose();
   };
@@ -97,7 +69,7 @@ export default function TimePickerModal({
             </TouchableOpacity>
           </View>
 
-          {/* Time Display with AM/PM */}
+          {/* Time Display */}
           <View style={styles.timeDisplayRow}>
             <View style={styles.timeDigitsBox}>
               <TouchableOpacity
@@ -115,7 +87,7 @@ export default function TimePickerModal({
                 >
                   {selectedHour}
                 </Text>
-                <Text style={styles.segmentLabel}>Hour</Text>
+                <Text style={styles.segmentLabel}>Hour (24h)</Text>
               </TouchableOpacity>
 
               <Text style={styles.colonText}>:</Text>
@@ -138,43 +110,6 @@ export default function TimePickerModal({
                 <Text style={styles.segmentLabel}>Minute</Text>
               </TouchableOpacity>
             </View>
-
-            {/* AM / PM Toggle */}
-            <View style={styles.ampmContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.ampmBtn,
-                  period === "AM" && styles.activeAmpmBtn,
-                ]}
-                onPress={() => setPeriod("AM")}
-              >
-                <Text
-                  style={[
-                    styles.ampmText,
-                    period === "AM" && styles.activeAmpmText,
-                  ]}
-                >
-                  AM
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.ampmBtn,
-                  period === "PM" && styles.activeAmpmBtn,
-                ]}
-                onPress={() => setPeriod("PM")}
-              >
-                <Text
-                  style={[
-                    styles.ampmText,
-                    period === "PM" && styles.activeAmpmText,
-                  ]}
-                >
-                  PM
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
           {/* Tabs switch */}
@@ -192,7 +127,7 @@ export default function TimePickerModal({
                   activeTab === "hour" && styles.activeTabButtonText,
                 ]}
               >
-                Hours (01 - 12)
+                Hours (00 - 23)
               </Text>
             </TouchableOpacity>
 
@@ -221,7 +156,7 @@ export default function TimePickerModal({
               contentContainerStyle={styles.gridContent}
             >
               {activeTab === "hour"
-                ? HOURS_12.map((hour) => {
+                ? HOURS_24.map((hour) => {
                     const isSelected = selectedHour === hour;
                     return (
                       <TouchableOpacity

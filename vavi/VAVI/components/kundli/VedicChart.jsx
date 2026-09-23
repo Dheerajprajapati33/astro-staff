@@ -115,10 +115,22 @@ const VedicChart = ({
   svgXml = null,
   size = wp(90),
 }) => {
-  if (svgXml) {
+  const formattedSvg = React.useMemo(() => {
+    if (!svgXml || typeof svgXml !== "string") return null;
+    let clean = svgXml.trim();
+    // Ensure all <text> elements have visible fill and font styling
+    if (!clean.includes("fill=")) {
+      clean = clean.replace(/<text /g, '<text fill="#111" font-weight="bold" ');
+    }
+    // Optimize stroke color for branded display
+    clean = clean.replace(/stroke="#000000"/g, 'stroke="#ff5a00"');
+    return clean;
+  }, [svgXml]);
+
+  if (formattedSvg) {
     return (
       <View style={[styles.container, { width: size, height: size }]}>
-        <SvgXml xml={svgXml} width="100%" height="100%" />
+        <SvgXml xml={formattedSvg} width="100%" height="100%" />
       </View>
     );
   }
