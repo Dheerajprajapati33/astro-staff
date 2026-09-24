@@ -7,282 +7,566 @@ const LIGHT = "#fff8ef";
 
 const dashaTabs = ["Major dasha", "Yogini"];
 
-const VIMSHOTTARI_CYCLE = [
-  { name: "Ketu", years: 7 },
-  { name: "Venus", years: 20 },
-  { name: "Sun", years: 6 },
-  { name: "Moon", years: 10 },
-  { name: "Mars", years: 7 },
-  { name: "Rahu", years: 18 },
-  { name: "Jupiter", years: 16 },
-  { name: "Saturn", years: 19 },
-  { name: "Mercury", years: 17 },
-];
+/*
+|--------------------------------------------------------------------------
+| Planet Normalization
+|--------------------------------------------------------------------------
+| API may return Hindi names while some frontend data may use English names.
+| This helper makes filtering work in both cases.
+|--------------------------------------------------------------------------
+*/
+
+const PLANET_MAP = {
+  // Hindi
+  "राहु": "rahu",
+  "केतु": "ketu",
+  "गुरू": "jupiter",
+  "गुरु": "jupiter",
+  "बृहस्पति": "jupiter",
+  "शनि": "saturn",
+  "बुध": "mercury",
+  "शुक्र": "venus",
+  "सूर्य": "sun",
+  "चंद्र": "moon",
+  "चन्द्र": "moon",
+  "मंगल": "mars",
+
+  // English
+  rahu: "rahu",
+  ketu: "ketu",
+  jupiter: "jupiter",
+  saturn: "saturn",
+  mercury: "mercury",
+  venus: "venus",
+  sun: "sun",
+  moon: "moon",
+  mars: "mars",
+};
+
+const normalizePlanet = (name = "") => {
+  const value = String(name).trim().toLowerCase();
+
+  return PLANET_MAP[value] || value;
+};
+
+/*
+|--------------------------------------------------------------------------
+| Fallback Mahadasha Data
+|--------------------------------------------------------------------------
+| Used only if API data is unavailable.
+|--------------------------------------------------------------------------
+*/
 
 const majorFallbackData = [
-  { name: "Ketu", startDate: "15-06-1973", endDate: "15-06-1980" },
-  { name: "Venus", startDate: "15-06-1980", endDate: "15-06-2000" },
-  { name: "Sun", startDate: "15-06-2000", endDate: "15-06-2006" },
-  { name: "Moon", startDate: "15-06-2006", endDate: "15-06-2016" },
-  { name: "Mars", startDate: "15-06-2016", endDate: "16-06-2023" },
-  { name: "Rahu", startDate: "16-06-2023", endDate: "15-06-2041" },
-  { name: "Jupiter", startDate: "15-06-2041", endDate: "15-06-2057" },
-  { name: "Saturn", startDate: "15-06-2057", endDate: "15-06-2076" },
-  { name: "Mercury", startDate: "15-06-2076", endDate: "15-06-2093" },
+  {
+    name: "Ketu",
+    startDate: "15-06-1973",
+    endDate: "15-06-1980",
+  },
+  {
+    name: "Venus",
+    startDate: "15-06-1980",
+    endDate: "15-06-2000",
+  },
+  {
+    name: "Sun",
+    startDate: "15-06-2000",
+    endDate: "15-06-2006",
+  },
+  {
+    name: "Moon",
+    startDate: "15-06-2006",
+    endDate: "15-06-2016",
+  },
+  {
+    name: "Mars",
+    startDate: "15-06-2016",
+    endDate: "16-06-2023",
+  },
+  {
+    name: "Rahu",
+    startDate: "16-06-2023",
+    endDate: "15-06-2041",
+  },
+  {
+    name: "Jupiter",
+    startDate: "15-06-2041",
+    endDate: "15-06-2057",
+  },
+  {
+    name: "Saturn",
+    startDate: "15-06-2057",
+    endDate: "15-06-2076",
+  },
+  {
+    name: "Mercury",
+    startDate: "15-06-2076",
+    endDate: "15-06-2093",
+  },
 ];
 
 const yoginiFallbackData = [
-  { name: "Bhadrika", startDate: "Birth", endDate: "23-07-1981" },
-  { name: "Ulka", startDate: "23-07-1981", endDate: "23-07-1987" },
-  { name: "Siddha", startDate: "23-07-1987", endDate: "23-07-1994" },
-  { name: "Sankata", startDate: "23-07-1994", endDate: "23-07-2002" },
-  { name: "Mangala", startDate: "23-07-2002", endDate: "23-07-2003" },
-  { name: "Pingala", startDate: "23-07-2003", endDate: "23-07-2005" },
-  { name: "Dhanya", startDate: "23-07-2005", endDate: "23-07-2008" },
-  { name: "Bhramari", startDate: "23-07-2008", endDate: "23-07-2012" },
+  {
+    name: "Bhadrika",
+    startDate: "Birth",
+    endDate: "23-07-1981",
+  },
+  {
+    name: "Ulka",
+    startDate: "23-07-1981",
+    endDate: "23-07-1987",
+  },
+  {
+    name: "Siddha",
+    startDate: "23-07-1987",
+    endDate: "23-07-1994",
+  },
+  {
+    name: "Sankata",
+    startDate: "23-07-1994",
+    endDate: "23-07-2002",
+  },
+  {
+    name: "Mangala",
+    startDate: "23-07-2002",
+    endDate: "23-07-2003",
+  },
+  {
+    name: "Pingala",
+    startDate: "23-07-2003",
+    endDate: "23-07-2005",
+  },
+  {
+    name: "Dhanya",
+    startDate: "23-07-2005",
+    endDate: "23-07-2008",
+  },
+  {
+    name: "Bhramari",
+    startDate: "23-07-2008",
+    endDate: "23-07-2012",
+  },
 ];
 
-const formatDashaDate = (str) => {
-  if (!str) return "-";
-  if (typeof str !== "string") return String(str);
-  if (str.includes("T")) {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) {
-      const day = String(d.getDate()).padStart(2, "0");
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const year = d.getFullYear();
+/*
+|--------------------------------------------------------------------------
+| Date Formatter
+|--------------------------------------------------------------------------
+*/
+
+const formatDashaDate = (value) => {
+  if (!value) return "-";
+
+  if (typeof value !== "string") {
+    return String(value);
+  }
+
+  /*
+   * API can return:
+   * 2026-06-23
+   * 2026-06-23T04:48:58+05:30
+   */
+
+  if (value.includes("T")) {
+    const date = new Date(value);
+
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+
       return `${day}-${month}-${year}`;
     }
-    return str.split("T")[0];
-  }
-  return str;
-};
 
-// Generate Pratyantardasha fallback periods proportionally if not provided
-const generatePratyantardashaFallback = (
-  antarLord,
-  antarStartStr,
-  antarEndStr,
-) => {
-  const sDate = new Date(antarStartStr);
-  const eDate = new Date(antarEndStr);
-  if (isNaN(sDate.getTime()) || isNaN(eDate.getTime())) {
-    return VIMSHOTTARI_CYCLE.map((p) => ({
-      name: p.name,
-      startDate: antarStartStr,
-      endDate: antarEndStr,
-    }));
+    return value.split("T")[0];
   }
 
-  const totalMs = eDate.getTime() - sDate.getTime();
-  const startIdx = VIMSHOTTARI_CYCLE.findIndex(
-    (p) => p.name.toLowerCase() === (antarLord || "").toLowerCase(),
-  );
-  const offset = startIdx !== -1 ? startIdx : 0;
+  /*
+   * Convert YYYY-MM-DD → DD-MM-YYYY
+   */
 
-  let currentMs = sDate.getTime();
-  return Array.from({ length: 9 }, (_, i) => {
-    const planet = VIMSHOTTARI_CYCLE[(offset + i) % 9];
-    const durationMs = totalMs * (planet.years / 120);
-    const startObj = new Date(currentMs);
-    currentMs += durationMs;
-    const endObj = new Date(currentMs);
+  const isoMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
-    return {
-      name: planet.name,
-      startDate: `${String(startObj.getDate()).padStart(2, "0")}-${String(
-        startObj.getMonth() + 1,
-      ).padStart(2, "0")}-${startObj.getFullYear()}`,
-      endDate: `${String(endObj.getDate()).padStart(2, "0")}-${String(
-        endObj.getMonth() + 1,
-      ).padStart(2, "0")}-${endObj.getFullYear()}`,
-    };
-  });
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+
+    return `${day}-${month}-${year}`;
+  }
+
+  /*
+   * Already DD-MM-YYYY
+   */
+
+  return value;
 };
+
+/*
+|--------------------------------------------------------------------------
+| Extract API Root
+|--------------------------------------------------------------------------
+| Depending on your API service, the component may receive:
+|
+| data = API data object
+|
+| OR
+|
+| data = {
+|   success: true,
+|   data: {...}
+| }
+|
+| This helper supports both.
+|--------------------------------------------------------------------------
+*/
+
+const getApiRoot = (data, fullData) => {
+  if (fullData?.data && typeof fullData.data === "object") {
+    return fullData.data;
+  }
+
+  if (data?.data && typeof data.data === "object") {
+    return data.data;
+  }
+
+  return fullData || data || {};
+};
+
+/*
+|--------------------------------------------------------------------------
+| Dasha Component
+|--------------------------------------------------------------------------
+*/
 
 const DashaTab = ({ data, fullData }) => {
   const [activeTab, setActiveTab] = useState("Major dasha");
+
   const [selectedMahadasha, setSelectedMahadasha] = useState(null);
+
   const [selectedAntardasha, setSelectedAntardasha] = useState(null);
 
   const isYogini = activeTab === "Yogini";
 
-  // Comprehensive Mahadasha List (Level 1)
-  const mahadashaList = useMemo(() => {
-    // 1. Check dasha_periods (Prokerala full tree with pratyantardasha)
-    const periods = fullData?.dasha_periods || fullData?.dasha?.dasha_periods;
-    if (Array.isArray(periods) && periods.length > 0) {
-      return periods.map((p) => ({
-        id: p.id,
-        name: p.name || p.planet || "Planet",
-        startDate: formatDashaDate(p.start || p.startDate),
-        endDate: formatDashaDate(p.end || p.endDate),
-        rawStart: p.start || p.startDate,
-        rawEnd: p.end || p.endDate,
-        antardasha: p.antardasha || [],
-      }));
-    }
+  /*
+  |--------------------------------------------------------------------------
+  | API ROOT
+  |--------------------------------------------------------------------------
+  */
 
-    // 2. Check dasha.mahadasha
-    const maha =
-      fullData?.dasha?.mahadasha ||
-      data?.mahadasha ||
-      fullData?.vimshottari_dasha;
-    if (Array.isArray(maha) && maha.length > 0) {
-      return maha.map((p) => ({
-        id: p.id,
-        name: p.name || p.planet?.split("/")?.[0] || "Planet",
-        startDate: formatDashaDate(p.startDate || p.start),
-        endDate: formatDashaDate(p.endDate || p.end),
-        rawStart: p.startDate || p.start,
-        rawEnd: p.endDate || p.end,
-        antardasha: p.antardasha || [],
-      }));
-    }
-
-    return majorFallbackData;
+  const apiRoot = useMemo(() => {
+    return getApiRoot(data, fullData);
   }, [data, fullData]);
 
-  // Yogini Dasha List
+  /*
+  |--------------------------------------------------------------------------
+  | Level 1: Mahadasha
+  |--------------------------------------------------------------------------
+  |
+  | Correct API:
+  |
+  | data["5_mahadasha"].list
+  |
+  |--------------------------------------------------------------------------
+  */
+
+  const mahadashaList = useMemo(() => {
+    const mahaData = apiRoot?.["5_mahadasha"];
+
+    if (
+      mahaData &&
+      Array.isArray(mahaData.list) &&
+      mahaData.list.length > 0
+    ) {
+      return mahaData.list.map((item) => ({
+        id: item.id,
+
+        name:
+          item.planet ||
+          item.name ||
+          "Planet",
+
+        startDate: formatDashaDate(
+          item.startDate || item.start
+        ),
+
+        endDate: formatDashaDate(
+          item.endDate || item.end
+        ),
+
+        rawStart:
+          item.startDate ||
+          item.start,
+
+        rawEnd:
+          item.endDate ||
+          item.end,
+      }));
+    }
+
+    /*
+     * Fallback only when API data is unavailable.
+     */
+
+    return [];
+  }, [apiRoot]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Yogini Dasha
+  |--------------------------------------------------------------------------
+  */
+
   const yoginiList = useMemo(() => {
     const raw =
-      fullData?.dasha?.yogini ||
-      data?.yogini ||
-      fullData?.yogini_dasha ||
-      fullData?.yogini;
+      apiRoot?.["yogini"] ||
+      apiRoot?.["yogini_dasha"];
+
     if (Array.isArray(raw) && raw.length > 0) {
-      return raw.map((d) => ({
-        name: d.planet || d.name || "Dasha",
-        ruler: d.ruler || "-",
-        startDate: formatDashaDate(d.startDate || d.start),
-        endDate: formatDashaDate(d.endDate || d.end),
+      return raw.map((item) => ({
+        name:
+          item.planet ||
+          item.name ||
+          "Dasha",
+
+        ruler:
+          item.ruler ||
+          "-",
+
+        startDate: formatDashaDate(
+          item.startDate ||
+            item.start
+        ),
+
+        endDate: formatDashaDate(
+          item.endDate ||
+            item.end
+        ),
       }));
     }
-    return yoginiFallbackData;
-  }, [data, fullData]);
 
-  // Active Antardasha List (Level 2)
+    return [];
+  }, [apiRoot]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Level 2: Antardasha
+  |--------------------------------------------------------------------------
+  |
+  | Correct API:
+  |
+  | data["6_antardasha"].list
+  |
+  | Example:
+  |
+  | Rahu Mahadasha
+  |
+  | Rahu     16-06-2023 → 26-02-2026
+  | Jupiter  26-02-2026 → 21-07-2028
+  | Saturn   21-07-2028 → 28-05-2031
+  |
+  |--------------------------------------------------------------------------
+  */
+
   const antardashaList = useMemo(() => {
-    if (!selectedMahadasha) return [];
-
-    // Find rich entry in dasha_periods if available
-    const periods =
-      fullData?.dasha_periods || fullData?.dasha?.dasha_periods || [];
-    const richMaha = periods.find(
-      (p) =>
-        (p.name || "").toLowerCase() === selectedMahadasha.name.toLowerCase() ||
-        p.id === selectedMahadasha.id,
-    );
-
-    const sourceAntar =
-      richMaha?.antardasha || selectedMahadasha.antardasha || [];
-
-    if (Array.isArray(sourceAntar) && sourceAntar.length > 0) {
-      return sourceAntar.map((a) => {
-        const pName =
-          a.name || (a.planet ? a.planet.split("/").pop() : null) || "Planet";
-        return {
-          id: a.id,
-          name: pName,
-          startDate: formatDashaDate(a.start || a.startDate),
-          endDate: formatDashaDate(a.end || a.endDate),
-          rawStart: a.start || a.startDate,
-          rawEnd: a.end || a.endDate,
-          pratyantardasha: a.pratyantardasha || [],
-        };
-      });
+    if (!selectedMahadasha) {
+      return [];
     }
 
-    // Fallback Antardasha calculation
-    const startIdx = VIMSHOTTARI_CYCLE.findIndex(
-      (p) => p.name.toLowerCase() === selectedMahadasha.name.toLowerCase(),
-    );
-    const offset = startIdx !== -1 ? startIdx : 0;
-    return Array.from({ length: 9 }, (_, i) => {
-      const p = VIMSHOTTARI_CYCLE[(offset + i) % 9];
-      return {
-        name: p.name,
-        startDate: selectedMahadasha.startDate,
-        endDate: selectedMahadasha.endDate,
-        pratyantardasha: [],
-      };
-    });
-  }, [selectedMahadasha, fullData]);
+    const antarData = apiRoot?.["6_antardasha"];
 
-  // Active Pratyantardasha List (Level 3)
-  const pratyantardashaList = useMemo(() => {
-    if (!selectedAntardasha) return [];
-
-    // 1. Direct from selectedAntardasha
     if (
-      Array.isArray(selectedAntardasha.pratyantardasha) &&
-      selectedAntardasha.pratyantardasha.length > 0
+      !antarData ||
+      !Array.isArray(antarData.list)
     ) {
-      return selectedAntardasha.pratyantardasha.map((pr) => ({
-        id: pr.id,
-        name: pr.name || pr.planet || "Planet",
-        startDate: formatDashaDate(pr.start || pr.startDate),
-        endDate: formatDashaDate(pr.end || pr.endDate),
-      }));
+      return [];
     }
 
-    // 2. Search in dasha_periods
-    const periods =
-      fullData?.dasha_periods || fullData?.dasha?.dasha_periods || [];
-    for (const m of periods) {
-      if (m.antardasha && Array.isArray(m.antardasha)) {
-        for (const a of m.antardasha) {
-          if (
-            ((a.name &&
-              a.name.toLowerCase() === selectedAntardasha.name.toLowerCase()) ||
-              a.id === selectedAntardasha.id) &&
-            Array.isArray(a.pratyantardasha) &&
-            a.pratyantardasha.length > 0
-          ) {
-            return a.pratyantardasha.map((pr) => ({
-              id: pr.id,
-              name: pr.name || pr.planet || "Planet",
-              startDate: formatDashaDate(pr.start || pr.startDate),
-              endDate: formatDashaDate(pr.end || pr.endDate),
-            }));
-          }
-        }
+    const selectedMahaPlanet =
+      normalizePlanet(
+        selectedMahadasha.name
+      );
+
+    const filtered = antarData.list.filter(
+      (item) => {
+        const itemMahaPlanet =
+          normalizePlanet(
+            item.mahadasha
+          );
+
+        return (
+          itemMahaPlanet ===
+          selectedMahaPlanet
+        );
       }
+    );
+
+    return filtered.map((item) => ({
+      id: item.id,
+
+      name:
+        item.planet ||
+        item.name ||
+        "Planet",
+
+      startDate: formatDashaDate(
+        item.startDate ||
+          item.start
+      ),
+
+      endDate: formatDashaDate(
+        item.endDate ||
+          item.end
+      ),
+
+      rawStart:
+        item.startDate ||
+        item.start,
+
+      rawEnd:
+        item.endDate ||
+        item.end,
+
+      /*
+       * We don't calculate Pratyantardasha here.
+       * It comes directly from the API's
+       * 7_pratyantardasha.list.
+       */
+    }));
+  }, [selectedMahadasha, apiRoot]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Level 3: Pratyantardasha
+  |--------------------------------------------------------------------------
+  |
+  | Correct API:
+  |
+  | data["7_pratyantardasha"].list
+  |
+  |--------------------------------------------------------------------------
+  */
+
+  const pratyantardashaList = useMemo(() => {
+    if (
+      !selectedMahadasha ||
+      !selectedAntardasha
+    ) {
+      return [];
     }
 
-    // 3. Fallback proportional calculation
-    return generatePratyantardashaFallback(
-      selectedAntardasha.name,
-      selectedAntardasha.rawStart || selectedAntardasha.startDate,
-      selectedAntardasha.rawEnd || selectedAntardasha.endDate,
-    );
-  }, [selectedAntardasha, fullData]);
+    const pratyaData =
+      apiRoot?.["7_pratyantardasha"];
 
-  // Switch tabs and reset drill-down
+    if (
+      !pratyaData ||
+      !Array.isArray(pratyaData.list)
+    ) {
+      return [];
+    }
+
+    const selectedMahaPlanet =
+      normalizePlanet(
+        selectedMahadasha.name
+      );
+
+    const selectedAntarPlanet =
+      normalizePlanet(
+        selectedAntardasha.name
+      );
+
+    const filtered =
+      pratyaData.list.filter(
+        (item) => {
+          const itemMahaPlanet =
+            normalizePlanet(
+              item.mahadasha
+            );
+
+          const itemAntarPlanet =
+            normalizePlanet(
+              item.antardasha
+            );
+
+          return (
+            itemMahaPlanet ===
+              selectedMahaPlanet &&
+            itemAntarPlanet ===
+              selectedAntarPlanet
+          );
+        }
+      );
+
+    return filtered.map((item) => ({
+      id: item.id,
+
+      name:
+        item.planet ||
+        item.name ||
+        "Planet",
+
+      startDate: formatDashaDate(
+        item.startDate ||
+          item.start
+      ),
+
+      endDate: formatDashaDate(
+        item.endDate ||
+          item.end
+      ),
+    }));
+  }, [
+    selectedMahadasha,
+    selectedAntardasha,
+    apiRoot,
+  ]);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Tab Switch
+  |--------------------------------------------------------------------------
+  */
+
   const handleTabSwitch = (item) => {
     setActiveTab(item);
+
     setSelectedMahadasha(null);
+
     setSelectedAntardasha(null);
   };
 
+  /*
+  |--------------------------------------------------------------------------
+  | Render
+  |--------------------------------------------------------------------------
+  */
+
   return (
     <View style={styles.container}>
-      {/* Tab Switcher (Major dasha / Yogini) */}
+
+      {/* =========================================================
+          Major Dasha / Yogini
+      ========================================================= */}
+
       <View style={styles.switchRow}>
         {dashaTabs.map((item) => (
           <TouchableOpacity
             key={item}
-            onPress={() => handleTabSwitch(item)}
+            onPress={() =>
+              handleTabSwitch(item)
+            }
             activeOpacity={0.8}
             style={[
               styles.switchBtn,
-              activeTab === item && styles.activeSwitchBtn,
+
+              activeTab === item &&
+                styles.activeSwitchBtn,
             ]}
           >
             <Text
               style={[
                 styles.switchText,
-                activeTab === item && styles.activeSwitchText,
+
+                activeTab === item &&
+                  styles.activeSwitchText,
               ]}
             >
               {item}
@@ -291,40 +575,58 @@ const DashaTab = ({ data, fullData }) => {
         ))}
       </View>
 
-      {/* Breadcrumb Path & Drill-down Navigation */}
+      {/* =========================================================
+          Breadcrumb
+      ========================================================= */}
+
       {!isYogini && (
         <View style={styles.pathRow}>
+
+          {/* Mahadasha */}
+
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => {
               setSelectedMahadasha(null);
+
               setSelectedAntardasha(null);
             }}
           >
             <Text
               style={[
                 styles.breadcrumbText,
-                !selectedMahadasha && styles.breadcrumbActive,
+
+                !selectedMahadasha &&
+                  styles.breadcrumbActive,
               ]}
             >
               Mahadasha
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.arrow}>›</Text>
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+
+          {/* Antardasha */}
 
           <TouchableOpacity
             activeOpacity={0.7}
             disabled={!selectedMahadasha}
-            onPress={() => setSelectedAntardasha(null)}
+            onPress={() =>
+              setSelectedAntardasha(null)
+            }
           >
             <Text
               style={[
                 styles.breadcrumbText,
+
                 selectedMahadasha &&
                   !selectedAntardasha &&
                   styles.breadcrumbActive,
-                !selectedMahadasha && styles.breadcrumbDisabled,
+
+                !selectedMahadasha &&
+                  styles.breadcrumbDisabled,
               ]}
             >
               {selectedMahadasha
@@ -333,13 +635,21 @@ const DashaTab = ({ data, fullData }) => {
             </Text>
           </TouchableOpacity>
 
-          <Text style={styles.arrow}>›</Text>
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+
+          {/* Pratyantar */}
 
           <Text
             style={[
               styles.breadcrumbText,
-              selectedAntardasha && styles.breadcrumbActive,
-              !selectedAntardasha && styles.breadcrumbDisabled,
+
+              selectedAntardasha &&
+                styles.breadcrumbActive,
+
+              !selectedAntardasha &&
+                styles.breadcrumbDisabled,
             ]}
           >
             {selectedAntardasha
@@ -349,138 +659,349 @@ const DashaTab = ({ data, fullData }) => {
         </View>
       )}
 
-      {/* Yogini Header */}
+      {/* =========================================================
+          Yogini Header
+      ========================================================= */}
+
       {isYogini && (
         <View style={styles.pathRow}>
-          <Text style={styles.breadcrumbActive}>Yogini Dasha</Text>
-          <Text style={styles.arrow}>›</Text>
-          <Text style={styles.breadcrumbText}>Cycle Periods</Text>
+          <Text
+            style={
+              styles.breadcrumbActive
+            }
+          >
+            Yogini Dasha
+          </Text>
+
+          <Text style={styles.arrow}>
+            ›
+          </Text>
+
+          <Text
+            style={styles.breadcrumbText}
+          >
+            Cycle Periods
+          </Text>
         </View>
       )}
 
-      {/* Dynamic Table Content */}
+      {/* =========================================================
+          Table Content
+      ========================================================= */}
+
       {isYogini ? (
+
+        /*
+        |--------------------------------------------------------------------------
+        | Yogini
+        |--------------------------------------------------------------------------
+        */
+
         <DashaTable
-          headers={["Dasha", "Ruler", "Start Date", "End Date"]}
-          data={yoginiList.map((y) => [
-            y.name,
-            y.ruler,
-            y.startDate,
-            y.endDate,
-          ])}
+          headers={[
+            "Dasha",
+            "Ruler",
+            "Start Date",
+            "End Date",
+          ]}
+          data={yoginiList.map(
+            (item) => [
+              item.name,
+              item.ruler,
+              item.startDate,
+              item.endDate,
+            ]
+          )}
         />
+
       ) : selectedAntardasha ? (
-        // Level 3: Pratyantardasha Table
+
+        /*
+        |--------------------------------------------------------------------------
+        | Level 3: Pratyantardasha
+        |--------------------------------------------------------------------------
+        */
+
         <View>
+
           <View style={styles.subHeaderBox}>
+
             <TouchableOpacity
-              onPress={() => setSelectedAntardasha(null)}
+              onPress={() =>
+                setSelectedAntardasha(
+                  null
+                )
+              }
               style={styles.backButton}
             >
-              <Text style={styles.backButtonText}>‹ Back to Antardasha</Text>
+              <Text
+                style={
+                  styles.backButtonText
+                }
+              >
+                ‹ Back to Antardasha
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.subHeaderTitle}>
-              {selectedMahadasha?.name} › {selectedAntardasha?.name}{" "}
+
+            <Text
+              style={
+                styles.subHeaderTitle
+              }
+            >
+              {selectedMahadasha?.name} ›{" "}
+              {selectedAntardasha?.name}{" "}
               Pratyantardashas
             </Text>
+
           </View>
+
           <DashaTable
-            headers={["Pratyantar Lord", "Start Date", "End Date"]}
-            data={pratyantardashaList.map((pr) => [
-              pr.name,
-              pr.startDate,
-              pr.endDate,
-            ])}
+            headers={[
+              "Pratyantar Lord",
+              "Start Date",
+              "End Date",
+            ]}
+            data={pratyantardashaList.map(
+              (item) => [
+                item.name,
+                item.startDate,
+                item.endDate,
+              ]
+            )}
           />
+
         </View>
+
       ) : selectedMahadasha ? (
-        // Level 2: Antardasha Table
+
+        /*
+        |--------------------------------------------------------------------------
+        | Level 2: Antardasha
+        |--------------------------------------------------------------------------
+        */
+
         <View>
+
           <View style={styles.subHeaderBox}>
+
             <TouchableOpacity
-              onPress={() => setSelectedMahadasha(null)}
+              onPress={() =>
+                setSelectedMahadasha(
+                  null
+                )
+              }
               style={styles.backButton}
             >
-              <Text style={styles.backButtonText}>‹ Back to Mahadashas</Text>
+              <Text
+                style={
+                  styles.backButtonText
+                }
+              >
+                ‹ Back to Mahadashas
+              </Text>
             </TouchableOpacity>
-            <Text style={styles.subHeaderTitle}>
-              {selectedMahadasha?.name} Mahadasha Antardashas
+
+            <Text
+              style={
+                styles.subHeaderTitle
+              }
+            >
+              {selectedMahadasha?.name}{" "}
+              Mahadasha Antardashas
             </Text>
+
           </View>
+
           <DashaTable
-            headers={["Antardasha Lord", "Start Date", "End Date"]}
-            data={antardashaList.map((a) => [a.name, a.startDate, a.endDate])}
+            headers={[
+              "Antardasha Lord",
+              "Start Date",
+              "End Date",
+            ]}
+            data={antardashaList.map(
+              (item) => [
+                item.name,
+                item.startDate,
+                item.endDate,
+              ]
+            )}
             showArrow
             onRowPress={(index) => {
-              if (antardashaList[index]) {
-                setSelectedAntardasha(antardashaList[index]);
+              if (
+                antardashaList[index]
+              ) {
+                setSelectedAntardasha(
+                  antardashaList[index]
+                );
               }
             }}
           />
+
         </View>
+
       ) : (
-        // Level 1: Mahadasha Table
+
+        /*
+        |--------------------------------------------------------------------------
+        | Level 1: Mahadasha
+        |--------------------------------------------------------------------------
+        */
+
         <DashaTable
-          headers={["Mahadasha Lord", "Start Date", "End Date"]}
-          data={mahadashaList.map((m) => [m.name, m.startDate, m.endDate])}
+          headers={[
+            "Mahadasha Lord",
+            "Start Date",
+            "End Date",
+          ]}
+          data={mahadashaList.map(
+            (item) => [
+              item.name,
+              item.startDate,
+              item.endDate,
+            ]
+          )}
           showArrow
           onRowPress={(index) => {
-            if (mahadashaList[index]) {
-              setSelectedMahadasha(mahadashaList[index]);
+            if (
+              mahadashaList[index]
+            ) {
+              setSelectedMahadasha(
+                mahadashaList[index]
+              );
             }
           }}
         />
+
       )}
 
-      <TouchableOpacity style={styles.button} activeOpacity={0.85}>
-        <Text style={styles.buttonText}>☏ Consult An Expert</Text>
+      {/* =========================================================
+          Consult Button
+      ========================================================= */}
+
+      <TouchableOpacity
+        style={styles.button}
+        activeOpacity={0.85}
+      >
+        <Text
+          style={styles.buttonText}
+        >
+          ☏ Consult An Expert
+        </Text>
       </TouchableOpacity>
+
     </View>
   );
 };
 
-const DashaTable = ({ headers, data, showArrow = false, onRowPress }) => {
+/*
+|--------------------------------------------------------------------------
+| Dasha Table
+|--------------------------------------------------------------------------
+*/
+
+const DashaTable = ({
+  headers,
+  data,
+  showArrow = false,
+  onRowPress,
+}) => {
   return (
     <View style={styles.table}>
+
+      {/* Header */}
+
       <View style={styles.headerRow}>
-        {headers.map((h, i) => (
-          <Text key={i} style={styles.headerCell}>
-            {h}
-          </Text>
-        ))}
-        {showArrow && <Text style={styles.iconHeader} />}
+
+        {headers.map(
+          (header, index) => (
+            <Text
+              key={index}
+              style={
+                styles.headerCell
+              }
+            >
+              {header}
+            </Text>
+          )
+        )}
+
+        {showArrow && (
+          <Text
+            style={styles.iconHeader}
+          />
+        )}
+
       </View>
+
+      {/* Rows */}
 
       {data.map((row, index) => (
         <TouchableOpacity
           key={index}
-          activeOpacity={onRowPress ? 0.7 : 1}
-          onPress={() => onRowPress && onRowPress(index)}
-          style={[styles.row, index % 2 === 0 && styles.lightRow]}
+          activeOpacity={
+            onRowPress
+              ? 0.7
+              : 1
+          }
+          onPress={() =>
+            onRowPress &&
+            onRowPress(index)
+          }
+          style={[
+            styles.row,
+
+            index % 2 === 0 &&
+              styles.lightRow,
+          ]}
         >
-          {row.map((cell, cellIndex) => (
-            <Text key={cellIndex} style={styles.bodyCell}>
-              {cell}
+
+          {row.map(
+            (cell, cellIndex) => (
+              <Text
+                key={cellIndex}
+                style={
+                  styles.bodyCell
+                }
+              >
+                {cell}
+              </Text>
+            )
+          )}
+
+          {showArrow && (
+            <Text
+              style={
+                styles.iconCell
+              }
+            >
+              ›
             </Text>
-          ))}
-          {showArrow && <Text style={styles.iconCell}>›</Text>}
+          )}
+
         </TouchableOpacity>
       ))}
+
     </View>
   );
 };
 
-export default DashaTab;
+/*
+|--------------------------------------------------------------------------
+| Styles
+|--------------------------------------------------------------------------
+*/
 
 const styles = StyleSheet.create({
   container: {
     paddingBottom: hp(2),
   },
+
   switchRow: {
     flexDirection: "row",
     gap: wp(3),
     marginBottom: hp(2),
   },
+
   switchBtn: {
     width: wp(32),
     height: hp(4.2),
@@ -491,64 +1012,77 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   activeSwitchBtn: {
     backgroundColor: ORANGE,
     borderColor: ORANGE,
   },
+
   switchText: {
     fontSize: RF(11),
     color: "#111",
     fontWeight: "600",
   },
+
   activeSwitchText: {
     color: "#fff",
   },
+
   pathRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: hp(1.8),
     flexWrap: "wrap",
   },
+
   breadcrumbText: {
     fontSize: RF(11.5),
     color: "#777",
     fontWeight: "600",
   },
+
   breadcrumbActive: {
     color: ORANGE,
     fontWeight: "700",
   },
+
   breadcrumbDisabled: {
     color: "#aaa",
     fontWeight: "400",
   },
+
   arrow: {
     fontSize: RF(18),
     color: "#999",
     marginHorizontal: wp(2),
   },
+
   subHeaderBox: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: hp(1.2),
   },
+
   backButton: {
     paddingVertical: hp(0.5),
     paddingHorizontal: wp(2),
     backgroundColor: "#ffece2",
     borderRadius: wp(1.5),
   },
+
   backButtonText: {
     color: ORANGE,
     fontSize: RF(10.5),
     fontWeight: "700",
   },
+
   subHeaderTitle: {
     fontSize: RF(11),
     fontWeight: "600",
     color: "#333",
   },
+
   table: {
     borderRadius: wp(2),
     borderWidth: 1,
@@ -556,12 +1090,14 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: hp(2),
   },
+
   headerRow: {
     flexDirection: "row",
     backgroundColor: ORANGE,
     minHeight: hp(5),
     alignItems: "center",
   },
+
   headerCell: {
     flex: 1,
     color: "#fff",
@@ -570,9 +1106,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     paddingHorizontal: wp(1),
   },
+
   iconHeader: {
     width: wp(6),
   },
+
   row: {
     flexDirection: "row",
     minHeight: hp(5.2),
@@ -581,9 +1119,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: "#ffd6c2",
   },
+
   lightRow: {
     backgroundColor: LIGHT,
   },
+
   bodyCell: {
     flex: 1,
     textAlign: "center",
@@ -592,6 +1132,7 @@ const styles = StyleSheet.create({
     fontWeight: "400",
     paddingHorizontal: wp(1),
   },
+
   iconCell: {
     width: wp(6),
     textAlign: "center",
@@ -599,6 +1140,7 @@ const styles = StyleSheet.create({
     color: ORANGE,
     fontWeight: "700",
   },
+
   button: {
     height: hp(5.4),
     backgroundColor: ORANGE,
@@ -607,9 +1149,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: hp(0.5),
   },
+
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
     fontWeight: "700",
   },
 });
+
+export default DashaTab;

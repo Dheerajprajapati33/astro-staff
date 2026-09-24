@@ -15,7 +15,7 @@ const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
 const LIGHT = "#fff4df";
 
-const chartTypes = ["Lagna", "Navamsa", "Transit"];
+const chartTypes = ["Lagna", "Chandra", "Navamsa", "Transit"];
 const planetTabs = ["Sign", "Nakshatra"];
 
 const SIGN_NAMES = [
@@ -279,6 +279,9 @@ const isValidPlanetList = (list) => {
 // Robust extractor that inspects all possible response paths from backend
 const extractPlanets = (data, fullData) => {
   const sources = [
+    data?.["9_kp_kundli"]?.planets,
+    fullData?.["9_kp_kundli"]?.planets,
+    fullData?.data?.["9_kp_kundli"]?.planets,
     data?.planets,
     data?.charts?.planets,
     data?.charts?.lagna?.planets,
@@ -365,12 +368,31 @@ const ChartsTab = ({ data, fullData }) => {
       if (activeChart === "Lagna") return;
       if (chartCache[activeChart]) return;
 
-      const birthDetails = fullData?.basicDetails || fullData || {};
-      const dob = birthDetails.dob || "2000-01-01";
-      const tob = birthDetails.tob || "06:14:00";
-      const city = birthDetails.city || birthDetails.birthPlace || "Delhi";
+      const birthDetails =
+        fullData?.user_details ||
+        data?.user_details ||
+        fullData?.data?.user_details ||
+        fullData?.basic ||
+        fullData?.data?.basic ||
+        fullData?.basicDetails ||
+        fullData?.data?.basicDetails ||
+        data?.basicDetails ||
+        fullData ||
+        {};
 
-      const chartTypeParam = activeChart === "Navamsa" ? "navamsha" : "transit";
+      const dob = birthDetails.dob || fullData?.dob || "2000-01-01";
+      const tob = birthDetails.tob || fullData?.tob || "06:14:00";
+      const city =
+        birthDetails.birthPlace ||
+        birthDetails.city ||
+        fullData?.birthPlace ||
+        fullData?.city ||
+        "Delhi";
+
+      let chartTypeParam = "navamsha";
+      if (activeChart === "Navamsa") chartTypeParam = "navamsha";
+      else if (activeChart === "Transit") chartTypeParam = "transit";
+      else if (activeChart === "Chandra") chartTypeParam = "moon";
 
       try {
         const res = await getKundliChart({
@@ -396,7 +418,7 @@ const ChartsTab = ({ data, fullData }) => {
     };
 
     fetchRemoteChart();
-  }, [activeChart, fullData, chartCache]);
+  }, [activeChart, fullData, data, chartCache]);
 
   // Dynamic Planets for Active Chart
   const currentChartPlanets = useMemo(() => {
@@ -404,19 +426,87 @@ const ChartsTab = ({ data, fullData }) => {
       return rawPlanets;
     }
 
+    if (activeChart === "Chandra") {
+      // Find Moon's sign number to make it 1st House for Moon Chart
+      const moonPlanet = rawPlanets.find((p) => {
+        const name = (p.name || p.planet || "").toLowerCase();
+        return (
+          name === "moon" ||
+          name === "chandra" ||
+          name === "चन्द्र" ||
+          name === "चंद्र" ||
+          name === "mo"
+        );
+      });
+      const moonSignNum = parseSignNumber(
+        moonPlanet?.sign ||
+          moonPlanet?.rasi ||
+          fullData?.["2_chandra_kundli"]?.moon_sign ||
+          "मेष",
+      );
+
+      return rawPlanets.map((p) => {
+        const pSignNum = parseSignNumber(p.sign || p.rasi);
+        const moonHouse = ((pSignNum - moonSignNum + 12) % 12) + 1;
+        return {
+          ...p,
+          house: moonHouse,
+        };
+      });
+    }
+
     if (activeChart === "Navamsa") {
-      // 1. Pre-calculated or API response
+      // 1. If cached or backend returns full planet objects (with sign/degree)
       const cached =
         chartCache["Navamsa"]?.planets ||
         chartCache["Navamsa"]?.response?.planets ||
+        chartCache["Navamsa"]?.data?.planets ||
         fullData?.charts?.navamsa?.planets ||
         fullData?.navamsa?.planets;
 
-      if (isValidPlanetList(cached)) {
+      if (
+        isValidPlanetList(cached) &&
+        cached.some((p) => p && (p.sign || p.rasi || p.degree || p.normDegree))
+      ) {
         return cached;
       }
 
-      // Check pre-calculated houses dictionary (e.g. {"3": ["Mo", "Me"], ...})
+      // 2. Computed accurate D9 positions from Natal Planetary Data (Standard Vedic Navamsa)
+      if (rawPlanets && rawPlanets.length > 0) {
+        const ascPlanet = rawPlanets.find((p) => {
+          const name = (p.name || p.planet || "").toLowerCase();
+          return (
+            name === "ascendant" ||
+            name === "lagna" ||
+            name === "asc" ||
+            name === "लग्न"
+          );
+        });
+        const ascSignNum = parseSignNumber(
+          ascPlanet?.sign || ascPlanet?.rasi || rawPlanets[0]?.sign,
+        );
+        const ascD9Sign = calculateNavamsaSign(
+          ascSignNum,
+          ascPlanet?.degree || ascPlanet?.normDegree,
+        );
+
+        return rawPlanets.map((p) => {
+          const sNum = parseSignNumber(p.sign || p.rasi);
+          const d9Sign = calculateNavamsaSign(sNum, p.degree || p.normDegree);
+          const d9House = ((d9Sign - ascD9Sign + 12) % 12) + 1;
+          const signName = SIGN_NAMES[d9Sign] || p.sign;
+          const signLord = SIGN_LORDS[d9Sign] || p.signLord;
+          return {
+            ...p,
+            sign: signName,
+            rasi: signName,
+            signLord: signLord,
+            house: d9House,
+          };
+        });
+      }
+
+      // 3. Fallback: Pre-calculated houses dictionary (e.g. {"3": ["Mo", "Me"], ...})
       const navHouses =
         fullData?.charts?.navamsa?.houses || chartCache["Navamsa"]?.houses;
       if (navHouses && typeof navHouses === "object") {
@@ -433,34 +523,6 @@ const ChartsTab = ({ data, fullData }) => {
           }
         });
         if (pList.length > 0) return pList;
-      }
-
-      // 2. Computed D9 positions from natal data
-      if (rawPlanets && rawPlanets.length > 0) {
-        const ascPlanet = rawPlanets.find((p) => {
-          const name = (p.name || p.planet || "").toLowerCase();
-          return name === "ascendant" || name === "lagna" || name === "asc";
-        });
-        const ascSignNum = parseSignNumber(
-          ascPlanet?.sign || ascPlanet?.rasi || rawPlanets[0]?.sign,
-        );
-        const ascD9Sign = calculateNavamsaSign(
-          ascSignNum,
-          ascPlanet?.degree || ascPlanet?.normDegree,
-        );
-
-        return rawPlanets.map((p) => {
-          const sNum = parseSignNumber(p.sign || p.rasi);
-          const d9Sign = calculateNavamsaSign(sNum, p.degree || p.normDegree);
-          const d9House = ((d9Sign - ascD9Sign + 12) % 12) + 1;
-          return {
-            ...p,
-            sign: SIGN_NAMES[d9Sign] || p.sign,
-            rasi: SIGN_NAMES[d9Sign] || p.rasi,
-            signLord: SIGN_LORDS[d9Sign] || p.signLord,
-            house: d9House,
-          };
-        });
       }
     }
 
@@ -513,20 +575,13 @@ const ChartsTab = ({ data, fullData }) => {
   // Active chart SVG if available
   const activeSvgXml = useMemo(() => {
     const key = activeChart.toLowerCase();
-    const candidates = [
-      fullData?.charts?.[key]?.svg,
-      fullData?.charts?.[key],
-      fullData?.charts?.[activeChart]?.svg,
-      fullData?.charts?.[activeChart],
-      fullData?.[key]?.svg,
-      data?.[key]?.svg,
-      chartCache[activeChart]?.svg,
-      chartCache[activeChart]?.data?.svg,
-      chartCache[activeChart],
-    ];
+    const candidates = [];
 
     if (activeChart === "Lagna") {
       candidates.push(
+        fullData?.["1_lagna_chart"]?.svg,
+        data?.["1_lagna_chart"]?.svg,
+        fullData?.data?.["1_lagna_chart"]?.svg,
         fullData?.charts?.lagna?.svg,
         fullData?.charts?.lagna,
         fullData?.charts?.svg,
@@ -538,7 +593,50 @@ const ChartsTab = ({ data, fullData }) => {
         data?.charts?.lagna?.svg,
         data?.chart,
       );
+    } else if (activeChart === "Chandra") {
+      candidates.push(
+        fullData?.["2_chandra_kundli"]?.svg,
+        data?.["2_chandra_kundli"]?.svg,
+        fullData?.data?.["2_chandra_kundli"]?.svg,
+        fullData?.charts?.moon?.svg,
+        fullData?.charts?.chandra?.svg,
+        chartCache["Chandra"]?.svg,
+      );
+    } else if (activeChart === "Navamsa") {
+      candidates.push(
+        fullData?.["3_navamsha_kundli"]?.svg,
+        data?.["3_navamsha_kundli"]?.svg,
+        fullData?.data?.["3_navamsha_kundli"]?.svg,
+        fullData?.charts?.navamsa?.svg,
+        fullData?.charts?.navamsha?.svg,
+        fullData?.navamsa?.svg,
+        chartCache["Navamsa"]?.svg,
+        chartCache["Navamsa"]?.data?.svg,
+      );
+    } else if (activeChart === "Transit") {
+      candidates.push(
+        fullData?.["4_gochar_kundli"]?.svg,
+        data?.["4_gochar_kundli"]?.svg,
+        fullData?.data?.["4_gochar_kundli"]?.svg,
+        fullData?.charts?.transit?.svg,
+        fullData?.charts?.gochar?.svg,
+        fullData?.transit?.svg,
+        chartCache["Transit"]?.svg,
+        chartCache["Transit"]?.data?.svg,
+      );
     }
+
+    candidates.push(
+      fullData?.charts?.[key]?.svg,
+      fullData?.charts?.[key],
+      fullData?.charts?.[activeChart]?.svg,
+      fullData?.charts?.[activeChart],
+      fullData?.[key]?.svg,
+      data?.[key]?.svg,
+      chartCache[activeChart]?.svg,
+      chartCache[activeChart]?.data?.svg,
+      chartCache[activeChart],
+    );
 
     for (const cand of candidates) {
       if (typeof cand === "string" && cand.includes("<svg")) {
@@ -564,9 +662,9 @@ const ChartsTab = ({ data, fullData }) => {
     if (!list || list.length === 0) return [];
     return list.map((p) => {
       const sNum = parseSignNumber(p.sign || p.rasi);
-      const signName = p.sign || p.rasi || SIGN_NAMES[sNum] || "Aries";
+      const signName = SIGN_NAMES[sNum] || p.sign || p.rasi || "Aries";
       const signLord =
-        p.signLord || p.sign_lord || p.lord || SIGN_LORDS[sNum] || "-";
+        SIGN_LORDS[sNum] || p.signLord || p.sign_lord || p.lord || "-";
       const deg = p.degree || p.normDegree || p.norm_degree || `0° 0' 0"`;
       const isRetro =
         p.isRetrograde || p.is_retrograde || p.retrograde ? "true" : "false";
@@ -604,29 +702,36 @@ const ChartsTab = ({ data, fullData }) => {
       {/* Title */}
       <Text style={styles.title}>{activeChart} Chart</Text>
 
-      {/* Chart Switcher Buttons */}
-      <View style={styles.chartBtnRow}>
-        {chartTypes.map((item) => (
-          <TouchableOpacity
-            key={item}
-            activeOpacity={0.8}
-            onPress={() => setActiveChart(item)}
-            style={[
-              styles.pillBtn,
-              activeChart === item && styles.activePillBtn,
-            ]}
-          >
-            <Text
-              style={[
-                styles.pillText,
-                activeChart === item && styles.activePillText,
-              ]}
-            >
-              {item}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+{/* Chart Switcher Buttons */}
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  contentContainerStyle={styles.chartScrollContent}
+>
+  <View style={styles.chartBtnRow}>
+    {chartTypes.map((item) => (
+      <TouchableOpacity
+        key={item}
+        activeOpacity={0.8}
+        onPress={() => setActiveChart(item)}
+        style={[
+          styles.pillBtn,
+          activeChart === item && styles.activePillBtn,
+        ]}
+      >
+        <Text
+          style={[
+            styles.pillText,
+            activeChart === item && styles.activePillText,
+          ]}
+        >
+          {item}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+</ScrollView>
+
 
       {/* Dynamic North Indian Vedic Chart */}
       {isFetchingChart && !chartCache[activeChart] ? (
@@ -778,11 +883,14 @@ const styles = StyleSheet.create({
     color: "#111",
     marginBottom: hp(1),
   },
-  chartBtnRow: {
-    flexDirection: "row",
-    gap: wp(3),
-    marginBottom: hp(2),
-  },
+chartScrollContent: {
+  paddingRight: wp(3),
+},
+chartBtnRow: {
+  flexDirection: "row",
+  gap: wp(3),
+  marginBottom: hp(2),
+},
   pillBtn: {
     width: wp(25),
     height: hp(4),

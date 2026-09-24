@@ -9,11 +9,10 @@ import BasicTab from "../../components/kundli/BasicTab";
 import ChartsTab from "../../components/kundli/ChartsTab";
 import DashaTab from "../../components/kundli/DashaTab";
 import KPTab from "../../components/kundli/KPTab";
-import ReportTab from "../../components/kundli/ReportTab";
+// import ReportTab from "../../components/kundli/ReportTab";
 import { hp, RF, wp } from "../../utils/responsive";
 
-const tabs = ["Basic", "Charts", "KP", "AC", "Dasha", "Report"];
-
+const tabs = ["Basic", "Charts", "Dasha Charts", "KP Kundali", "AC Scores"];
 const KundliScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState("Basic");
   const params = useLocalSearchParams();
@@ -46,31 +45,31 @@ const KundliScreen = ({ navigation }) => {
             fullData={kundliData}
           />
         );
-      case "KP":
+      case "KP Kundali":
         return (
           <KPTab data={kundliData?.kp || kundliData} fullData={kundliData} />
         );
-      case "AC":
+      case "AC Scores":
         return (
           <ACTab
             data={kundliData?.ashtakvarga || kundliData?.ac || kundliData}
             fullData={kundliData}
           />
         );
-      case "Dasha":
+      case "Dasha Charts":
         return (
           <DashaTab
             data={kundliData?.dasha || kundliData}
             fullData={kundliData}
           />
         );
-      case "Report":
-        return (
-          <ReportTab
-            data={kundliData?.doshas || kundliData?.report || kundliData}
-            fullData={kundliData}
-          />
-        );
+      // case "Kundali Report":
+      //   return (
+      //     <ReportTab
+      //       data={kundliData?.doshas || kundliData?.report || kundliData}
+      //       fullData={kundliData}
+      //     />
+      //   );
       default:
         return (
           <BasicTab
@@ -153,7 +152,7 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
-    height: hp(4.5),
+    height: hp(6.5),
     alignItems: "center",
     justifyContent: "center",
     borderRightWidth: 1,
@@ -163,9 +162,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff5a00",
   },
   tabText: {
-    fontSize: RF(10),
+    fontSize: RF(13),
     color: "#111",
     fontWeight: "600",
+    textAlign: "center",
   },
   activeTabText: {
     color: "#fff",

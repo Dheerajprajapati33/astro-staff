@@ -26,7 +26,14 @@ const InfoTable = ({ title, data }) => {
 };
 
 const BasicTab = ({ data, fullData }) => {
-  const basic = data?.basicDetails || fullData?.basic || data || {};
+  const basic =
+    data?.user_details ||
+    fullData?.user_details ||
+    fullData?.data?.user_details ||
+    data?.basicDetails ||
+    fullData?.basic ||
+    data ||
+    {};
   const panchang = data?.panchang || fullData?.panchang || {};
   const avakhada = data?.avakhada || fullData?.avakhada || {};
 
@@ -41,12 +48,12 @@ const BasicTab = ({ data, fullData }) => {
     fullData?.city ||
     "-";
   const latitude =
-    basic?.latitude || fullData?.latitude
-      ? `${basic?.latitude || fullData?.latitude}° N`
+    basic?.latitude !== undefined || fullData?.latitude !== undefined
+      ? `${basic?.latitude ?? fullData?.latitude}° N`
       : "-";
   const longitude =
-    basic?.longitude || fullData?.longitude
-      ? `${basic?.longitude || fullData?.longitude}° E`
+    basic?.longitude !== undefined || fullData?.longitude !== undefined
+      ? `${basic?.longitude ?? fullData?.longitude}° E`
       : "-";
 
   const sunrise =
@@ -62,7 +69,11 @@ const BasicTab = ({ data, fullData }) => {
     basic?.moonset || panchang?.moonset || fullData?.moonset || "-";
 
   const ayanamsha =
-    basic?.ayanamsha || fullData?.ayanamsha || "Lahiri (Chitra Paksha)";
+    basic?.ayanamsa ||
+    basic?.ayanamsha ||
+    fullData?.ayanamsa ||
+    fullData?.ayanamsha ||
+    "Lahiri (Chitra Paksha)";
 
   const mangalData =
     fullData?.mangal_dosha ||

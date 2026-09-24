@@ -8,12 +8,15 @@ const TEXT_COLOR = "#111";
 
 // Helper: Zodiac sign name to number (1-12)
 export const SIGN_NAME_TO_NUM = {
+  // English & Transliterated
   aries: 1,
   mesha: 1,
   mesh: 1,
   taurus: 2,
   vrishabha: 2,
   vrishabh: 2,
+  vrisha: 2,
+  vrish: 2,
   gemini: 3,
   mithuna: 3,
   mithun: 3,
@@ -30,8 +33,11 @@ export const SIGN_NAME_TO_NUM = {
   scorpio: 8,
   vrischika: 8,
   vrishchik: 8,
+  vrischik: 8,
   sagittarius: 9,
   dhanu: 9,
+  dhanus: 9,
+  dhanush: 9,
   capricorn: 10,
   makar: 10,
   makara: 10,
@@ -41,6 +47,23 @@ export const SIGN_NAME_TO_NUM = {
   pisces: 12,
   meen: 12,
   meena: 12,
+
+  // Devanagari / Hindi
+  मेष: 1,
+  वृषभ: 2,
+  वृष: 2,
+  मिथुन: 3,
+  कर्क: 4,
+  सिंह: 5,
+  कन्या: 6,
+  तुला: 7,
+  वृश्चिक: 8,
+  धनु: 9,
+  धनुष: 9,
+  मकर: 10,
+  कुंभ: 11,
+  कुम्भ: 11,
+  मीन: 12,
 };
 
 // Helper: Planet name to short 2-letter code
@@ -48,20 +71,25 @@ export const PLANET_SHORT = {
   ascendant: "As",
   lagna: "As",
   asc: "As",
+  as: "As",
   sun: "Su",
   surya: "Su",
   su: "Su",
   moon: "Mo",
   chandra: "Mo",
+  chandrama: "Mo",
   mo: "Mo",
   mars: "Ma",
   mangal: "Ma",
+  kuja: "Ma",
   ma: "Ma",
   mercury: "Me",
   budh: "Me",
+  budha: "Me",
   me: "Me",
   jupiter: "Ju",
   guru: "Ju",
+  brihaspati: "Ju",
   ju: "Ju",
   venus: "Ve",
   shukra: "Ve",
@@ -76,6 +104,21 @@ export const PLANET_SHORT = {
   uranus: "Ur",
   neptune: "Ne",
   pluto: "Pl",
+
+  // Devanagari / Hindi
+  लग्न: "As",
+  सूर्य: "Su",
+  सूरज: "Su",
+  चन्द्र: "Mo",
+  चंद्र: "Mo",
+  मंगल: "Ma",
+  बुध: "Me",
+  गुरु: "Ju",
+  बृहस्पति: "Ju",
+  शुक्र: "Ve",
+  शनि: "Sa",
+  राहु: "Ra",
+  केतु: "Ke",
 };
 
 // House layout coordinates in standard 400x400 North Indian Chart
@@ -95,18 +138,23 @@ const HOUSE_COORDINATES = {
 };
 
 export const parseSignNumber = (signVal) => {
-  if (!signVal) return 1;
-  if (typeof signVal === "number") return signVal;
+  if (signVal === undefined || signVal === null || signVal === "") return 1;
+  if (typeof signVal === "number") {
+    if (signVal >= 1 && signVal <= 12) return signVal;
+    return ((signVal % 12) + 12) % 12 || 1;
+  }
   const num = parseInt(signVal, 10);
   if (!isNaN(num) && num >= 1 && num <= 12) return num;
-  const clean = String(signVal).trim().toLowerCase();
-  return SIGN_NAME_TO_NUM[clean] || 1;
+  const rawStr = String(signVal).trim();
+  const clean = rawStr.toLowerCase();
+  return SIGN_NAME_TO_NUM[clean] || SIGN_NAME_TO_NUM[rawStr] || 1;
 };
 
 export const getPlanetCode = (name) => {
   if (!name) return "";
-  const clean = String(name).trim().toLowerCase();
-  return PLANET_SHORT[clean] || name.slice(0, 2);
+  const rawStr = String(name).trim();
+  const clean = rawStr.toLowerCase();
+  return PLANET_SHORT[clean] || PLANET_SHORT[rawStr] || rawStr.slice(0, 2);
 };
 
 const VedicChart = ({

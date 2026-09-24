@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import {
-  Dimensions,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -16,22 +15,9 @@ import Colors from "../../constants/Colors";
 import { HOROSCOPE_DATA, RASHIS } from "../../data/horoscopeData";
 import { hp, RF, wp } from "../../utils/responsive";
 
-const DAYS_SHORT = [
-  { id: 0, en: "Sun", hi: "रवि" },
-  { id: 1, en: "Mon", hi: "सोम" },
-  { id: 2, en: "Tue", hi: "मंगल" },
-  { id: 3, en: "Wed", hi: "बुध" },
-  { id: 4, en: "Thu", hi: "गुरु" },
-  { id: 5, en: "Fri", hi: "शुक्र" },
-  { id: 6, en: "Sat", hi: "शनि" },
-];
-
 export default function HoroscopeScreen() {
-  // Current real day index (0 = Sunday ... 6 = Saturday)
-  const currentRealDay = useMemo(() => new Date().getDay(), []);
-
-  // Selected Day (defaults to today's day)
-  const [selectedDay, setSelectedDay] = useState(currentRealDay);
+  // Current real day index (0 = Sunday, 1 = Monday ... 6 = Saturday)
+  const currentDayIndex = useMemo(() => new Date().getDay(), []);
 
   // Selected Rashi (defaults to mesh / first rashi)
   const [selectedRashi, setSelectedRashi] = useState("mesh");
@@ -41,11 +27,11 @@ export default function HoroscopeScreen() {
     return RASHIS.find((r) => r.id === selectedRashi) || RASHIS[0];
   }, [selectedRashi]);
 
-  // Get active horoscope for selected rashi & day
+  // Get active horoscope automatically for selected rashi & current day
   const activeHoroscope = useMemo(() => {
     const list = HOROSCOPE_DATA[selectedRashi] || HOROSCOPE_DATA["mesh"];
-    return list[selectedDay] || list[0];
-  }, [selectedRashi, selectedDay]);
+    return list[currentDayIndex] || list[0];
+  }, [selectedRashi, currentDayIndex]);
 
   // Format today's human readable date
   const formattedDate = useMemo(() => {
@@ -139,54 +125,7 @@ export default function HoroscopeScreen() {
           })}
         </ScrollView>
 
-        {/* DAY SELECTOR (SUNDAY TO SATURDAY) */}
-        <View style={styles.daySelectorContainer}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dayScroll}
-          >
-            {DAYS_SHORT.map((item) => {
-              const isSelected = selectedDay === item.id;
-              const isToday = currentRealDay === item.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.dayPill, isSelected && styles.dayPillActive]}
-                  onPress={() => setSelectedDay(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <Text
-                    style={[
-                      styles.dayPillText,
-                      isSelected && styles.dayPillTextActive,
-                    ]}
-                  >
-                    {item.hi}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.dayPillSub,
-                      isSelected && styles.dayPillSubActive,
-                    ]}
-                  >
-                    {item.en}
-                  </Text>
-                  {isToday && (
-                    <View
-                      style={[
-                        styles.todayDot,
-                        isSelected && styles.todayDotActive,
-                      ]}
-                    />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* ACTIVE RASHI BANNER */}
+        {/* ACTIVE RASHI & TODAY'S DAY BANNER */}
         <View style={styles.rashiBanner}>
           <View style={styles.rashiBannerLeft}>
             <View style={styles.bannerSymbolBox}>
@@ -514,56 +453,6 @@ const styles = StyleSheet.create({
   },
   rashiEnNameActive: {
     color: "#FFF0E0",
-  },
-
-  // Day Selector
-  daySelectorContainer: {
-    marginTop: hp(1.5),
-    paddingHorizontal: wp(4),
-  },
-  dayScroll: {
-    paddingVertical: hp(0.5),
-  },
-  dayPill: {
-    paddingHorizontal: wp(3.5),
-    paddingVertical: hp(0.8),
-    backgroundColor: "#FFFFFF",
-    borderRadius: wp(3),
-    marginRight: wp(2),
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#EFE5DC",
-    minWidth: wp(12),
-  },
-  dayPillActive: {
-    backgroundColor: "#3A2317",
-    borderColor: "#3A2317",
-  },
-  dayPillText: {
-    fontSize: RF(12),
-    fontWeight: "700",
-    color: "#3A2317",
-  },
-  dayPillTextActive: {
-    color: "#FFFFFF",
-  },
-  dayPillSub: {
-    fontSize: RF(9),
-    fontWeight: "500",
-    color: "#888888",
-  },
-  dayPillSubActive: {
-    color: "#E0D7D0",
-  },
-  todayDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.primary || "#FF8A00",
-    marginTop: 2,
-  },
-  todayDotActive: {
-    backgroundColor: "#FFC24A",
   },
 
   // Rashi Banner

@@ -59,30 +59,40 @@ const cuspsData = [
 const KPTab = ({ data, fullData }) => {
   const dynamicPlanetData = useMemo(() => {
     const raw =
+      data?.["9_kp_kundli"]?.planets ||
+      fullData?.["9_kp_kundli"]?.planets ||
+      fullData?.data?.["9_kp_kundli"]?.planets ||
       data?.planets ||
       fullData?.kp?.planets ||
       fullData?.kp_planets ||
       fullData?.kpPlanets ||
       fullData?.kp?.planetary_positions;
-    if (!raw || !Array.isArray(raw) || raw.length === 0) return planetData;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
     return raw.map((p) => [
       p.name || p.planet || p.planet_name || "Planet",
       String(p.house || p.cusp || "1"),
       p.sign || p.rasi || "Aries",
       p.signLord || p.lord || p.sign_lord || "Mars",
-      p.starLord || p.nakshatraLord || p.star_lord || "Rahu",
+      p.starLord ||
+        p.nakshatraLord ||
+        p.nakshatra_lord ||
+        p.star_lord ||
+        "Rahu",
       p.subLord || p.sub_lord || "Jupiter",
     ]);
   }, [data, fullData]);
 
   const dynamicCuspsData = useMemo(() => {
     const raw =
+      data?.["9_kp_kundli"]?.cusps ||
+      fullData?.["9_kp_kundli"]?.cusps ||
+      fullData?.data?.["9_kp_kundli"]?.cusps ||
       data?.cusps ||
       fullData?.kp?.cusps ||
       fullData?.kp_cusps ||
       fullData?.kpCusps ||
       fullData?.cusps;
-    if (!raw || !Array.isArray(raw) || raw.length === 0) return cuspsData;
+    if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
     return raw.map((c, i) => [
       String(c.cusp || c.house || i + 1),
       c.degree || c.normDegree || `0° 0' 0"`,
