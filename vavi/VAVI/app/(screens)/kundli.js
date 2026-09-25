@@ -12,7 +12,7 @@ import KPTab from "../../components/kundli/KPTab";
 // import ReportTab from "../../components/kundli/ReportTab";
 import { hp, RF, wp } from "../../utils/responsive";
 
-const tabs = ["Basic", "Charts", "Dasha Charts", "KP Kundali", "AC Scores"];
+const tabs = ["Basic", "Charts", "Dasha Charts", "KP Kundli", "AC Scores"];
 const KundliScreen = ({ navigation }) => {
   const [activeTab, setActiveTab] = useState("Basic");
   const params = useLocalSearchParams();
@@ -45,7 +45,7 @@ const KundliScreen = ({ navigation }) => {
             fullData={kundliData}
           />
         );
-      case "KP Kundali":
+      case "KP Kundli":
         return (
           <KPTab data={kundliData?.kp || kundliData} fullData={kundliData} />
         );

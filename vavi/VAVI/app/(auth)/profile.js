@@ -6,7 +6,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
 export default function Profile() {
   return (

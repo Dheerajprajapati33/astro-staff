@@ -1,374 +1,64 @@
-import React from "react";
-import { StyleSheet, View } from "react-native";
-import Svg, { Line, Rect, Text as SvgText, SvgXml } from "react-native-svg";
-import { hp, wp } from "../../utils/responsive";
+import React, { useMemo } from "react";
+import {
+  StyleSheet,
+  View,
+} from "react-native";
 
-const ORANGE = "#ff5a00";
-const TEXT_COLOR = "#111";
+import {
+  SvgXml,
+} from "react-native-svg";
 
-// Helper: Zodiac sign name to number (1-12)
-export const SIGN_NAME_TO_NUM = {
-  // English & Transliterated
-  aries: 1,
-  mesha: 1,
-  mesh: 1,
-  taurus: 2,
-  vrishabha: 2,
-  vrishabh: 2,
-  vrisha: 2,
-  vrish: 2,
-  gemini: 3,
-  mithuna: 3,
-  mithun: 3,
-  cancer: 4,
-  karka: 4,
-  kark: 4,
-  leo: 5,
-  simha: 5,
-  singh: 5,
-  virgo: 6,
-  kanya: 6,
-  libra: 7,
-  tula: 7,
-  scorpio: 8,
-  vrischika: 8,
-  vrishchik: 8,
-  vrischik: 8,
-  sagittarius: 9,
-  dhanu: 9,
-  dhanus: 9,
-  dhanush: 9,
-  capricorn: 10,
-  makar: 10,
-  makara: 10,
-  aquarius: 11,
-  kumbh: 11,
-  kumbha: 11,
-  pisces: 12,
-  meen: 12,
-  meena: 12,
-
-  // Devanagari / Hindi
-  मेष: 1,
-  वृषभ: 2,
-  वृष: 2,
-  मिथुन: 3,
-  कर्क: 4,
-  सिंह: 5,
-  कन्या: 6,
-  तुला: 7,
-  वृश्चिक: 8,
-  धनु: 9,
-  धनुष: 9,
-  मकर: 10,
-  कुंभ: 11,
-  कुम्भ: 11,
-  मीन: 12,
-};
-
-// Helper: Planet name to short 2-letter code
-export const PLANET_SHORT = {
-  ascendant: "As",
-  lagna: "As",
-  asc: "As",
-  as: "As",
-  sun: "Su",
-  surya: "Su",
-  su: "Su",
-  moon: "Mo",
-  chandra: "Mo",
-  chandrama: "Mo",
-  mo: "Mo",
-  mars: "Ma",
-  mangal: "Ma",
-  kuja: "Ma",
-  ma: "Ma",
-  mercury: "Me",
-  budh: "Me",
-  budha: "Me",
-  me: "Me",
-  jupiter: "Ju",
-  guru: "Ju",
-  brihaspati: "Ju",
-  ju: "Ju",
-  venus: "Ve",
-  shukra: "Ve",
-  ve: "Ve",
-  saturn: "Sa",
-  shani: "Sa",
-  sa: "Sa",
-  rahu: "Ra",
-  ra: "Ra",
-  ketu: "Ke",
-  ke: "Ke",
-  uranus: "Ur",
-  neptune: "Ne",
-  pluto: "Pl",
-
-  // Devanagari / Hindi
-  लग्न: "As",
-  सूर्य: "Su",
-  सूरज: "Su",
-  चन्द्र: "Mo",
-  चंद्र: "Mo",
-  मंगल: "Ma",
-  बुध: "Me",
-  गुरु: "Ju",
-  बृहस्पति: "Ju",
-  शुक्र: "Ve",
-  शनि: "Sa",
-  राहु: "Ra",
-  केतु: "Ke",
-};
-
-// House layout coordinates in standard 400x400 North Indian Chart
-const HOUSE_COORDINATES = {
-  1: { signX: 200, signY: 170, planetX: 200, planetY: 75 },
-  2: { signX: 125, signY: 65, planetX: 70, planetY: 35 },
-  3: { signX: 65, signY: 125, planetX: 30, planetY: 70 },
-  4: { signX: 170, signY: 200, planetX: 65, planetY: 200 },
-  5: { signX: 65, signY: 275, planetX: 30, planetY: 330 },
-  6: { signX: 125, signY: 335, planetX: 70, planetY: 365 },
-  7: { signX: 200, signY: 230, planetX: 200, planetY: 325 },
-  8: { signX: 275, signY: 335, planetX: 330, planetY: 365 },
-  9: { signX: 335, signY: 275, planetX: 370, planetY: 330 },
-  10: { signX: 230, signY: 200, planetX: 335, planetY: 200 },
-  11: { signX: 335, signY: 125, planetX: 370, planetY: 70 },
-  12: { signX: 275, signY: 65, planetX: 330, planetY: 35 },
-};
-
-export const parseSignNumber = (signVal) => {
-  if (signVal === undefined || signVal === null || signVal === "") return 1;
-  if (typeof signVal === "number") {
-    if (signVal >= 1 && signVal <= 12) return signVal;
-    return ((signVal % 12) + 12) % 12 || 1;
-  }
-  const num = parseInt(signVal, 10);
-  if (!isNaN(num) && num >= 1 && num <= 12) return num;
-  const rawStr = String(signVal).trim();
-  const clean = rawStr.toLowerCase();
-  return SIGN_NAME_TO_NUM[clean] || SIGN_NAME_TO_NUM[rawStr] || 1;
-};
-
-export const getPlanetCode = (name) => {
-  if (!name) return "";
-  const rawStr = String(name).trim();
-  const clean = rawStr.toLowerCase();
-  return PLANET_SHORT[clean] || PLANET_SHORT[rawStr] || rawStr.slice(0, 2);
-};
+import {
+  hp,
+  wp,
+} from "../../utils/responsive";
 
 const VedicChart = ({
-  planets = [],
-  ascendantSign = null,
-  svgXml = null,
+  svgXml,
   size = wp(90),
 }) => {
-  const formattedSvg = React.useMemo(() => {
-    if (!svgXml || typeof svgXml !== "string") return null;
-    let clean = svgXml.trim();
-    // Ensure all <text> elements have visible fill and font styling
-    if (!clean.includes("fill=")) {
-      clean = clean.replace(/<text /g, '<text fill="#111" font-weight="bold" ');
+  const cleanSvg = useMemo(() => {
+    if (
+      !svgXml ||
+      typeof svgXml !== "string"
+    ) {
+      return null;
     }
-    // Optimize stroke color for branded display
-    clean = clean.replace(/stroke="#000000"/g, 'stroke="#ff5a00"');
-    return clean;
+
+    let svg = svgXml.trim();
+
+    return svg;
   }, [svgXml]);
 
-  if (formattedSvg) {
+  if (!cleanSvg) {
     return (
-      <View style={[styles.container, { width: size, height: size }]}>
-        <SvgXml xml={formattedSvg} width="100%" height="100%" />
-      </View>
+      <View
+        style={[
+          styles.empty,
+          {
+            width: size,
+            height: size,
+          },
+        ]}
+      />
     );
   }
 
-  // 1. Determine Ascendant (Lagna) Sign Number (1 to 12)
-  let lagnaSign = 1;
-  if (ascendantSign) {
-    lagnaSign = parseSignNumber(ascendantSign);
-  } else {
-    const ascPlanet = planets.find((p) => {
-      const name = (p.name || p.planet || "").toLowerCase();
-      return name === "ascendant" || name === "lagna" || name === "asc";
-    });
-    if (ascPlanet) {
-      lagnaSign = parseSignNumber(ascPlanet.sign || ascPlanet.rasi);
-    } else {
-      // Find planet in house 1
-      const house1Planet = planets.find(
-        (p) => parseInt(p.house || p.bhava, 10) === 1,
-      );
-      if (house1Planet) {
-        lagnaSign = parseSignNumber(house1Planet.sign || house1Planet.rasi);
-      } else if (planets.length > 0 && planets[0]?.sign) {
-        lagnaSign = parseSignNumber(planets[0].sign);
-      }
-    }
-  }
-
-  // 2. Calculate Sign Number for each of the 12 houses (counter-clockwise)
-  const houseSigns = {};
-  for (let h = 1; h <= 12; h++) {
-    houseSigns[h] = ((lagnaSign - 1 + (h - 1)) % 12) + 1;
-  }
-
-  // 3. Group Planets by House (1 to 12)
-  const housePlanets = {
-    1: [],
-    2: [],
-    3: [],
-    4: [],
-    5: [],
-    6: [],
-    7: [],
-    8: [],
-    9: [],
-    10: [],
-    11: [],
-    12: [],
-  };
-
-  planets.forEach((p) => {
-    const rawName = p.name || p.planet || "";
-    const code = getPlanetCode(rawName);
-    const isRetro =
-      p.isRetrograde === true ||
-      p.isRetrograde === "true" ||
-      p.retrograde === true;
-    const label = isRetro ? `${code}*` : code;
-
-    let targetHouse = parseInt(p.house || p.bhava, 10);
-
-    // If house is missing, determine from planet's sign vs lagnaSign
-    if (isNaN(targetHouse) || targetHouse < 1 || targetHouse > 12) {
-      const pSign = parseSignNumber(p.sign || p.rasi);
-      targetHouse = ((pSign - lagnaSign + 12) % 12) + 1;
-    }
-
-    if (housePlanets[targetHouse]) {
-      housePlanets[targetHouse].push(label);
-    }
-  });
-
   return (
-    <View style={[styles.container, { width: size, height: size }]}>
-      <Svg width="100%" height="100%" viewBox="0 0 400 400">
-        {/* Background & Outer Border */}
-        <Rect
-          x="1"
-          y="1"
-          width="398"
-          height="398"
-          fill="#fff"
-          stroke={ORANGE}
-          strokeWidth="2.5"
-        />
-
-        {/* Diagonal Corner-to-Corner Lines */}
-        <Line
-          x1="0"
-          y1="0"
-          x2="400"
-          y2="400"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-        <Line
-          x1="0"
-          y1="400"
-          x2="400"
-          y2="0"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-
-        {/* Center Diamond Lines (Midpoints) */}
-        <Line
-          x1="200"
-          y1="0"
-          x2="0"
-          y2="200"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-        <Line
-          x1="0"
-          y1="200"
-          x2="200"
-          y2="400"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-        <Line
-          x1="200"
-          y1="400"
-          x2="400"
-          y2="200"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-        <Line
-          x1="400"
-          y1="200"
-          x2="200"
-          y2="0"
-          stroke={ORANGE}
-          strokeWidth="1.8"
-        />
-
-        {/* Render House Numbers & Planets for all 12 Houses */}
-        {Array.from({ length: 12 }, (_, i) => i + 1).map((houseNum) => {
-          const coords = HOUSE_COORDINATES[houseNum];
-          const signNum = houseSigns[houseNum];
-          const planetList = housePlanets[houseNum] || [];
-
-          return (
-            <React.Fragment key={houseNum}>
-              {/* Zodiac Sign (Rashi) Number in this house */}
-              <SvgText
-                x={coords.signX}
-                y={coords.signY}
-                fill={ORANGE}
-                fontSize="15"
-                fontWeight="bold"
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {signNum}
-              </SvgText>
-
-              {/* Planets placed in this house */}
-              {planetList.length > 0 && (
-                <SvgText
-                  x={coords.planetX}
-                  y={coords.planetY}
-                  fill={TEXT_COLOR}
-                  fontSize={planetList.length > 3 ? "12" : "13.5"}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {planetList.slice(0, 2).join(" ")}
-                </SvgText>
-              )}
-              {planetList.length > 2 && (
-                <SvgText
-                  x={coords.planetX}
-                  y={coords.planetY + 16}
-                  fill={TEXT_COLOR}
-                  fontSize="12"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {planetList.slice(2, 5).join(" ")}
-                </SvgText>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </Svg>
+    <View
+      style={[
+        styles.container,
+        {
+          width: size,
+          height: size,
+        },
+      ]}
+    >
+      <SvgXml
+        xml={cleanSvg}
+        width="100%"
+        height="100%"
+      />
     </View>
   );
 };
@@ -380,5 +70,10 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: hp(2),
     backgroundColor: "#fff",
+  },
+
+  empty: {
+    alignSelf: "center",
+    marginBottom: hp(2),
   },
 });

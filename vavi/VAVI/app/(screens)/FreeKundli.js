@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
+
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 
@@ -18,10 +20,7 @@ import DatePickerModal from "../../components/common/DatePickerModal";
 import TimePickerModal from "../../components/common/TimePickerModal";
 import StatePickerModal from "../../components/common/StatePickerModal";
 
-import {
-  useGenerateKundliMutation,
-  useGetFullKundliMutation,
-} from "../../redux/KundliApi";
+import { useGetFullKundliMutation } from "../../redux/KundliApi";
 
 import {
   useDeleteSavedKundliMutation,
@@ -37,154 +36,347 @@ import {
 export default function FreeKundli() {
   const [activeTab, setActiveTab] = useState("new");
 
+  // ==========================================
+  // FORM STATE
+  // ==========================================
+
   const [name, setName] = useState("");
   const [gender, setGender] = useState("MALE");
   const [dob, setDob] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
-  const [coordinates, setCoordinates] = useState(DEFAULT_COORDINATES);
+
+  const [coordinates, setCoordinates] =
+    useState(DEFAULT_COORDINATES);
 
   const [unknownTime, setUnknownTime] = useState(false);
 
-  // Modals state
+  // ==========================================
+  // MODAL STATE
+  // ==========================================
+
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showPlacePicker, setShowPlacePicker] = useState(false);
 
-  const [getFullKundli, { isLoading: fullGenerating }] =
+  // ==========================================
+  // KUNDLI API
+  // ==========================================
+
+  const [getFullKundli, { isLoading: generating }] =
     useGetFullKundliMutation();
-  const [generateKundli, { isLoading: generating }] =
-    useGenerateKundliMutation();
+
+  // ==========================================
+  // SAVED KUNDLI API
+  // ==========================================
 
   const [saveKundli] = useSaveKundliMutation();
-  const [deleteSavedKundli] = useDeleteSavedKundliMutation();
 
-  const { data: savedData, isLoading: savedLoading } = useGetSavedKundliQuery();
+  const [deleteSavedKundli] =
+    useDeleteSavedKundliMutation();
+
+  const {
+    data: savedData,
+    isLoading: savedLoading,
+  } = useGetSavedKundliQuery();
+
+  // ==========================================
+  // GENERATE KUNDLI
+  // ==========================================
 
   const handleGenerateKundli = async (customPayload) => {
     try {
-      // Guard against React Native onPress event being passed as customPayload
+      // Check whether this is a saved Kundli/custom payload
       const isCustomData =
         customPayload &&
         typeof customPayload === "object" &&
         !customPayload.nativeEvent &&
         customPayload.name;
 
-      const resolvedCoords = isCustomData
-        ? {
-            latitude:
-              customPayload.latitude ||
-              getCoordinatesForPlace(
-                customPayload.city || customPayload.birthPlace,
-              ).latitude,
-            longitude:
-              customPayload.longitude ||
-              getCoordinatesForPlace(
-                customPayload.city || customPayload.birthPlace,
-              ).longitude,
-            timezone: customPayload.timezone || "5.5",
-          }
-        : coordinates?.latitude
-          ? coordinates
-          : getCoordinatesForPlace(birthPlace || "Delhi");
+      // ==========================================
+      // RESOLVE COORDINATES
+      // ==========================================
+
+      let resolvedCoords;
+
+      if (isCustomData) {
+        const place =
+          customPayload.city ||
+          customPayload.birthPlace ||
+          "Delhi";
+
+        const placeCoordinates =
+          getCoordinatesForPlace(place);
+
+        resolvedCoords = {
+          latitude:
+            customPayload.latitude ||
+            placeCoordinates.latitude,
+
+          longitude:
+            customPayload.longitude ||
+            placeCoordinates.longitude,
+
+          // IMPORTANT:
+          // Astrology Engine requires this exact timezone
+          timezone: "Asia/Kolkata",
+        };
+      } else {
+        const placeCoordinates =
+          getCoordinatesForPlace(
+            birthPlace || "Delhi"
+          );
+
+        resolvedCoords = {
+          latitude:
+            coordinates?.latitude ||
+            placeCoordinates.latitude,
+
+          longitude:
+            coordinates?.longitude ||
+            placeCoordinates.longitude,
+
+          // IMPORTANT:
+          // Do NOT send "5.5"
+          timezone: "Asia/Kolkata",
+        };
+      }
+
+      // ==========================================
+      // CREATE API PAYLOAD
+      // ==========================================
 
       const payload = isCustomData
         ? {
             ...customPayload,
+
             latitude: resolvedCoords.latitude,
+
             longitude: resolvedCoords.longitude,
-            timezone: resolvedCoords.timezone,
+
+            timezone: "Asia/Kolkata",
+
+            la: customPayload.la || "hi",
           }
         : {
             name: name || "User",
+
             gender: gender || "MALE",
+
             dob: dob || "2000-01-01",
-            tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
+
+            tob: unknownTime
+              ? "12:00:00"
+              : birthTime || "12:00:00",
+
             city: birthPlace || "Delhi",
+
             birthPlace: birthPlace || "Delhi",
+
             latitude: resolvedCoords.latitude,
+
             longitude: resolvedCoords.longitude,
-            timezone: resolvedCoords.timezone,
+
+            timezone: "Asia/Kolkata",
+
             la: "hi",
           };
 
-      let response;
-      try {
-        response = await getFullKundli(payload).unwrap();
-      } catch (err) {
-        // Fallback to basic generate endpoint if full kundli fails
-        response = await generateKundli(payload).unwrap();
-      }
+      // ==========================================
+      // DEBUG PAYLOAD
+      // ==========================================
+
+      console.log(
+        "Kundli API Payload:",
+        payload
+      );
+
+      // ==========================================
+      // GENERATE KUNDLI
+      // ==========================================
+
+      const response =
+        await getFullKundli(payload).unwrap();
+
+      console.log(
+        "Kundli API Response:",
+        response
+      );
+
+      // ==========================================
+      // SAVE NEW KUNDLI
+      // ==========================================
 
       if (!customPayload) {
         try {
           await saveKundli({
             name: name || "User",
+
             relation: "Self",
+
             gender: gender || "MALE",
+
             dob: dob || "2000-01-01",
-            tob: unknownTime ? "12:00:00" : birthTime || "12:00:00",
+
+            tob: unknownTime
+              ? "12:00:00"
+              : birthTime || "12:00:00",
+
             city: birthPlace || "Delhi",
+
             birthPlace: birthPlace || "Delhi",
+
             latitude: resolvedCoords.latitude,
+
             longitude: resolvedCoords.longitude,
-            timezone: resolvedCoords.timezone,
+
+            timezone: "Asia/Kolkata",
           }).unwrap();
         } catch (saveErr) {
-          console.log("save kundli err", saveErr);
+          console.log(
+            "save kundli err",
+            saveErr
+          );
         }
       }
 
+      // ==========================================
+      // NORMALIZE API RESPONSE
+      // ==========================================
+
       const basePayload =
-        response && typeof response === "object"
-          ? response?.data && typeof response.data === "object"
-            ? { ...response, ...response.data }
+        response &&
+        typeof response === "object"
+          ? response?.data &&
+            typeof response.data === "object"
+            ? {
+                ...response,
+                ...response.data,
+              }
             : response
           : {};
 
+      // ==========================================
+      // PREPARE KUNDLI DATA
+      // ==========================================
+
       const kundliPayload = {
         ...basePayload,
-        dob: basePayload?.dob || payload.dob,
-        tob: basePayload?.tob || payload.tob,
-        city: basePayload?.city || payload.city,
-        birthPlace: basePayload?.birthPlace || payload.birthPlace,
-        latitude: resolvedCoords.latitude,
-        longitude: resolvedCoords.longitude,
-        timezone: resolvedCoords.timezone,
-        gender: basePayload?.gender || payload.gender,
-        name: basePayload?.name || payload.name,
+
+        dob:
+          basePayload?.dob ||
+          payload.dob,
+
+        tob:
+          basePayload?.tob ||
+          payload.tob,
+
+        city:
+          basePayload?.city ||
+          payload.city,
+
+        birthPlace:
+          basePayload?.birthPlace ||
+          payload.birthPlace,
+
+        latitude:
+          resolvedCoords.latitude,
+
+        longitude:
+          resolvedCoords.longitude,
+
+        // Always keep the supported timezone
+        timezone: "Asia/Kolkata",
+
+        gender:
+          basePayload?.gender ||
+          payload.gender,
+
+        name:
+          basePayload?.name ||
+          payload.name,
       };
+
+      // ==========================================
+      // OPEN KUNDLI SCREEN
+      // ==========================================
 
       router.push({
         pathname: "/kundli",
+
         params: {
-          data: JSON.stringify(kundliPayload),
+          data: JSON.stringify(
+            kundliPayload
+          ),
         },
       });
     } catch (error) {
-      console.log("kundli error", error);
+      console.log(
+        "kundli error",
+        error
+      );
+
+      console.log(
+        "Kundli API Error Data:",
+        error?.data
+      );
+
+      console.log(
+        "Kundli API Error Status:",
+        error?.status
+      );
     }
   };
+
+  // ==========================================
+  // OPEN SAVED KUNDLI
+  // ==========================================
 
   const handleOpenSavedKundli = (item) => {
     handleGenerateKundli({
       name: item.name,
-      gender: item.gender ? item.gender.toUpperCase() : "MALE",
+
+      gender: item.gender
+        ? item.gender.toUpperCase()
+        : "MALE",
+
       dob: item.dob,
+
       tob: item.tob,
-      city: item.city || item.birthPlace,
-      birthPlace: item.birthPlace || item.city,
+
+      city:
+        item.city ||
+        item.birthPlace,
+
+      birthPlace:
+        item.birthPlace ||
+        item.city,
+
       la: "hi",
+
+      // Always use supported timezone
+      timezone: "Asia/Kolkata",
     });
   };
+
+  // ==========================================
+  // DELETE SAVED KUNDLI
+  // ==========================================
 
   const handleDeleteSaved = async (id) => {
     try {
       await deleteSavedKundli(id).unwrap();
     } catch (err) {
-      console.log("delete saved kundli err", err);
+      console.log(
+        "delete saved kundli err",
+        err
+      );
     }
   };
+
+  // ==========================================
+  // UI
+  // ==========================================
 
   return (
     <SafeAreaView style={styles.container}>
@@ -196,9 +388,13 @@ export default function FreeKundli() {
         extraHeight={120}
         contentContainerStyle={styles.content}
       >
-        {/* Header */}
+        {/* HEADER */}
+
         <View style={styles.header}>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => router.back()}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+          >
             <Ionicons
               name="arrow-back"
               size={RF(24)}
@@ -206,11 +402,15 @@ export default function FreeKundli() {
             />
           </TouchableOpacity>
 
-          <Text style={styles.logo}>VAVI</Text>
+          <Text style={styles.logo}>
+            VAVI
+          </Text>
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push("/Notification")}
+            onPress={() =>
+              router.push("/Notification")
+            }
           >
             <Ionicons
               name="notifications-outline"
@@ -220,20 +420,31 @@ export default function FreeKundli() {
           </TouchableOpacity>
         </View>
 
-        {/* Heading */}
-        <Text style={styles.heading}>Free Kundli Online</Text>
+        {/* HEADING */}
 
-        {/* Tabs */}
+        <Text style={styles.heading}>
+          Free Kundli Online
+        </Text>
+
+        {/* TABS */}
+
         <View style={styles.tabContainer}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setActiveTab("saved")}
-            style={[styles.tab, activeTab === "saved" && styles.activeTab]}
+            onPress={() =>
+              setActiveTab("saved")
+            }
+            style={[
+              styles.tab,
+              activeTab === "saved" &&
+                styles.activeTab,
+            ]}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "saved" && styles.activeTabText,
+                activeTab === "saved" &&
+                  styles.activeTabText,
               ]}
             >
               Saved Kundli
@@ -242,13 +453,20 @@ export default function FreeKundli() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setActiveTab("new")}
-            style={[styles.tab, activeTab === "new" && styles.activeTab]}
+            onPress={() =>
+              setActiveTab("new")
+            }
+            style={[
+              styles.tab,
+              activeTab === "new" &&
+                styles.activeTab,
+            ]}
           >
             <Text
               style={[
                 styles.tabText,
-                activeTab === "new" && styles.activeTabText,
+                activeTab === "new" &&
+                  styles.activeTabText,
               ]}
             >
               New Kundli
@@ -259,9 +477,11 @@ export default function FreeKundli() {
         {/* ========================= */}
         {/* NEW KUNDLI TAB */}
         {/* ========================= */}
+
         {activeTab === "new" && (
           <View style={styles.formCard}>
-            {/* Card Heading */}
+            {/* CARD HEADER */}
+
             <View style={styles.cardHeader}>
               <Ionicons
                 name="document-text-outline"
@@ -269,22 +489,41 @@ export default function FreeKundli() {
                 color={Colors.primary}
               />
 
-              <View style={{ marginLeft: wp(2) }}>
-                <Text style={styles.cardTitle}>Enter Details</Text>
-                <Text style={styles.cardSubtitle}>
-                  Please enter your birth details to generate Kundli
+              <View
+                style={{
+                  marginLeft: wp(2),
+                }}
+              >
+                <Text
+                  style={styles.cardTitle}
+                >
+                  Enter Details
+                </Text>
+
+                <Text
+                  style={styles.cardSubtitle}
+                >
+                  Please enter your birth
+                  details to generate Kundli
                 </Text>
               </View>
             </View>
 
-            {/* Name */}
-            <Text style={styles.label}>Name</Text>
-            <View style={styles.inputContainer}>
+            {/* NAME */}
+
+            <Text style={styles.label}>
+              Name
+            </Text>
+
+            <View
+              style={styles.inputContainer}
+            >
               <Ionicons
                 name="person-outline"
                 size={RF(18)}
                 color={Colors.primary}
               />
+
               <TextInput
                 value={name}
                 onChangeText={setName}
@@ -294,34 +533,61 @@ export default function FreeKundli() {
               />
             </View>
 
-            {/* Gender */}
-            <Text style={styles.label}>Gender</Text>
+            {/* GENDER */}
+
+            <Text style={styles.label}>
+              Gender
+            </Text>
+
             <View style={styles.genderRow}>
               {[
-                { label: "Male", value: "MALE", icon: "male" },
-                { label: "Female", value: "FEMALE", icon: "female" },
-                { label: "Others", value: "OTHER", icon: "person" },
+                {
+                  label: "Male",
+                  value: "MALE",
+                  icon: "male",
+                },
+                {
+                  label: "Female",
+                  value: "FEMALE",
+                  icon: "female",
+                },
+                {
+                  label: "Others",
+                  value: "OTHER",
+                  icon: "person",
+                },
               ].map((item) => {
-                const isSelected = gender === item.value;
+                const isSelected =
+                  gender === item.value;
+
                 return (
                   <TouchableOpacity
                     key={item.value}
                     activeOpacity={0.8}
                     style={[
                       styles.genderOption,
-                      isSelected && styles.genderOptionActive,
+                      isSelected &&
+                        styles.genderOptionActive,
                     ]}
-                    onPress={() => setGender(item.value)}
+                    onPress={() =>
+                      setGender(item.value)
+                    }
                   >
                     <Ionicons
                       name={item.icon}
                       size={RF(16)}
-                      color={isSelected ? "#FFF" : Colors.darkBrown}
+                      color={
+                        isSelected
+                          ? "#FFF"
+                          : Colors.darkBrown
+                      }
                     />
+
                     <Text
                       style={[
                         styles.genderOptionText,
-                        isSelected && styles.genderOptionTextActive,
+                        isSelected &&
+                          styles.genderOptionTextActive,
                       ]}
                     >
                       {item.label}
@@ -331,52 +597,86 @@ export default function FreeKundli() {
               })}
             </View>
 
-            {/* Date of Birth */}
-            <Text style={styles.label}>Date of Birth</Text>
+            {/* DATE OF BIRTH */}
+
+            <Text style={styles.label}>
+              Date of Birth
+            </Text>
+
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.pickerInputContainer}
-              onPress={() => setShowDobPicker(true)}
+              style={
+                styles.pickerInputContainer
+              }
+              onPress={() =>
+                setShowDobPicker(true)
+              }
             >
-              <View style={styles.pickerInputLeft}>
+              <View
+                style={styles.pickerInputLeft}
+              >
                 <Ionicons
                   name="calendar-outline"
                   size={RF(18)}
                   color={Colors.primary}
                 />
+
                 <Text
                   style={[
                     styles.pickerInputText,
-                    !dob && styles.placeholderText,
+                    !dob &&
+                      styles.placeholderText,
                   ]}
                 >
-                  {dob || "Select Date of Birth"}
+                  {dob ||
+                    "Select Date of Birth"}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={RF(16)} color="#888" />
+
+              <Ionicons
+                name="chevron-down"
+                size={RF(16)}
+                color="#888"
+              />
             </TouchableOpacity>
 
-            {/* Birth Time */}
-            <Text style={styles.label}>Birth Time</Text>
+            {/* BIRTH TIME */}
+
+            <Text style={styles.label}>
+              Birth Time
+            </Text>
+
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
                 styles.pickerInputContainer,
-                unknownTime && styles.disabledPicker,
+                unknownTime &&
+                  styles.disabledPicker,
               ]}
               disabled={unknownTime}
-              onPress={() => setShowTimePicker(true)}
+              onPress={() =>
+                setShowTimePicker(true)
+              }
             >
-              <View style={styles.pickerInputLeft}>
+              <View
+                style={styles.pickerInputLeft}
+              >
                 <Ionicons
                   name="time-outline"
                   size={RF(18)}
-                  color={unknownTime ? "#BBB" : Colors.primary}
+                  color={
+                    unknownTime
+                      ? "#BBB"
+                      : Colors.primary
+                  }
                 />
+
                 <Text
                   style={[
                     styles.pickerInputText,
-                    (!birthTime || unknownTime) && styles.placeholderText,
+                    (!birthTime ||
+                      unknownTime) &&
+                      styles.placeholderText,
                   ]}
                 >
                   {unknownTime
@@ -388,68 +688,114 @@ export default function FreeKundli() {
                       : "Select Birth Time (HH:MM:SS)"}
                 </Text>
               </View>
-              <Ionicons name="chevron-down" size={RF(16)} color="#888" />
+
+              <Ionicons
+                name="chevron-down"
+                size={RF(16)}
+                color="#888"
+              />
             </TouchableOpacity>
 
-            {/* Unknown Time Checkbox */}
+            {/* UNKNOWN TIME */}
+
             <TouchableOpacity
               activeOpacity={0.8}
               style={styles.checkboxRow}
               onPress={() => {
-                const next = !unknownTime;
+                const next =
+                  !unknownTime;
+
                 setUnknownTime(next);
+
                 if (next) {
-                  setBirthTime("12:00:00");
+                  setBirthTime(
+                    "12:00:00"
+                  );
                 }
               }}
             >
               <Ionicons
-                name={unknownTime ? "checkbox" : "square-outline"}
+                name={
+                  unknownTime
+                    ? "checkbox"
+                    : "square-outline"
+                }
                 size={RF(20)}
                 color={Colors.primary}
               />
-              <Text style={styles.checkboxText}>
-                I don't know my exact time of birth
+
+              <Text
+                style={styles.checkboxText}
+              >
+                I don't know my exact time
+                of birth
               </Text>
             </TouchableOpacity>
 
-            {/* Birth Place */}
-            <Text style={styles.label}>Birth Place</Text>
+            {/* BIRTH PLACE */}
+
+            <Text style={styles.label}>
+              Birth Place
+            </Text>
+
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.pickerInputContainer}
-              onPress={() => setShowPlacePicker(true)}
+              style={
+                styles.pickerInputContainer
+              }
+              onPress={() =>
+                setShowPlacePicker(true)
+              }
             >
-              <View style={styles.pickerInputLeft}>
+              <View
+                style={styles.pickerInputLeft}
+              >
                 <Ionicons
                   name="location-outline"
                   size={RF(18)}
                   color={Colors.primary}
                 />
+
                 <Text
                   style={[
                     styles.pickerInputText,
-                    !birthPlace && styles.placeholderText,
+                    !birthPlace &&
+                      styles.placeholderText,
                   ]}
                 >
-                  {birthPlace || "Select Birth Place / State"}
+                  {birthPlace ||
+                    "Select Birth Place / State"}
                 </Text>
               </View>
-              <Ionicons name="search-outline" size={RF(18)} color="#888" />
+
+              <Ionicons
+                name="search-outline"
+                size={RF(18)}
+                color="#888"
+              />
             </TouchableOpacity>
 
-            {/* Continue Button */}
+            {/* CONTINUE */}
+
             <TouchableOpacity
               activeOpacity={0.8}
               style={[
                 styles.continueButton,
-                (generating || fullGenerating) && { opacity: 0.7 },
+                generating && {
+                  opacity: 0.7,
+                },
               ]}
-              disabled={generating || fullGenerating}
-              onPress={() => handleGenerateKundli()}
+              disabled={generating}
+              onPress={() =>
+                handleGenerateKundli()
+              }
             >
-              <Text style={styles.continueText}>
-                {generating || fullGenerating ? "Generating..." : "Continue"}
+              <Text
+                style={styles.continueText}
+              >
+                {generating
+                  ? "Generating..."
+                  : "Continue"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -458,46 +804,83 @@ export default function FreeKundli() {
         {/* ========================= */}
         {/* SAVED KUNDLI TAB */}
         {/* ========================= */}
+
         {activeTab === "saved" && (
           <FlatList
             data={savedData?.data || []}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item) =>
+              item.id.toString()
+            }
             scrollEnabled={false}
             renderItem={({ item }) => (
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => handleOpenSavedKundli(item)}
+                onPress={() =>
+                  handleOpenSavedKundli(item)
+                }
                 style={styles.savedCard}
               >
-                {/* Top Row */}
-                <View style={styles.savedTopRow}>
-                  <View style={styles.userSection}>
-                    <View style={styles.avatar}>
-                      <Ionicons name="person" size={RF(26)} color="#FFF" />
+                <View
+                  style={styles.savedTopRow}
+                >
+                  <View
+                    style={styles.userSection}
+                  >
+                    <View
+                      style={styles.avatar}
+                    >
+                      <Ionicons
+                        name="person"
+                        size={RF(26)}
+                        color="#FFF"
+                      />
                     </View>
 
-                    <View style={styles.userInfo}>
-                      <Text style={styles.userName}>
+                    <View
+                      style={styles.userInfo}
+                    >
+                      <Text
+                        style={styles.userName}
+                      >
                         {item.name}
-                        <Text style={styles.gender}> ({item.gender})</Text>
+
+                        <Text
+                          style={styles.gender}
+                        >
+                          {" "}
+                          ({item.gender})
+                        </Text>
                       </Text>
 
-                      <Text style={styles.dateText}>
-                        {item.dob}, {item.tob}
+                      <Text
+                        style={styles.dateText}
+                      >
+                        {item.dob},{" "}
+                        {item.tob}
                       </Text>
 
-                      <Text style={styles.placeText}>
-                        {item.birthPlace || item.city}
+                      <Text
+                        style={styles.placeText}
+                      >
+                        {item.birthPlace ||
+                          item.city}
                       </Text>
                     </View>
                   </View>
 
-                  {/* Action Buttons */}
-                  <View style={styles.actionRow}>
+                  <View
+                    style={styles.actionRow}
+                  >
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.actionButton}
-                      onPress={() => handleOpenSavedKundli(item)}
+                      style={
+                        styles.actionButton
+                      }
+                      onPress={() =>
+                        handleOpenSavedKundli(
+                          item
+                        )
+                      }
                     >
                       <Ionicons
                         name="eye-outline"
@@ -508,8 +891,14 @@ export default function FreeKundli() {
 
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.actionButton}
-                      onPress={() => handleDeleteSaved(item.id)}
+                      style={
+                        styles.actionButton
+                      }
+                      onPress={() =>
+                        handleDeleteSaved(
+                          item.id
+                        )
+                      }
                     >
                       <Ionicons
                         name="trash-outline"
@@ -520,49 +909,99 @@ export default function FreeKundli() {
                   </View>
                 </View>
 
-                {/* Divider */}
-                <View style={styles.divider} />
+                <View
+                  style={styles.divider}
+                />
 
-                {/* Bottom Details */}
-                <View style={styles.detailRow}>
-                  <View style={styles.detailItem}>
+                <View
+                  style={styles.detailRow}
+                >
+                  <View
+                    style={styles.detailItem}
+                  >
                     <Ionicons
                       name="calendar-outline"
                       size={RF(17)}
                       color={Colors.primary}
                     />
-                    <Text style={styles.detailLabel}>Date</Text>
-                    <Text style={styles.detailValue}>{item.dob}</Text>
+
+                    <Text
+                      style={styles.detailLabel}
+                    >
+                      Date
+                    </Text>
+
+                    <Text
+                      style={styles.detailValue}
+                    >
+                      {item.dob}
+                    </Text>
                   </View>
 
-                  <View style={styles.detailItem}>
+                  <View
+                    style={styles.detailItem}
+                  >
                     <Ionicons
                       name="time-outline"
                       size={RF(17)}
                       color={Colors.primary}
                     />
-                    <Text style={styles.detailLabel}>Time</Text>
-                    <Text style={styles.detailValue}>{item.tob}</Text>
+
+                    <Text
+                      style={styles.detailLabel}
+                    >
+                      Time
+                    </Text>
+
+                    <Text
+                      style={styles.detailValue}
+                    >
+                      {item.tob}
+                    </Text>
                   </View>
 
-                  <View style={styles.detailItem}>
+                  <View
+                    style={styles.detailItem}
+                  >
                     <Ionicons
                       name="location-outline"
                       size={RF(17)}
                       color={Colors.primary}
                     />
-                    <Text style={styles.detailLabel}>Place</Text>
-                    <Text style={styles.detailValue}>{item.birthPlace}</Text>
+
+                    <Text
+                      style={styles.detailLabel}
+                    >
+                      Place
+                    </Text>
+
+                    <Text
+                      style={styles.detailValue}
+                    >
+                      {item.birthPlace}
+                    </Text>
                   </View>
 
-                  <View style={styles.detailItem}>
+                  <View
+                    style={styles.detailItem}
+                  >
                     <Ionicons
                       name="male-female-outline"
                       size={RF(17)}
                       color={Colors.primary}
                     />
-                    <Text style={styles.detailLabel}>Gender</Text>
-                    <Text style={styles.detailValue}>{item.gender}</Text>
+
+                    <Text
+                      style={styles.detailLabel}
+                    >
+                      Gender
+                    </Text>
+
+                    <Text
+                      style={styles.detailValue}
+                    >
+                      {item.gender}
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -571,32 +1010,53 @@ export default function FreeKundli() {
         )}
       </KeyboardAwareScrollView>
 
-      {/* Date of Birth Picker Modal */}
+      {/* DATE PICKER */}
+
       <DatePickerModal
         visible={showDobPicker}
-        onClose={() => setShowDobPicker(false)}
-        onSelectDate={(date) => setDob(date)}
+        onClose={() =>
+          setShowDobPicker(false)
+        }
+        onSelectDate={(date) =>
+          setDob(date)
+        }
         initialDate={dob}
       />
 
-      {/* Time of Birth Picker Modal */}
+      {/* TIME PICKER */}
+
       <TimePickerModal
         visible={showTimePicker}
-        onClose={() => setShowTimePicker(false)}
-        onSelectTime={(time) => setBirthTime(time)}
+        onClose={() =>
+          setShowTimePicker(false)
+        }
+        onSelectTime={(time) =>
+          setBirthTime(time)
+        }
         initialTime={birthTime}
       />
 
-      {/* Birth Place / State Picker Modal */}
+      {/* PLACE PICKER */}
+
       <StatePickerModal
         visible={showPlacePicker}
-        onClose={() => setShowPlacePicker(false)}
+        onClose={() =>
+          setShowPlacePicker(false)
+        }
         onSelectState={(place, item) => {
           setBirthPlace(place);
-          if (item && item.latitude) {
+
+          if (
+            item &&
+            item.latitude
+          ) {
             setCoordinates(item);
           } else {
-            setCoordinates(getCoordinatesForPlace(place));
+            setCoordinates(
+              getCoordinatesForPlace(
+                place
+              )
+            );
           }
         }}
         selectedState={birthPlace}
@@ -605,6 +1065,10 @@ export default function FreeKundli() {
     </SafeAreaView>
   );
 }
+
+// ==========================================
+// STYLES
+// ==========================================
 
 const styles = StyleSheet.create({
   container: {
@@ -617,7 +1081,6 @@ const styles = StyleSheet.create({
     paddingBottom: hp(12),
   },
 
-  /* ================= HEADER ================= */
   header: {
     marginTop: hp(1),
     flexDirection: "row",
@@ -640,7 +1103,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ================= TABS ================= */
   tabContainer: {
     flexDirection: "row",
     backgroundColor: "#FFF",
@@ -674,7 +1136,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ================= FORM CARD ================= */
   formCard: {
     backgroundColor: "#FFF",
     borderRadius: wp(4),
@@ -708,7 +1169,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
 
-  /* ================= INPUT & GENDER ================= */
   label: {
     marginBottom: hp(0.8),
     marginTop: hp(1.4),
@@ -774,7 +1234,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  /* ================= PICKER INPUTS ================= */
   pickerInputContainer: {
     height: hp(6.5),
     borderWidth: 1,
@@ -811,7 +1270,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  /* ================= CHECKBOX ================= */
   checkboxRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -825,7 +1283,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
 
-  /* ================= BUTTON ================= */
   continueButton: {
     height: hp(6),
     backgroundColor: Colors.primary,
@@ -841,7 +1298,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ================= SAVED KUNDLI CARD ================= */
   savedCard: {
     backgroundColor: "#FFF",
     borderRadius: wp(4),
@@ -909,7 +1365,6 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
 
-  /* ================= ACTION BUTTONS ================= */
   actionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -925,14 +1380,12 @@ const styles = StyleSheet.create({
     marginLeft: wp(2),
   },
 
-  /* ================= DIVIDER ================= */
   divider: {
     height: 1,
     backgroundColor: "#EEEEEE",
     marginVertical: hp(2),
   },
 
-  /* ================= DETAILS ================= */
   detailRow: {
     flexDirection: "row",
     flexWrap: "wrap",

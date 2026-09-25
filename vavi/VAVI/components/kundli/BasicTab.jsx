@@ -1,23 +1,62 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { hp, RF, wp } from "../../utils/responsive";
+import React, { useMemo } from "react";
+
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+import {
+  hp,
+  RF,
+  wp,
+} from "../../utils/responsive";
+
+import {
+  getApiRoot,
+  getValue,
+  firstObject,
+  firstValue,
+} from "./kundliApiHelpers";
+
+const ORANGE = "#ff5a00";
+const BORDER = "#ff8a50";
+const LIGHT = "#fff4df";
+
+// =====================================================
+// INFO TABLE
+// =====================================================
 
 const InfoTable = ({ title, data }) => {
+  if (!data?.length) {
+    return null;
+  }
+
   return (
     <View style={styles.section}>
-      {title ? <Text style={styles.sectionTitle}>{title}</Text> : null}
+      {title ? (
+        <Text style={styles.sectionTitle}>
+          {title}
+        </Text>
+      ) : null}
 
       <View style={styles.card}>
         {data.map((item, index) => (
           <View
-            key={index}
+            key={`${item.label}-${index}`}
             style={[
               styles.row,
               index % 2 === 0 && styles.lightRow,
-              index === data.length - 1 && styles.lastRow,
             ]}
           >
-            <Text style={styles.label}>{item.label}</Text>
-            <Text style={styles.value}>{item.value}</Text>
+            <Text style={styles.label}>
+              {item.label}
+            </Text>
+
+            <Text style={styles.value}>
+              {getValue(item.value)}
+            </Text>
           </View>
         ))}
       </View>
@@ -25,270 +64,861 @@ const InfoTable = ({ title, data }) => {
   );
 };
 
-const BasicTab = ({ data, fullData }) => {
-  const basic =
-    data?.user_details ||
-    fullData?.user_details ||
-    fullData?.data?.user_details ||
-    data?.basicDetails ||
-    fullData?.basic ||
-    data ||
-    {};
-  const panchang = data?.panchang || fullData?.panchang || {};
-  const avakhada = data?.avakhada || fullData?.avakhada || {};
+// =====================================================
+// BASIC TAB
+// =====================================================
 
-  const name = basic?.name || fullData?.name || "User";
-  const gender = basic?.gender || fullData?.gender || "MALE";
-  const dob = basic?.dob || fullData?.dob || "-";
-  const tob = basic?.tob || fullData?.tob || "-";
+const BasicTab = ({
+  data,
+  fullData,
+}) => {
+  // ===================================================
+  // API ROOT
+  // ===================================================
+
+  const apiRoot = useMemo(
+    () =>
+      getApiRoot(
+        data,
+        fullData
+      ),
+    [data, fullData]
+  );
+
+  // ===================================================
+  // USER DETAILS
+  // ===================================================
+
+  const userDetails = useMemo(
+    () =>
+      firstObject(apiRoot, [
+        "user_details",
+        "userDetails",
+        "basic",
+        "basicDetails",
+        "birth_details",
+        "birthDetails",
+      ]),
+    [apiRoot]
+  );
+
+  // ===================================================
+  // MANGLIK OBJECT
+  // ===================================================
+
+  const mangal = useMemo(
+    () =>
+      firstObject(userDetails, [
+        "manglik",
+        "mangal_dosha",
+        "manglik_dosha",
+      ]) ??
+      firstObject(apiRoot, [
+        "mangal_dosha",
+        "manglik",
+        "manglik_dosha",
+      ]),
+    [userDetails, apiRoot]
+  );
+
+  // ===================================================
+  // BASIC DETAILS
+  // ===================================================
+
+  const name =
+    firstValue(
+      userDetails,
+      ["name"]
+    ) ??
+    firstValue(
+      apiRoot,
+      ["name"]
+    );
+
+  const gender =
+    firstValue(
+      userDetails,
+      ["gender"]
+    ) ??
+    firstValue(
+      apiRoot,
+      ["gender"]
+    );
+
+  const dob =
+    firstValue(
+      userDetails,
+      [
+        "dob",
+        "dateOfBirth",
+        "date_of_birth",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "dob",
+        "dateOfBirth",
+        "date_of_birth",
+      ]
+    );
+
+  const tob =
+    firstValue(
+      userDetails,
+      [
+        "tob",
+        "timeOfBirth",
+        "time_of_birth",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "tob",
+        "timeOfBirth",
+        "time_of_birth",
+      ]
+    );
+
   const birthPlace =
-    basic?.birthPlace ||
-    basic?.city ||
-    fullData?.birthPlace ||
-    fullData?.city ||
-    "-";
+    firstValue(
+      userDetails,
+      [
+        "birthPlace",
+        "birth_place",
+        "city",
+        "place",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "birthPlace",
+        "birth_place",
+        "city",
+        "place",
+      ]
+    );
+
   const latitude =
-    basic?.latitude !== undefined || fullData?.latitude !== undefined
-      ? `${basic?.latitude ?? fullData?.latitude}° N`
-      : "-";
+    firstValue(
+      userDetails,
+      [
+        "latitude",
+        "lat",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "latitude",
+        "lat",
+      ]
+    );
+
   const longitude =
-    basic?.longitude !== undefined || fullData?.longitude !== undefined
-      ? `${basic?.longitude ?? fullData?.longitude}° E`
-      : "-";
+    firstValue(
+      userDetails,
+      [
+        "longitude",
+        "long",
+        "lng",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "longitude",
+        "long",
+        "lng",
+      ]
+    );
+
+  const timezone =
+    firstValue(
+      userDetails,
+      ["timezone"]
+    ) ??
+    firstValue(
+      apiRoot,
+      ["timezone"]
+    );
+
+  const language =
+    firstValue(
+      userDetails,
+      ["language"]
+    ) ??
+    firstValue(
+      apiRoot,
+      ["language"]
+    );
+
+  // ===================================================
+  // OPTIONAL BASIC DATA
+  // These will show only if API actually provides them
+  // ===================================================
 
   const sunrise =
-    basic?.sunrise || panchang?.sunrise || fullData?.sunrise || "06:00:00 AM";
+    firstValue(
+      userDetails,
+      [
+        "sunrise",
+        "sun_rise",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "sunrise",
+        "sun_rise",
+      ]
+    );
 
   const sunset =
-    basic?.sunset || panchang?.sunset || fullData?.sunset || "06:30:00 PM";
-
-  const moonrise =
-    basic?.moonrise || panchang?.moonrise || fullData?.moonrise || "-";
-
-  const moonset =
-    basic?.moonset || panchang?.moonset || fullData?.moonset || "-";
+    firstValue(
+      userDetails,
+      [
+        "sunset",
+        "sun_set",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "sunset",
+        "sun_set",
+      ]
+    );
 
   const ayanamsha =
-    basic?.ayanamsa ||
-    basic?.ayanamsha ||
-    fullData?.ayanamsa ||
-    fullData?.ayanamsha ||
-    "Lahiri (Chitra Paksha)";
+    firstValue(
+      userDetails,
+      [
+        "ayanamsha",
+        "ayanamsa",
+      ]
+    ) ??
+    firstValue(
+      apiRoot,
+      [
+        "ayanamsha",
+        "ayanamsa",
+      ]
+    );
 
-  const mangalData =
-    fullData?.mangal_dosha ||
-    data?.mangal_dosha ||
-    fullData?.doshas?.manglik ||
-    data?.manglik;
+  // ===================================================
+  // MANGLIK STATUS
+  // Actual API:
+  // isManglik: false
+  // ===================================================
 
   const isManglik =
-    mangalData?.has_dosha ??
-    mangalData?.hasDosha ??
-    mangalData?.isManglik ??
-    data?.isManglik ??
-    false;
+    firstValue(
+      mangal,
+      [
+        "isManglik",
+        "is_manglik",
+        "has_dosha",
+        "hasDosha",
+      ]
+    );
 
-  const manglikPercentage =
-    mangalData?.percentage ||
-    mangalData?.score ||
-    data?.manglikPercentage ||
-    (isManglik ? "23%" : "0%");
+  // ===================================================
+  // MANGLIK TYPE
+  // Actual API:
+  // manglikType
+  // ===================================================
 
-  const manglikDesc =
-    mangalData?.description ||
-    mangalData?.remedies ||
-    data?.manglikDescription ||
-    (isManglik
-      ? `You are ${manglikPercentage} manglik. Appropriate astrological remedies or pujas are recommended.`
-      : "You do not have Manglik Dosha in your birth chart. Your chart is clear.");
+  const manglikType =
+    firstValue(
+      mangal,
+      [
+        "manglikType",
+        "manglik_type",
+      ]
+    );
 
-  const getVal = (item, fallback = "-") => {
-    if (item === undefined || item === null || item === "") return fallback;
-    if (typeof item === "string" || typeof item === "number")
-      return String(item);
-    if (typeof item === "object")
-      return item.name || item.title || item.value || fallback;
-    return String(item);
-  };
+  // ===================================================
+  // MARS DETAILS
+  // ===================================================
+
+  const mars = useMemo(
+    () =>
+      firstObject(mangal, [
+        "mars",
+      ]),
+    [mangal]
+  );
+
+  const marsSign =
+    firstValue(
+      mars,
+      ["sign"]
+    );
+
+  const marsSignId =
+    firstValue(
+      mars,
+      [
+        "signId",
+        "sign_id",
+      ]
+    );
+
+  const marsDegree =
+    firstValue(
+      mars,
+      [
+        "degreeInSign",
+        "degree_in_sign",
+      ]
+    );
+
+  const marsRetrograde =
+    firstValue(
+      mars,
+      [
+        "isRetrograde",
+        "is_retrograde",
+      ]
+    );
+
+  // ===================================================
+  // CHECKED FROM
+  // ===================================================
+
+  const checkedFrom =
+    Array.isArray(
+      mangal?.checkedFrom
+    )
+      ? mangal.checkedFrom
+      : [];
+
+  // ===================================================
+  // DOSHA HOUSES
+  // ===================================================
+
+  const doshaHouses =
+    Array.isArray(
+      mangal?.doshaHouses
+    )
+      ? mangal.doshaHouses
+      : [];
+
+  // ===================================================
+  // MANGLIK NOTE
+  // ===================================================
+
+  const manglikNote =
+    firstValue(
+      mangal,
+      ["note"]
+    );
+
+  // ===================================================
+  // BASIC BIRTH ROWS
+  // ===================================================
 
   const birthRows = [
-    { label: "Name", value: name },
-    { label: "Gender", value: gender },
-    { label: "Date of Birth", value: dob },
-    { label: "Time of Birth", value: tob },
-    { label: "Birth Place", value: birthPlace },
-    { label: "Latitude", value: latitude },
-    { label: "Longitude", value: longitude },
-    { label: "Sunrise", value: sunrise },
-    { label: "Sunset", value: sunset },
-    { label: "Ayanamsha", value: ayanamsha },
+    {
+      label: "Name",
+      value: name,
+    },
+
+    {
+      label: "Gender",
+      value: gender,
+    },
+
+    {
+      label: "Date of Birth",
+      value: dob,
+    },
+
+    {
+      label: "Time of Birth",
+      value: tob,
+    },
+
+    {
+      label: "Birth Place",
+      value: birthPlace,
+    },
+
+    {
+      label: "Latitude",
+      value:
+        latitude !== undefined &&
+        latitude !== null
+          ? `${latitude}°`
+          : "-",
+    },
+
+    {
+      label: "Longitude",
+      value:
+        longitude !== undefined &&
+        longitude !== null
+          ? `${longitude}°`
+          : "-",
+    },
+
+    {
+      label: "Timezone",
+      value: timezone,
+    },
+
+    {
+      label: "Sunrise",
+      value: sunrise,
+    },
+
+    {
+      label: "Sunset",
+      value: sunset,
+    },
+
+    {
+      label: "Ayanamsha",
+      value: ayanamsha,
+    },
+
+    {
+      label: "Language",
+      value: language,
+    },
   ];
 
-  const panchangRows = [
-    { label: "Tithi", value: getVal(panchang?.tithi, "Panchami") },
-    { label: "Karana", value: getVal(panchang?.karana, "Balava") },
-    { label: "Yoga", value: getVal(panchang?.yoga, "Saubhagya") },
-    { label: "Nakshatra", value: getVal(panchang?.nakshatra, "Rohini") },
+  // ===================================================
+  // MANGLIK CHECKED FROM ROWS
+  // ===================================================
+
+  const checkedFromRows =
+    checkedFrom.map(
+      (item, index) => ({
+        label:
+          item?.referencePlanet ||
+          `Reference ${index + 1}`,
+
+        value:
+          item?.house !== undefined
+            ? `House ${item.house} - ${
+                item?.isManglik
+                  ? "Manglik"
+                  : "No Dosha"
+              }`
+            : item?.isManglik
+              ? "Manglik"
+              : "No Dosha",
+      })
+    );
+
+  // ===================================================
+  // MANGLIK DETAILS
+  // ===================================================
+
+  const manglikDetailsRows = [
     {
-      label: "Vaara (Day)",
-      value: getVal(panchang?.vaara || panchang?.day, "Monday"),
+      label: "Manglik Type",
+      value: manglikType,
     },
-    { label: "Sunrise", value: sunrise },
-    { label: "Sunset", value: sunset },
-    { label: "Moonrise", value: moonrise },
-    { label: "Moonset", value: moonset },
+
+    {
+      label: "Mars Sign",
+      value: marsSign,
+    },
+
+    {
+      label: "Mars Sign ID",
+      value: marsSignId,
+    },
+
+    {
+      label: "Degree in Sign",
+      value:
+        marsDegree !== undefined &&
+        marsDegree !== null
+          ? `${Number(marsDegree).toFixed(5)}°`
+          : "-",
+    },
+
+    {
+      label: "Mars Retrograde",
+      value:
+        marsRetrograde === true
+          ? "Yes"
+          : marsRetrograde === false
+            ? "No"
+            : "-",
+    },
   ];
 
-  const avakhadaRows = [
-    { label: "Varna", value: getVal(avakhada?.varna, "Brahmin") },
-    { label: "Vashya", value: getVal(avakhada?.vashya, "Chatushpada") },
-    { label: "Yoni", value: getVal(avakhada?.yoni, "Sarpa") },
-    { label: "Gana", value: getVal(avakhada?.gan || avakhada?.gana, "Deva") },
-    { label: "Nadi", value: getVal(avakhada?.nadi, "Antya") },
+  // ===================================================
+  // DOSHA HOUSE ROW
+  // ===================================================
+
+  const doshaHouseRows = [
     {
-      label: "Sign / Rasi",
-      value: getVal(avakhada?.sign || avakhada?.rasi, "Mesha"),
-    },
-    {
-      label: "Sign Lord",
-      value: getVal(avakhada?.signLord || avakhada?.sign_lord, "Mars"),
-    },
-    { label: "Nakshatra", value: getVal(avakhada?.nakshatra, "Ashwini") },
-    {
-      label: "Nakshatra Lord",
-      value: getVal(
-        avakhada?.nakshatraLord || avakhada?.nakshatra_lord,
-        "Ketu",
-      ),
-    },
-    {
-      label: "Charan (Pada)",
-      value: getVal(avakhada?.charan || avakhada?.pada, "1"),
+      label: "Applicable Houses",
+      value:
+        doshaHouses.length > 0
+          ? doshaHouses.join(", ")
+          : "-",
     },
   ];
+
+  // ===================================================
+  // DEBUG
+  // ===================================================
+
+  console.log(
+    "========================================"
+  );
+
+  console.log(
+    "🔎 BASIC TAB API ROOT:"
+  );
+
+  console.log(
+    JSON.stringify(
+      apiRoot,
+      null,
+      2
+    )
+  );
+
+  console.log(
+    "🔎 USER DETAILS:"
+  );
+
+  console.log(
+    JSON.stringify(
+      userDetails,
+      null,
+      2
+    )
+  );
+
+  console.log(
+    "🔎 MANGLIK DATA:"
+  );
+
+  console.log(
+    JSON.stringify(
+      mangal,
+      null,
+      2
+    )
+  );
+
+  console.log(
+    "🔎 MARS DATA:"
+  );
+
+  console.log(
+    JSON.stringify(
+      mars,
+      null,
+      2
+    )
+  );
+
+  console.log(
+    "🔎 API ROOT KEYS:",
+    Object.keys(
+      apiRoot || {}
+    )
+  );
+
+  console.log(
+    "========================================"
+  );
+
+  // ===================================================
+  // UI
+  // ===================================================
 
   return (
     <View>
-      <InfoTable title="Basic Birth Details" data={birthRows} />
 
-      <Text style={styles.sectionTitle}>Manglik Analysis</Text>
+      {/* =============================================
+          BASIC BIRTH DETAILS
+      ============================================== */}
+
+      <InfoTable
+        title="Basic Birth Details"
+        data={birthRows}
+      />
+
+      {/* =============================================
+          MANGLIK ANALYSIS
+      ============================================== */}
+
+      <Text style={styles.sectionTitle}>
+        Manglik Analysis
+      </Text>
 
       <View style={styles.manglikCard}>
+
+        {/* STATUS */}
+
         <View
           style={[
-            styles.yesCircle,
-            !isManglik && { backgroundColor: "#4CAF50" },
+            styles.circle,
+
+            isManglik === true &&
+              styles.manglikYes,
           ]}
         >
-          <Text style={styles.yesText}>{isManglik ? "Yes" : "No"}</Text>
+          <Text
+            style={styles.circleText}
+          >
+            {isManglik === true
+              ? "Yes"
+              : "No"}
+          </Text>
         </View>
 
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{name}</Text>
-          <Text style={styles.desc}>{manglikDesc}</Text>
+        {/* CONTENT */}
+
+        <View
+          style={styles.manglikContent}
+        >
+          <Text
+            style={styles.name}
+          >
+            {getValue(name)}
+          </Text>
+
+          <Text
+            style={styles.manglikType}
+          >
+            {getValue(
+              manglikType
+            )}
+          </Text>
         </View>
+
       </View>
 
-      <InfoTable title="Panchang Details" data={panchangRows} />
+      {/* =============================================
+          MARS / MANGLIK DETAILS
+      ============================================== */}
 
-      <InfoTable title="Avakhada Details" data={avakhadaRows} />
+      <InfoTable
+        title="Manglik Details"
+        data={manglikDetailsRows}
+      />
 
-      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
-        <Text style={styles.buttonText}>Consult An Expert</Text>
+      {/* =============================================
+          CHECKED FROM
+      ============================================== */}
+
+      <InfoTable
+        title="Manglik Checked From"
+        data={checkedFromRows}
+      />
+
+      {/* =============================================
+          DOSHA HOUSES
+      ============================================== */}
+
+      <InfoTable
+        title="Dosha Houses"
+        data={doshaHouseRows}
+      />
+
+      {/* =============================================
+          MANGLIK NOTE
+      ============================================== */}
+
+      {manglikNote ? (
+        <View style={styles.noteCard}>
+
+          <Text
+            style={styles.noteTitle}
+          >
+            Note
+          </Text>
+
+          <Text
+            style={styles.noteText}
+          >
+            {getValue(
+              manglikNote
+            )}
+          </Text>
+
+        </View>
+      ) : null}
+
+      {/* =============================================
+          CONSULT BUTTON
+      ============================================== */}
+
+      <TouchableOpacity
+        style={styles.button}
+        activeOpacity={0.8}
+      >
+        <Text
+          style={styles.buttonText}
+        >
+          Consult An Expert
+        </Text>
       </TouchableOpacity>
+
     </View>
   );
 };
 
-export default BasicTab;
+// =====================================================
+// STYLES
+// =====================================================
 
 const styles = StyleSheet.create({
+
   section: {
     marginBottom: hp(2),
   },
+
   sectionTitle: {
     fontSize: RF(14),
     fontWeight: "700",
-    color: "#ff5a00",
+    color: ORANGE,
     marginBottom: hp(1),
   },
+
   card: {
     borderWidth: 1,
-    borderColor: "#ff8a50",
+    borderColor: BORDER,
     borderRadius: wp(2),
     overflow: "hidden",
   },
+
   row: {
     minHeight: hp(4.8),
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: wp(4),
+    paddingVertical: hp(0.8),
     backgroundColor: "#fff",
   },
+
   lightRow: {
-    backgroundColor: "#fff4df",
+    backgroundColor: LIGHT,
   },
-  lastRow: {
-    borderBottomWidth: 0,
-  },
+
   label: {
     flex: 1,
     fontSize: RF(11),
     color: "#111",
-    fontWeight: "400",
+    paddingRight: wp(2),
   },
+
   value: {
     flex: 1,
     fontSize: RF(11),
     color: "#111",
-    textAlign: "left",
     fontWeight: "500",
   },
+
+  // =================================================
+  // MANGLIK CARD
+  // =================================================
+
   manglikCard: {
     borderWidth: 1,
-    borderColor: "#ff8a50",
+    borderColor: BORDER,
     borderRadius: wp(2),
     padding: wp(3),
     flexDirection: "row",
     alignItems: "center",
     marginBottom: hp(2),
   },
-  yesCircle: {
+
+  circle: {
     width: wp(18),
     height: wp(18),
     borderRadius: wp(9),
-    backgroundColor: "#ff5a00",
+    backgroundColor: "#4caf50",
     alignItems: "center",
     justifyContent: "center",
     marginRight: wp(4),
   },
-  yesText: {
+
+  manglikYes: {
+    backgroundColor: ORANGE,
+  },
+
+  circleText: {
     color: "#fff",
     fontSize: RF(16),
     fontWeight: "700",
   },
+
+  manglikContent: {
+    flex: 1,
+  },
+
   name: {
-    color: "#ff5a00",
+    color: ORANGE,
     fontSize: RF(12),
     fontWeight: "700",
   },
-  desc: {
+
+  manglikType: {
+    marginTop: hp(0.4),
     fontSize: RF(11),
     color: "#111",
-    marginTop: hp(0.3),
-    fontWeight: "400",
+    fontWeight: "500",
   },
+
+  // =================================================
+  // NOTE
+  // =================================================
+
+  noteCard: {
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: wp(2),
+    padding: wp(3),
+    marginBottom: hp(2),
+    backgroundColor: LIGHT,
+  },
+
+  noteTitle: {
+    color: ORANGE,
+    fontSize: RF(12),
+    fontWeight: "700",
+    marginBottom: hp(0.5),
+  },
+
+  noteText: {
+    color: "#111",
+    fontSize: RF(10),
+    lineHeight: RF(15),
+  },
+
+  // =================================================
+  // BUTTON
+  // =================================================
+
   button: {
     height: hp(5.2),
-    backgroundColor: "#ff5a00",
+    backgroundColor: ORANGE,
     borderRadius: wp(2),
     alignItems: "center",
     justifyContent: "center",
-    marginTop: hp(0.5),
   },
+
   buttonText: {
     color: "#fff",
     fontSize: RF(13),
     fontWeight: "700",
   },
+
 });
+
+export default BasicTab;

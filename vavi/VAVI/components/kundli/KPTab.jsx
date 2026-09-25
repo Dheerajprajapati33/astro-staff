@@ -1,4 +1,7 @@
-import { useMemo } from "react";
+import React, {
+  useMemo,
+} from "react";
+
 import {
   ScrollView,
   StyleSheet,
@@ -6,190 +9,286 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { hp, RF, wp } from "../../utils/responsive";
+
+import {
+  hp,
+  RF,
+  wp,
+} from "../../utils/responsive";
+
+import {
+  getApiRoot,
+  getSection,
+  getNormalizedPlanets,
+  firstArray,
+  getValue,
+} from "./kundliApiHelpers";
 
 const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
 const LIGHT = "#fff8ef";
 
-const planetData = [
-  ["Ascendant", "1", "Pisces", "Jupiter", "Rahu", "Jupiter"],
-  ["Sun", "12", "Pisces", "Jupiter", "Moon", "Mercury"],
-  ["Moon", "2", "Taurus", "Venus", "Mercury", "Saturn"],
-  ["Mars", "10", "Sagittarius", "Jupiter", "Sun", "Jupiter"],
-  ["Mercury", "1", "Aries", "Mars", "Jupiter", "Venus"],
-  ["Jupiter", "5", "Cancer", "Moon", "Rahu", "Ketu"],
-  ["Venus", "12", "Aquarius", "Saturn", "Moon", "Jupiter"],
-  ["Saturn", "3", "Gemini", "Mercury", "Saturn", "Jupiter"],
-  ["Rahu", "2", "Taurus", "Venus", "Venus", "Venus"],
-  ["Ketu", "8", "Scorpio", "Mars", "Ketu", "Mercury"],
-];
+const KPTab = ({
+  data,
+  fullData,
+}) => {
+  const apiRoot = useMemo(
+    () =>
+      getApiRoot(
+        data,
+        fullData
+      ),
+    [data, fullData]
+  );
 
-const cuspsData = [
-  ["1", `9° 24' 10.68"`, "Aries", "Mars", "Rahu", "Bharani", "Venus"],
-  ["2", `9° 40' 48.96"`, "Taurus", "Venus", "Mercury", "Mrigashira", "Mars"],
-  ["3", `6° 32' 32.52"`, "Gemini", "Mercury", "Rahu", "Ardra", "Rahu"],
-  ["4", `0° 47' 37.20"`, "Cancer", "Moon", "Sun", "Pushya", "Saturn"],
-  ["5", `26° 43' 27.72"`, "Leo", "Sun", "Rahu", "Magha", "Ketu"],
-  ["6", `26° 57' 23.16"`, "Virgo", "Mercury", "Saturn", "Chitra", "Mars"],
-  ["7", `9° 24' 10.68"`, "Libra", "Venus", "Rahu", "Vishakha", "Jupiter"],
-  ["8", `9° 40' 48.96"`, "Scorpio", "Mars", "Mercury", "Jyeshtha", "Mercury"],
-  [
-    "9",
-    `6° 32' 32.52"`,
-    "Sagittarius",
-    "Jupiter",
-    "Rahu",
-    "PurvaShadha",
-    "Venus",
-  ],
-  ["10", `0° 47' 37.20"`, "Capricorn", "Saturn", "Sun", "UttaraShadha", "Sun"],
-  [
-    "11",
-    `26° 43' 27.72"`,
-    "Aquarius",
-    "Saturn",
-    "Jupiter",
-    "PurvaBhadra",
-    "Jupiter",
-  ],
-  ["12", `26° 57' 23.16"`, "Pisces", "Jupiter", "Mercury", "Revati", "Mercury"],
-];
+  const kp = useMemo(
+    () =>
+      getSection(
+        apiRoot,
+        [
+          "9_kp_kundli",
+          "kp_kundli",
+          "kpKundli",
+        ]
+      ),
+    [apiRoot]
+  );
 
-const KPTab = ({ data, fullData }) => {
-  const dynamicPlanetData = useMemo(() => {
-    const raw =
-      data?.["9_kp_kundli"]?.planets ||
-      fullData?.["9_kp_kundli"]?.planets ||
-      fullData?.data?.["9_kp_kundli"]?.planets ||
-      data?.planets ||
-      fullData?.kp?.planets ||
-      fullData?.kp_planets ||
-      fullData?.kpPlanets ||
-      fullData?.kp?.planetary_positions;
-    if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-    return raw.map((p) => [
-      p.name || p.planet || p.planet_name || "Planet",
-      String(p.house || p.cusp || "1"),
-      p.sign || p.rasi || "Aries",
-      p.signLord || p.lord || p.sign_lord || "Mars",
-      p.starLord ||
-        p.nakshatraLord ||
-        p.nakshatra_lord ||
-        p.star_lord ||
-        "Rahu",
-      p.subLord || p.sub_lord || "Jupiter",
-    ]);
-  }, [data, fullData]);
+  const planets = useMemo(
+    () =>
+      getNormalizedPlanets(
+        kp
+      ),
+    [kp]
+  );
 
-  const dynamicCuspsData = useMemo(() => {
-    const raw =
-      data?.["9_kp_kundli"]?.cusps ||
-      fullData?.["9_kp_kundli"]?.cusps ||
-      fullData?.data?.["9_kp_kundli"]?.cusps ||
-      data?.cusps ||
-      fullData?.kp?.cusps ||
-      fullData?.kp_cusps ||
-      fullData?.kpCusps ||
-      fullData?.cusps;
-    if (!raw || !Array.isArray(raw) || raw.length === 0) return [];
-    return raw.map((c, i) => [
-      String(c.cusp || c.house || i + 1),
-      c.degree || c.normDegree || `0° 0' 0"`,
-      c.sign || c.rasi || "Aries",
-      c.signLord || c.lord || c.sign_lord || "Mars",
-      c.subLord || c.sub_lord || c.cuspSub || "Rahu",
-      c.nakshatra || c.star || "Ashwini",
-      c.nakshatraLord || c.starLord || c.star_lord || "Ketu",
-    ]);
-  }, [data, fullData]);
+  const planetData = useMemo(
+    () =>
+      planets.map(
+        (planet) => [
+          getValue(
+            planet.name
+          ),
+          getValue(
+            planet.cusp
+          ) !== "-"
+            ? getValue(
+                planet.cusp
+              )
+            : getValue(
+                planet.house
+              ),
+          getValue(
+            planet.sign
+          ),
+          getValue(
+            planet.signLord
+          ),
+          getValue(
+            planet.nakshatraLord
+          ),
+          getValue(
+            planet.subLord ??
+              planet.sub_lord
+          ),
+        ]
+      ),
+    [planets]
+  );
+
+  const rawCusps = firstArray(
+    kp,
+    [
+      "cusps",
+      "cusp",
+      "cuspDetails",
+      "cusp_details",
+    ]
+  );
+
+  const cuspData =
+    rawCusps.map(
+      (cusp, index) => [
+        getValue(
+          cusp?.cusp ??
+            cusp?.house ??
+            index + 1
+        ),
+
+        getValue(
+          cusp?.degree ??
+            cusp?.normDegree ??
+            cusp?.norm_degree
+        ),
+
+        getValue(
+          cusp?.sign ??
+            cusp?.rasi
+        ),
+
+        getValue(
+          cusp?.signLord ??
+            cusp?.sign_lord ??
+            cusp?.lord
+        ),
+
+        getValue(
+          cusp?.subLord ??
+            cusp?.sub_lord ??
+            cusp?.cuspSub
+        ),
+
+        getValue(
+          cusp?.nakshatra ??
+            cusp?.star
+        ),
+
+        getValue(
+          cusp?.nakshatraLord ??
+            cusp?.starLord ??
+            cusp?.star_lord
+        ),
+      ]
+    );
 
   return (
     <View>
-      <Text style={styles.title}>Planets</Text>
+      <Text style={styles.title}>
+        Planets
+      </Text>
 
-      <KPTable
-        headers={[
-          "Planets",
-          "Cusp",
-          "Sign",
-          "Sign Lord",
-          "Star Lord",
-          "Sub Lord",
-        ]}
-        data={dynamicPlanetData}
-        cellWidth={wp(15.5)}
-      />
+      {planetData.length ? (
+        <KPTable
+          headers={[
+            "Planets",
+            "Cusp",
+            "Sign",
+            "Sign Lord",
+            "Star Lord",
+            "Sub Lord",
+          ]}
+          data={planetData}
+        />
+      ) : (
+        <EmptyTable text="No KP planetary data available" />
+      )}
 
-      <Text style={styles.title}>Cusps</Text>
+      <Text style={styles.title}>
+        Cusps
+      </Text>
 
-      <KPTable
-        headers={[
-          "Cusp",
-          "Degree",
-          "Sign",
-          "Sign Lord",
-          "Cusp Sub",
-          "Nakshtra",
-          "Naks Lord",
-        ]}
-        data={dynamicCuspsData}
-        cellWidth={wp(16)}
-      />
+      {cuspData.length ? (
+        <KPTable
+          headers={[
+            "Cusp",
+            "Degree",
+            "Sign",
+            "Sign Lord",
+            "Cusp Sub",
+            "Nakshatra",
+            "Naks Lord",
+          ]}
+          data={cuspData}
+        />
+      ) : (
+        <EmptyTable text="No KP cusp data available" />
+      )}
 
-      <TouchableOpacity style={styles.button} activeOpacity={0.8}>
-        <Text style={styles.buttonText}>☏ Consult An Expert</Text>
+      <TouchableOpacity
+        style={styles.button}
+      >
+        <Text
+          style={styles.buttonText}
+        >
+          ☏ Consult An Expert
+        </Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-const KPTable = ({ headers, data, cellWidth }) => {
-  return (
-    <View style={styles.tableWrapper}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.table}>
-          <View style={styles.headerRow}>
-            {headers.map((item, index) => (
-              <Text
-                key={index}
-                style={[
-                  styles.headerCell,
-                  {
-                    width: index === 0 ? cellWidth + wp(2) : cellWidth,
-                  },
-                ]}
-              >
-                {item}
-              </Text>
-            ))}
-          </View>
+const EmptyTable = ({
+  text,
+}) => (
+  <View
+    style={
+      styles.emptyContainer
+    }
+  >
+    <Text
+      style={styles.emptyText}
+    >
+      {text}
+    </Text>
+  </View>
+);
 
-          {data.map((row, rowIndex) => (
+const KPTable = ({
+  headers,
+  data,
+}) => (
+  <View
+    style={
+      styles.tableWrapper
+    }
+  >
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={
+        false
+      }
+    >
+      <View style={styles.table}>
+        <View
+          style={styles.headerRow}
+        >
+          {headers.map(
+            (header) => (
+              <Text
+                key={header}
+                style={
+                  styles.headerCell
+                }
+              >
+                {header}
+              </Text>
+            )
+          )}
+        </View>
+
+        {data.map(
+          (row, rowIndex) => (
             <View
               key={rowIndex}
-              style={[styles.row, rowIndex % 2 === 0 && styles.lightRow]}
+              style={[
+                styles.row,
+                rowIndex % 2 ===
+                  0 &&
+                  styles.lightRow,
+              ]}
             >
-              {row.map((cell, cellIndex) => (
-                <Text
-                  key={cellIndex}
-                  style={[
-                    styles.bodyCell,
-                    {
-                      width: cellIndex === 0 ? cellWidth + wp(2) : cellWidth,
-                    },
-                  ]}
-                >
-                  {cell}
-                </Text>
-              ))}
+              {row.map(
+                (
+                  cell,
+                  cellIndex
+                ) => (
+                  <Text
+                    key={cellIndex}
+                    style={
+                      styles.bodyCell
+                    }
+                  >
+                    {getValue(cell)}
+                  </Text>
+                )
+              )}
             </View>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
-  );
-};
+          )
+        )}
+      </View>
+    </ScrollView>
+  </View>
+);
 
 export default KPTab;
 
@@ -200,6 +299,7 @@ const styles = StyleSheet.create({
     color: "#111",
     marginBottom: hp(1),
   },
+
   tableWrapper: {
     borderWidth: 1,
     borderColor: BORDER,
@@ -207,44 +307,58 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     marginBottom: hp(2),
   },
+
   table: {
     backgroundColor: "#fff",
   },
+
   headerRow: {
     flexDirection: "row",
     backgroundColor: ORANGE,
   },
+
   headerCell: {
+    width: wp(16),
     minHeight: hp(5),
     color: "#fff",
     fontSize: RF(8.5),
     fontWeight: "700",
     textAlign: "center",
     textAlignVertical: "center",
-    paddingHorizontal: wp(1),
-    borderRightWidth: 0.5,
-    borderRightColor: "#ff9b72",
   },
+
   row: {
     flexDirection: "row",
     backgroundColor: "#fff",
   },
+
   lightRow: {
     backgroundColor: LIGHT,
   },
+
   bodyCell: {
+    width: wp(16),
     minHeight: hp(5),
     color: "#111",
     fontSize: RF(8.5),
     textAlign: "center",
     textAlignVertical: "center",
-    paddingHorizontal: wp(1),
-    borderRightWidth: 0.5,
-    borderRightColor: "#eee",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#eee",
-    fontWeight: "400",
   },
+
+  emptyContainer: {
+    padding: hp(2.5),
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: wp(2),
+    marginBottom: hp(2),
+    alignItems: "center",
+  },
+
+  emptyText: {
+    color: "#888",
+    fontSize: RF(11),
+  },
+
   button: {
     height: hp(5.4),
     backgroundColor: ORANGE,
@@ -253,6 +367,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: hp(0.5),
   },
+
   buttonText: {
     color: "#fff",
     fontSize: RF(13),

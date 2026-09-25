@@ -1,27 +1,65 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import {
+  createApi,
+  fetchBaseQuery,
+} from "@reduxjs/toolkit/query/react";
 
 import { BASE_URL } from "../config/api";
+
+// Expo automatically loads EXPO_PUBLIC_ variables from .env
+const ASTROLOGY_ENGINE_TOKEN =
+  process.env.EXPO_PUBLIC_ASTROLOGY_ENGINE_TOKEN;
 
 export const kundliApi = createApi({
   reducerPath: "kundliApi",
 
   baseQuery: fetchBaseQuery({
+    // Example:
+    // https://your-ngrok-url.ngrok-free.app/api
     baseUrl: `${BASE_URL}/api`,
 
+    timeout: 60000,
+
     prepareHeaders: async (headers) => {
+      // Basic headers
       headers.set("Accept", "application/json");
       headers.set("Content-Type", "application/json");
-      headers.set("ngrok-skip-browser-warning", "true");
 
-      const userData = await AsyncStorage.getItem("userData");
+      // Astrology Engine Token
+      if (ASTROLOGY_ENGINE_TOKEN) {
+        headers.set(
+          "x-astrology-token",
+          ASTROLOGY_ENGINE_TOKEN
+        );
+      }
 
-      if (userData) {
-        const user = JSON.parse(userData);
+      // Required for ngrok
+      headers.set(
+        "ngrok-skip-browser-warning",
+        "true"
+      );
 
-        if (user?.token) {
-          headers.set("Authorization", `Bearer ${user.token}`);
+      // Existing application login token
+      // This is separate from ASTROLOGY_ENGINE_TOKEN.
+      try {
+        const userData =
+          await AsyncStorage.getItem("userData");
+
+        if (userData) {
+          const user = JSON.parse(userData);
+
+          if (user?.token) {
+            headers.set(
+              "Authorization",
+              `Bearer ${user.token}`
+            );
+          }
         }
+      } catch (error) {
+        console.log(
+          "Unable to read userData:",
+          error
+        );
       }
 
       return headers;
@@ -31,82 +69,63 @@ export const kundliApi = createApi({
   tagTypes: ["Kundli"],
 
   endpoints: (builder) => ({
-    // =========================
-    // GENERATE KUNDLI (BASIC)
-    // =========================
-    generateKundli: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/generate",
-        method: "POST",
-        body: data,
-      }),
-      invalidatesTags: ["Kundli"],
-    }),
-
-    // =========================
-    // FULL KUNDLI (6 FIGMA TABS)
-    // =========================
+    // ==========================================
+    // BASIC / FULL KUNDLI
+    // ==========================================
     getFullKundli: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/full",
+      query: (body) => ({
+        url: "/astrology/kundali/basic",
         method: "POST",
-        body: data,
+        body,
       }),
+
       invalidatesTags: ["Kundli"],
     }),
 
-    // =========================
-    // ADVANCED KUNDLI
-    // =========================
-    getAdvancedKundli: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/advanced",
+    // ==========================================
+    // BASIC KUNDLI
+    // ==========================================
+    getBasicKundli: builder.mutation({
+      query: (body) => ({
+        url: "/astrology/kundali/basic",
         method: "POST",
-        body: data,
+        body,
       }),
+
       invalidatesTags: ["Kundli"],
     }),
 
-    // =========================
-    // KUNDLI CHART (SVG / JSON)
-    // =========================
-    getKundliChart: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/chart",
+    // ==========================================
+    // PANCHANG
+    // ==========================================
+    getPanchang: builder.mutation({
+      query: (body) => ({
+        url: "/astrology/kundali/panchang",
         method: "POST",
-        body: data,
+        body,
       }),
     }),
 
-    // =========================
-    // KUNDLI MATCH (GUN MILAN)
-    // =========================
+    // ==========================================
+    // KUNDLI MATCHING
+    // ==========================================
     matchKundli: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/match",
+      query: (body) => ({
+        url: "/astrology/kundali/match",
         method: "POST",
-        body: data,
-      }),
-    }),
-
-    // =========================
-    // ADVANCED KUNDLI MATCH
-    // =========================
-    matchKundliAdvanced: builder.mutation({
-      query: (data) => ({
-        url: "/kundli/match/advanced",
-        method: "POST",
-        body: data,
+        body,
       }),
     }),
   }),
 });
 
+// ==========================================
+// EXPORT HOOKS
+// ==========================================
+
 export const {
-  useGenerateKundliMutation,
   useGetFullKundliMutation,
-  useGetAdvancedKundliMutation,
-  useGetKundliChartMutation,
+  useGetBasicKundliMutation,
+  useGetPanchangMutation,
   useMatchKundliMutation,
-  useMatchKundliAdvancedMutation,
 } = kundliApi;
