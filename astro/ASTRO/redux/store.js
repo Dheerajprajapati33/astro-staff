@@ -15,6 +15,7 @@ import { registerApi } from "./registerApi";
 import { reviewApi } from "./ReviewApi";
 import { walletApi } from "./walletApi";
 import { warningApi } from "./warningApi";
+import { blockReportApi } from "./blockReportApi";
 
 export const store = configureStore({
   reducer: {
@@ -31,6 +32,7 @@ export const store = configureStore({
     [reviewApi.reducerPath]: reviewApi.reducer,
     [priceUpdateApi.reducerPath]: priceUpdateApi.reducer,
     [chatApi.reducerPath]: chatApi.reducer,
+    [blockReportApi.reducerPath]: blockReportApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
     [walletApi.reducerPath]: walletApi.reducer,
     [warningApi.reducerPath]: warningApi.reducer,
@@ -51,6 +53,7 @@ export const store = configureStore({
       reviewApi.middleware,
       priceUpdateApi.middleware,
       chatApi.middleware,
+      blockReportApi.middleware,
       liveApi.middleware,
       walletApi.middleware,
       warningApi.middleware,

@@ -11,7 +11,6 @@ export const consultationApi = createApi({
 
     prepareHeaders: async (headers) => {
       headers.set("Accept", "application/json");
-
       headers.set("ngrok-skip-browser-warning", "true");
 
       const userData = await AsyncStorage.getItem("userData");
@@ -23,6 +22,7 @@ export const consultationApi = createApi({
           const rawToken = parsedUser.token.startsWith("Bearer ")
             ? parsedUser.token
             : `Bearer ${parsedUser.token}`;
+
           headers.set("Authorization", rawToken);
         }
       }
@@ -31,7 +31,11 @@ export const consultationApi = createApi({
     },
   }),
 
-  tagTypes: ["ChatMessages", "ConsultationHistory", "Reviews"],
+  tagTypes: [
+    "ChatMessages",
+    "ConsultationHistory",
+    "Reviews",
+  ],
 
   endpoints: (builder) => ({
     // ==========================
@@ -41,11 +45,10 @@ export const consultationApi = createApi({
     createConsultation: builder.mutation({
       query: (data) => ({
         url: "/consultation/create",
-
         method: "POST",
-
         body: data,
       }),
+
       invalidatesTags: ["ConsultationHistory"],
     }),
 
@@ -56,11 +59,26 @@ export const consultationApi = createApi({
     getChatMessages: builder.query({
       query: ({ roomId, page = 1, limit = 50 }) => ({
         url: `/chat/rooms/${roomId}/messages?page=${page}&limit=${limit}`,
-
         method: "GET",
       }),
 
       providesTags: ["ChatMessages"],
+    }),
+
+    // ==========================
+    // DELETE CHAT MESSAGE
+    // ==========================
+
+    deleteChatMessage: builder.mutation({
+      query: ({ messageId, deleteType = "me" }) => ({
+        url: `/chat/messages/${messageId}`,
+        method: "DELETE",
+        body: {
+          deleteType,
+        },
+      }),
+
+      invalidatesTags: ["ChatMessages"],
     }),
 
     // ==========================
@@ -70,13 +88,17 @@ export const consultationApi = createApi({
     getConsultationHistory: builder.query({
       query: ({ page = 1, limit = 50, type } = {}) => {
         let url = `/consultation/history?page=${page}&limit=${limit}`;
-        if (type) url += `&type=${type}`;
+
+        if (type) {
+          url += `&type=${type}`;
+        }
+
         return {
           url,
           method: "GET",
         };
       },
-      
+
       transformResponse: (response) => {
         const list = Array.isArray(response)
           ? response
@@ -91,23 +113,34 @@ export const consultationApi = createApi({
                   : Array.isArray(response?.data)
                     ? response.data
                     : [];
-        return { consultations: list };
+
+        return {
+          consultations: list,
+        };
       },
+
       providesTags: ["ConsultationHistory"],
     }),
 
     // ==========================
-    // GET CALL TOKEN (Agora RTC)
+    // GET CALL TOKEN
     // ==========================
 
     getCallToken: builder.mutation({
       query: (params) => {
         const consultationId =
-          typeof params === "object" ? params.consultationId : params;
+          typeof params === "object"
+            ? params.consultationId
+            : params;
+
         const body =
           typeof params === "object"
-            ? { uid: params.uid, role: params.role }
+            ? {
+                uid: params.uid,
+                role: params.role,
+              }
             : undefined;
+
         return {
           url: `/consultation/token/${consultationId}`,
           method: "POST",
@@ -121,20 +154,31 @@ export const consultationApi = createApi({
     // ==========================
 
     endConsultationCall: builder.mutation({
-      query: ({ consultationId, reason = "user_disconnected" }) => ({
+      query: ({
+        consultationId,
+        reason = "user_disconnected",
+      }) => ({
         url: `/consultation/${consultationId}/end-call`,
         method: "POST",
-        body: { reason },
+        body: {
+          reason,
+        },
       }),
+
       invalidatesTags: ["ConsultationHistory"],
     }),
 
     // ==========================
-    // CREATE / SUBMIT CONSULTATION REVIEW
+    // CREATE / SUBMIT REVIEW
     // ==========================
 
     createReview: builder.mutation({
-      query: ({ astrologerId, consultationId, rating, review }) => ({
+      query: ({
+        astrologerId,
+        consultationId,
+        rating,
+        review,
+      }) => ({
         url: "/review/create-review",
         method: "POST",
         body: {
@@ -144,7 +188,12 @@ export const consultationApi = createApi({
           review,
         },
       }),
-      invalidatesTags: ["ConsultationHistory", "Reviews", "ChatMessages"],
+
+      invalidatesTags: [
+        "ConsultationHistory",
+        "Reviews",
+        "ChatMessages",
+      ],
     }),
   }),
 });
@@ -156,4 +205,5 @@ export const {
   useGetCallTokenMutation,
   useEndConsultationCallMutation,
   useCreateReviewMutation,
+  useDeleteChatMessageMutation,
 } = consultationApi;

@@ -14,14 +14,11 @@ export const kundliApi = createApi({
   reducerPath: "kundliApi",
 
   baseQuery: fetchBaseQuery({
-    // Example:
-    // https://your-ngrok-url.ngrok-free.app/api
     baseUrl: `${BASE_URL}/api`,
 
     timeout: 60000,
 
     prepareHeaders: async (headers) => {
-      // Basic headers
       headers.set("Accept", "application/json");
       headers.set("Content-Type", "application/json");
 
@@ -33,14 +30,13 @@ export const kundliApi = createApi({
         );
       }
 
-      // Required for ngrok
+      // Ngrok
       headers.set(
         "ngrok-skip-browser-warning",
         "true"
       );
 
-      // Existing application login token
-      // This is separate from ASTROLOGY_ENGINE_TOKEN.
+      // Application login token
       try {
         const userData =
           await AsyncStorage.getItem("userData");
@@ -69,8 +65,9 @@ export const kundliApi = createApi({
   tagTypes: ["Kundli"],
 
   endpoints: (builder) => ({
+
     // ==========================================
-    // BASIC / FULL KUNDLI
+    // FULL KUNDLI
     // ==========================================
     getFullKundli: builder.mutation({
       query: (body) => ({
@@ -100,7 +97,7 @@ export const kundliApi = createApi({
     // ==========================================
     getPanchang: builder.mutation({
       query: (body) => ({
-        url: "/astrology/kundali/panchang",
+        url: "/tools/panchang",
         method: "POST",
         body,
       }),

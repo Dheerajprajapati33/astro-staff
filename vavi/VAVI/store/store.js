@@ -21,13 +21,20 @@ import { referralApi } from "../redux/referralApi";
 import { HoroscopeApi } from "../redux/HoroscopeApi";
 import { UpayaApi } from "../redux/UpayaApi";
 
+// Block / Report API
+import { blockReportApi } from "../redux/blockReportApi";
+
 import { performClientLogoutVavi } from "../utils/auth";
 
 let lastLoginTime = 0;
 
 export const recordFreshLogin = () => {
   lastLoginTime = Date.now();
-  console.log("[Store] Fresh login recorded at timestamp:", lastLoginTime);
+
+  console.log(
+    "[Store] Fresh login recorded at timestamp:",
+    lastLoginTime,
+  );
 };
 
 const authErrorMiddleware = (store) => (next) => (action) => {
@@ -39,12 +46,14 @@ const authErrorMiddleware = (store) => (next) => (action) => {
     action?.payload?.status === 401 &&
     !action?.type?.startsWith("authApi/")
   ) {
-    // Ignore pre-login 401 errors arriving right after a fresh login transition (within 4 seconds)
+    // Ignore pre-login 401 errors arriving right after a fresh login transition
+    // within 4 seconds
     if (Date.now() - lastLoginTime < 4000) {
       console.log(
         "[Store Middleware] Ignoring stale pre-login 401 action right after fresh login:",
         action.type,
       );
+
       return result;
     }
 
@@ -53,17 +62,24 @@ const authErrorMiddleware = (store) => (next) => (action) => {
       .then((userData) => {
         if (userData) {
           const parsed = JSON.parse(userData);
+
           if (parsed?.token) {
             console.log(
               "Unauthorized (401) on protected API detected:",
               action.type,
               "- logging out...",
             );
+
             performClientLogoutVavi();
           }
         }
       })
-      .catch((err) => console.log("Failed to check userData on 401:", err));
+      .catch((err) =>
+        console.log(
+          "Failed to check userData on 401:",
+          err,
+        ),
+      );
   }
 
   return result;
@@ -84,6 +100,13 @@ export const store = configureStore({
     [followerApi.reducerPath]: followerApi.reducer,
     [appContentApi.reducerPath]: appContentApi.reducer,
     [consultationApi.reducerPath]: consultationApi.reducer,
+
+    // ==========================
+    // BLOCK / REPORT API
+    // ==========================
+    [blockReportApi.reducerPath]:
+      blockReportApi.reducer,
+
     [liveApi.reducerPath]: liveApi.reducer,
     [referralApi.reducerPath]: referralApi.reducer,
     [notificationApi.reducerPath]: notificationApi.reducer,
@@ -94,6 +117,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authErrorMiddleware,
+
       authApi.middleware,
       updateApi.middleware,
       AstroApi.middleware,
@@ -107,6 +131,12 @@ export const store = configureStore({
       followerApi.middleware,
       appContentApi.middleware,
       consultationApi.middleware,
+
+      // ==========================
+      // BLOCK / REPORT API
+      // ==========================
+      blockReportApi.middleware,
+
       liveApi.middleware,
       referralApi.middleware,
       notificationApi.middleware,

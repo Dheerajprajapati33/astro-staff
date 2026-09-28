@@ -1,5 +1,7 @@
 import { useState } from "react";
+
 import {
+  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -34,250 +36,483 @@ import {
 } from "../../utils/cityCoordinates";
 
 export default function FreeKundli() {
+  // ==================================================
+  // TABS
+  // ==================================================
+
   const [activeTab, setActiveTab] = useState("new");
 
-  // ==========================================
+  // ==================================================
   // FORM STATE
-  // ==========================================
+  // ==================================================
 
   const [name, setName] = useState("");
   const [gender, setGender] = useState("MALE");
   const [dob, setDob] = useState("");
   const [birthTime, setBirthTime] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
-
   const [coordinates, setCoordinates] =
     useState(DEFAULT_COORDINATES);
-
   const [unknownTime, setUnknownTime] = useState(false);
+  const [language, setLanguage] = useState("hi");
 
-  // ==========================================
-  // MODAL STATE
-  // ==========================================
+  // ==================================================
+  // MODALS
+  // ==================================================
 
   const [showDobPicker, setShowDobPicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showPlacePicker, setShowPlacePicker] = useState(false);
 
-  // ==========================================
+  // ==================================================
   // KUNDLI API
-  // ==========================================
+  // ==================================================
 
-  const [getFullKundli, { isLoading: generating }] =
-    useGetFullKundliMutation();
+  const [
+    getFullKundli,
+    {
+      isLoading: generating,
+    },
+  ] = useGetFullKundliMutation();
 
-  // ==========================================
-  // SAVED KUNDLI API
-  // ==========================================
+  // ==================================================
+  // SAVE KUNDLI API
+  // ==================================================
 
-  const [saveKundli] = useSaveKundliMutation();
+  const [
+    saveKundli,
+    {
+      isLoading: saving,
+    },
+  ] = useSaveKundliMutation();
 
-  const [deleteSavedKundli] =
-    useDeleteSavedKundliMutation();
+  const [
+    deleteSavedKundli,
+    {
+      isLoading: deleting,
+    },
+  ] = useDeleteSavedKundliMutation();
 
   const {
     data: savedData,
     isLoading: savedLoading,
+    refetch: refetchSavedKundli,
   } = useGetSavedKundliQuery();
 
-  // ==========================================
-  // GENERATE KUNDLI
-  // ==========================================
+  // ==================================================
+  // DOB FORMAT FOR UI
+  // API: YYYY-MM-DD
+  // UI : DD:MM:YYYY
+  // ==================================================
 
-  const handleGenerateKundli = async (customPayload) => {
+  const formatDobForUI = (date) => {
+    if (!date) {
+      return "";
+    }
+
+    const value = String(date).trim();
+
+    const dashParts = value.split("-");
+
+    if (
+      dashParts.length === 3 &&
+      dashParts[0].length === 4
+    ) {
+      const [year, month, day] = dashParts;
+
+      return `${String(day).padStart(2, "0")}:${String(
+        month
+      ).padStart(2, "0")}:${year}`;
+    }
+
+    const colonParts = value.split(":");
+
+    if (
+      colonParts.length === 3 &&
+      colonParts[2].length === 4
+    ) {
+      const [day, month, year] = colonParts;
+
+      return `${String(day).padStart(2, "0")}:${String(
+        month
+      ).padStart(2, "0")}:${year}`;
+    }
+
+    return value;
+  };
+
+  // ==================================================
+  // DOB FORMAT FOR API
+  // ==================================================
+
+  const formatDobForApi = (date) => {
+    if (!date) {
+      return "";
+    }
+
+    const value = String(date).trim();
+
+    // YYYY-MM-DD
+    const dashParts = value.split("-");
+
+    if (
+      dashParts.length === 3 &&
+      dashParts[0].length === 4
+    ) {
+      const [year, month, day] = dashParts;
+
+      return `${year}-${String(month).padStart(
+        2,
+        "0"
+      )}-${String(day).padStart(2, "0")}`;
+    }
+
+    // DD:MM:YYYY
+    const colonParts = value.split(":");
+
+    if (
+      colonParts.length === 3 &&
+      colonParts[2].length === 4
+    ) {
+      const [day, month, year] = colonParts;
+
+      return `${year}-${String(month).padStart(
+        2,
+        "0"
+      )}-${String(day).padStart(2, "0")}`;
+    }
+
+    // DD-MM-YYYY
+    if (
+      dashParts.length === 3 &&
+      dashParts[2].length === 4
+    ) {
+      const [day, month, year] = dashParts;
+
+      return `${year}-${String(month).padStart(
+        2,
+        "0"
+      )}-${String(day).padStart(2, "0")}`;
+    }
+
+    return value;
+  };
+
+  // ==================================================
+  // AS OF DATE/TIME
+  // Used for Dasha + Gochar calculation
+  // ==================================================
+
+  const getCurrentAsOf = () => {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+      now.getDate()
+    ).padStart(2, "0");
+
+    const hours = String(
+      now.getHours()
+    ).padStart(2, "0");
+
+    const minutes = String(
+      now.getMinutes()
+    ).padStart(2, "0");
+
+    const seconds = String(
+      now.getSeconds()
+    ).padStart(2, "0");
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+05:30`;
+  };
+
+  // ==================================================
+  // NORMALIZE GENDER
+  // ==================================================
+
+  const normalizeGender = (value) => {
+    const genderValue = String(value || "")
+      .trim()
+      .toLowerCase();
+
+    if (
+      genderValue === "female" ||
+      genderValue === "महिला" ||
+      genderValue === "f"
+    ) {
+      return "FEMALE";
+    }
+
+    if (
+      genderValue === "other" ||
+      genderValue === "others"
+    ) {
+      return "OTHER";
+    }
+
+    return "MALE";
+  };
+
+  // ==================================================
+  // GET API DATA
+  // ==================================================
+
+  const getApiData = (response) => {
+    if (
+      response &&
+      typeof response === "object" &&
+      response.data &&
+      typeof response.data === "object"
+    ) {
+      return {
+        ...response,
+        ...response.data,
+      };
+    }
+
+    return response || {};
+  };
+
+  // ==================================================
+  // GET USER DETAILS
+  // ==================================================
+
+  const getUserDetails = (response) => {
+    return (
+      response?.user_details ||
+      response?.data?.user_details ||
+      {}
+    );
+  };
+
+  // ==================================================
+  // PREPARE SAVE PAYLOAD
+  // ==================================================
+
+  const createSavePayload = (
+    response,
+    payload,
+    resolvedCoords
+  ) => {
+    const userDetails = getUserDetails(response);
+
+    return {
+      name:
+        userDetails?.name ||
+        payload?.name ||
+        "User",
+
+      relation: "Self",
+
+      gender: normalizeGender(
+        userDetails?.gender ||
+          payload?.gender ||
+          "MALE"
+      ),
+
+      dob:
+        formatDobForApi(
+          userDetails?.dob ||
+            payload?.dob
+        ) || "2000-01-01",
+
+      tob:
+        userDetails?.tob ||
+        payload?.tob ||
+        "12:00:00",
+
+      birthPlace:
+        userDetails?.birthPlace ||
+        payload?.birthPlace ||
+        payload?.city ||
+        "Delhi",
+
+      latitude:
+        userDetails?.latitude ??
+        payload?.latitude ??
+        resolvedCoords.latitude,
+
+      longitude:
+        userDetails?.longitude ??
+        payload?.longitude ??
+        resolvedCoords.longitude,
+
+      timezone:
+        userDetails?.timezone ||
+        payload?.timezone ||
+        "Asia/Kolkata",
+
+      isDefault: true,
+
+      // IMPORTANT:
+      // Complete response of Kundli API
+      apiResponse: response,
+    };
+  };
+
+  // ==================================================
+  // SAVE KUNDLI
+  // ==================================================
+
+  const saveGeneratedKundli = async (
+    response,
+    payload,
+    resolvedCoords
+  ) => {
     try {
-      // Check whether this is a saved Kundli/custom payload
-      const isCustomData =
-        customPayload &&
-        typeof customPayload === "object" &&
-        !customPayload.nativeEvent &&
-        customPayload.name;
-
-      // ==========================================
-      // RESOLVE COORDINATES
-      // ==========================================
-
-      let resolvedCoords;
-
-      if (isCustomData) {
-        const place =
-          customPayload.city ||
-          customPayload.birthPlace ||
-          "Delhi";
-
-        const placeCoordinates =
-          getCoordinatesForPlace(place);
-
-        resolvedCoords = {
-          latitude:
-            customPayload.latitude ||
-            placeCoordinates.latitude,
-
-          longitude:
-            customPayload.longitude ||
-            placeCoordinates.longitude,
-
-          // IMPORTANT:
-          // Astrology Engine requires this exact timezone
-          timezone: "Asia/Kolkata",
-        };
-      } else {
-        const placeCoordinates =
-          getCoordinatesForPlace(
-            birthPlace || "Delhi"
-          );
-
-        resolvedCoords = {
-          latitude:
-            coordinates?.latitude ||
-            placeCoordinates.latitude,
-
-          longitude:
-            coordinates?.longitude ||
-            placeCoordinates.longitude,
-
-          // IMPORTANT:
-          // Do NOT send "5.5"
-          timezone: "Asia/Kolkata",
-        };
-      }
-
-      // ==========================================
-      // CREATE API PAYLOAD
-      // ==========================================
-
-      const payload = isCustomData
-        ? {
-            ...customPayload,
-
-            latitude: resolvedCoords.latitude,
-
-            longitude: resolvedCoords.longitude,
-
-            timezone: "Asia/Kolkata",
-
-            la: customPayload.la || "hi",
-          }
-        : {
-            name: name || "User",
-
-            gender: gender || "MALE",
-
-            dob: dob || "2000-01-01",
-
-            tob: unknownTime
-              ? "12:00:00"
-              : birthTime || "12:00:00",
-
-            city: birthPlace || "Delhi",
-
-            birthPlace: birthPlace || "Delhi",
-
-            latitude: resolvedCoords.latitude,
-
-            longitude: resolvedCoords.longitude,
-
-            timezone: "Asia/Kolkata",
-
-            la: "hi",
-          };
-
-      // ==========================================
-      // DEBUG PAYLOAD
-      // ==========================================
-
-      console.log(
-        "Kundli API Payload:",
-        payload
+      const savePayload = createSavePayload(
+        response,
+        payload,
+        resolvedCoords
       );
 
-      // ==========================================
-      // GENERATE KUNDLI
-      // ==========================================
-
-      const response =
-        await getFullKundli(payload).unwrap();
-
       console.log(
-        "Kundli API Response:",
-        response
+        "========================================"
       );
 
-      // ==========================================
-      // SAVE NEW KUNDLI
-      // ==========================================
+      console.log(
+        "💾 SAVE KUNDLI PAYLOAD"
+      );
 
-      if (!customPayload) {
-        try {
-          await saveKundli({
-            name: name || "User",
+      console.log(
+        JSON.stringify(
+          savePayload,
+          null,
+          2
+        )
+      );
 
-            relation: "Self",
+      console.log(
+        "========================================"
+      );
 
-            gender: gender || "MALE",
+      const saveResponse =
+        await saveKundli(
+          savePayload
+        ).unwrap();
 
-            dob: dob || "2000-01-01",
+      console.log(
+        "========================================"
+      );
 
-            tob: unknownTime
-              ? "12:00:00"
-              : birthTime || "12:00:00",
+      console.log(
+        "✅ KUNDLI SAVED SUCCESSFULLY"
+      );
 
-            city: birthPlace || "Delhi",
+      console.log(
+        JSON.stringify(
+          saveResponse,
+          null,
+          2
+        )
+      );
 
-            birthPlace: birthPlace || "Delhi",
+      console.log(
+        "========================================"
+      );
 
-            latitude: resolvedCoords.latitude,
+      return saveResponse;
+    } catch (error) {
+      console.log(
+        "========================================"
+      );
 
-            longitude: resolvedCoords.longitude,
+      console.log(
+        "❌ SAVE KUNDLI ERROR"
+      );
 
-            timezone: "Asia/Kolkata",
-          }).unwrap();
-        } catch (saveErr) {
-          console.log(
-            "save kundli err",
-            saveErr
-          );
-        }
-      }
+      console.log(
+        "STATUS:",
+        error?.status
+      );
 
-      // ==========================================
-      // NORMALIZE API RESPONSE
-      // ==========================================
+      console.log(
+        "DATA:",
+        error?.data
+      );
 
-      const basePayload =
-        response &&
-        typeof response === "object"
-          ? response?.data &&
-            typeof response.data === "object"
-            ? {
-                ...response,
-                ...response.data,
-              }
-            : response
-          : {};
+      console.log(
+        "ERROR:",
+        error
+      );
 
-      // ==========================================
-      // PREPARE KUNDLI DATA
-      // ==========================================
+      console.log(
+        "========================================"
+      );
 
-      const kundliPayload = {
-        ...basePayload,
+      return null;
+    }
+  };
+
+  // ==================================================
+  // CREATE KUNDLI PAYLOAD
+  // ==================================================
+
+  const createKundliPayload = (
+    customPayload
+  ) => {
+    const isCustomData =
+      customPayload &&
+      typeof customPayload === "object" &&
+      !customPayload.nativeEvent &&
+      customPayload.name;
+
+    let resolvedCoords;
+
+    if (isCustomData) {
+      const place =
+        customPayload.city ||
+        customPayload.birthPlace ||
+        "Delhi";
+
+      const placeCoordinates =
+        getCoordinatesForPlace(place);
+
+      resolvedCoords = {
+        latitude:
+          customPayload.latitude ??
+          placeCoordinates.latitude,
+
+        longitude:
+          customPayload.longitude ??
+          placeCoordinates.longitude,
+
+        timezone: "Asia/Kolkata",
+      };
+
+      const payload = {
+        ...customPayload,
+
+        name:
+          customPayload.name ||
+          "User",
+
+        gender:
+          customPayload.gender ||
+          "MALE",
 
         dob:
-          basePayload?.dob ||
-          payload.dob,
+          formatDobForApi(
+            customPayload.dob
+          ),
 
         tob:
-          basePayload?.tob ||
-          payload.tob,
+          customPayload.tob ||
+          "12:00:00",
 
         city:
-          basePayload?.city ||
-          payload.city,
+          customPayload.city ||
+          customPayload.birthPlace ||
+          "Delhi",
 
         birthPlace:
-          basePayload?.birthPlace ||
-          payload.birthPlace,
+          customPayload.birthPlace ||
+          customPayload.city ||
+          "Delhi",
 
         latitude:
           resolvedCoords.latitude,
@@ -285,150 +520,769 @@ export default function FreeKundli() {
         longitude:
           resolvedCoords.longitude,
 
-        // Always keep the supported timezone
         timezone: "Asia/Kolkata",
 
-        gender:
-          basePayload?.gender ||
-          payload.gender,
+        la:
+          customPayload.la ||
+          language ||
+          "hi",
 
-        name:
-          basePayload?.name ||
-          payload.name,
+        // Reference date/time for Dasha + Gochar
+        asOf:
+          customPayload.asOf ||
+          getCurrentAsOf(),
       };
 
-      // ==========================================
-      // OPEN KUNDLI SCREEN
-      // ==========================================
-
-      router.push({
-        pathname: "/kundli",
-
-        params: {
-          data: JSON.stringify(
-            kundliPayload
-          ),
-        },
-      });
-    } catch (error) {
-      console.log(
-        "kundli error",
-        error
-      );
-
-      console.log(
-        "Kundli API Error Data:",
-        error?.data
-      );
-
-      console.log(
-        "Kundli API Error Status:",
-        error?.status
-      );
+      return {
+        payload,
+        resolvedCoords,
+        isCustomData: true,
+      };
     }
-  };
 
-  // ==========================================
-  // OPEN SAVED KUNDLI
-  // ==========================================
+    const placeCoordinates =
+      getCoordinatesForPlace(
+        birthPlace || "Delhi"
+      );
 
-  const handleOpenSavedKundli = (item) => {
-    handleGenerateKundli({
-      name: item.name,
+    resolvedCoords = {
+      latitude:
+        coordinates?.latitude ??
+        placeCoordinates.latitude,
 
-      gender: item.gender
-        ? item.gender.toUpperCase()
-        : "MALE",
+      longitude:
+        coordinates?.longitude ??
+        placeCoordinates.longitude,
 
-      dob: item.dob,
+      timezone: "Asia/Kolkata",
+    };
 
-      tob: item.tob,
+    const payload = {
+      name:
+        name.trim() || "User",
+
+      gender:
+        gender || "MALE",
+
+      dob:
+        formatDobForApi(dob) ||
+        "2000-01-01",
+
+      tob:
+        unknownTime
+          ? "12:00:00"
+          : birthTime || "12:00:00",
 
       city:
-        item.city ||
-        item.birthPlace,
+        birthPlace.trim() ||
+        "Delhi",
 
       birthPlace:
-        item.birthPlace ||
-        item.city,
+        birthPlace.trim() ||
+        "Delhi",
 
-      la: "hi",
+      latitude:
+        resolvedCoords.latitude,
 
-      // Always use supported timezone
-      timezone: "Asia/Kolkata",
+      longitude:
+        resolvedCoords.longitude,
+
+      timezone:
+        "Asia/Kolkata",
+
+      la:
+        language || "hi",
+
+      // Reference date/time for Dasha + Gochar
+      asOf: getCurrentAsOf(),
+    };
+
+    return {
+      payload,
+      resolvedCoords,
+      isCustomData: false,
+    };
+  };
+
+  // ==================================================
+  // PREPARE KUNDLI SCREEN DATA
+  // ==================================================
+
+  const prepareKundliScreenData = (
+    response,
+    payload,
+    resolvedCoords
+  ) => {
+    const basePayload =
+      getApiData(response);
+
+    const userDetails =
+      getUserDetails(response);
+
+    return {
+      ...basePayload,
+
+      dob:
+        userDetails?.dob ||
+        basePayload?.dob ||
+        payload?.dob,
+
+      tob:
+        userDetails?.tob ||
+        basePayload?.tob ||
+        payload?.tob,
+
+      city:
+        userDetails?.birthPlace ||
+        basePayload?.city ||
+        payload?.city,
+
+      birthPlace:
+        userDetails?.birthPlace ||
+        basePayload?.birthPlace ||
+        payload?.birthPlace,
+
+      latitude:
+        userDetails?.latitude ??
+        basePayload?.latitude ??
+        resolvedCoords.latitude,
+
+      longitude:
+        userDetails?.longitude ??
+        basePayload?.longitude ??
+        resolvedCoords.longitude,
+
+      timezone:
+        userDetails?.timezone ||
+        basePayload?.timezone ||
+        payload?.timezone ||
+        "Asia/Kolkata",
+
+      gender:
+        userDetails?.gender ||
+        basePayload?.gender ||
+        payload?.gender,
+
+      name:
+        userDetails?.name ||
+        basePayload?.name ||
+        payload?.name,
+
+      la:
+        userDetails?.language ||
+        basePayload?.la ||
+        basePayload?.language ||
+        payload?.la ||
+        language ||
+        "hi",
+    };
+  };
+
+  // ==================================================
+  // OPEN KUNDLI SCREEN
+  // ==================================================
+
+  const openKundliScreen = (
+    kundliData
+  ) => {
+    router.push({
+      pathname: "/kundli",
+      params: {
+        data: JSON.stringify(
+          kundliData
+        ),
+      },
     });
   };
 
-  // ==========================================
-  // DELETE SAVED KUNDLI
-  // ==========================================
+  // ==================================================
+  // GENERATE NEW KUNDLI
+  // ==================================================
 
-  const handleDeleteSaved = async (id) => {
-    try {
-      await deleteSavedKundli(id).unwrap();
-    } catch (err) {
-      console.log(
-        "delete saved kundli err",
-        err
-      );
+  const handleGenerateKundli =
+    async (customPayload) => {
+      try {
+        const {
+          payload,
+          resolvedCoords,
+          isCustomData,
+        } =
+          createKundliPayload(
+            customPayload
+          );
+
+        console.log(
+          "========================================"
+        );
+
+        console.log(
+          "🔮 KUNDLI API REQUEST"
+        );
+
+        console.log(
+          "PAYLOAD:",
+          JSON.stringify(
+            payload,
+            null,
+            2
+          )
+        );
+
+        console.log(
+          "========================================"
+        );
+
+        // ==========================================
+        // GENERATE KUNDLI
+        // ==========================================
+
+        const response =
+          await getFullKundli(
+            payload
+          ).unwrap();
+
+        console.log(
+          "========================================"
+        );
+
+        console.log(
+          "✅ KUNDLI API RESPONSE"
+        );
+
+        console.log(
+          JSON.stringify(
+            response,
+            null,
+            2
+          )
+        );
+
+        console.log(
+          "========================================"
+        );
+
+        // ==========================================
+        // SAVE ONLY NEW KUNDLI
+        // ==========================================
+        //
+        // When opening an existing saved Kundli,
+        // customPayload is used.
+        //
+        // Therefore we don't save it again.
+        //
+        // ==========================================
+
+        if (!isCustomData) {
+          await saveGeneratedKundli(
+            response,
+            payload,
+            resolvedCoords
+          );
+        }
+
+        // ==========================================
+        // PREPARE DATA FOR KUNDLI SCREEN
+        // ==========================================
+
+        const kundliPayload =
+          prepareKundliScreenData(
+            response,
+            payload,
+            resolvedCoords
+          );
+
+        // ==========================================
+        // OPEN KUNDLI
+        // ==========================================
+
+        openKundliScreen(
+          kundliPayload
+        );
+      } catch (error) {
+        console.log(
+          "========================================"
+        );
+
+        console.log(
+          "❌ KUNDLI GENERATION ERROR"
+        );
+
+        console.log(
+          "ERROR:",
+          error
+        );
+
+        console.log(
+          "STATUS:",
+          error?.status
+        );
+
+        console.log(
+          "DATA:",
+          error?.data
+        );
+
+        console.log(
+          "========================================"
+        );
+      }
+    };
+
+  // ==================================================
+  // OPEN SAVED KUNDLI
+  // ==================================================
+
+  const handleOpenSavedKundli =
+    async (item) => {
+      try {
+        console.log(
+          "========================================"
+        );
+
+        console.log(
+          "📂 OPEN SAVED KUNDLI"
+        );
+
+        console.log(
+          "ITEM:",
+          JSON.stringify(
+            item,
+            null,
+            2
+          )
+        );
+
+        console.log(
+          "========================================"
+        );
+
+        // ==================================================
+        // BEST CASE:
+        // Saved API response is already available.
+        //
+        // Open it directly.
+        // No need to calculate again.
+        // No duplicate save.
+        // ==================================================
+
+        if (
+          item?.apiResponse &&
+          typeof item.apiResponse ===
+            "object"
+        ) {
+          const savedResponse =
+            item.apiResponse;
+
+          const userDetails =
+            getUserDetails(
+              savedResponse
+            );
+
+          const savedPayload = {
+            name:
+              userDetails?.name ||
+              item.name ||
+              "User",
+
+            gender:
+              userDetails?.gender ||
+              item.gender ||
+              "MALE",
+
+            dob:
+              formatDobForApi(
+                userDetails?.dob ||
+                  item.dob
+              ),
+
+            tob:
+              userDetails?.tob ||
+              item.tob ||
+              "12:00:00",
+
+            city:
+              userDetails?.birthPlace ||
+              item.city ||
+              item.birthPlace ||
+              "Delhi",
+
+            birthPlace:
+              userDetails?.birthPlace ||
+              item.birthPlace ||
+              item.city ||
+              "Delhi",
+
+            latitude:
+              userDetails?.latitude ??
+              item.latitude ??
+              DEFAULT_COORDINATES.latitude,
+
+            longitude:
+              userDetails?.longitude ??
+              item.longitude ??
+              DEFAULT_COORDINATES.longitude,
+
+            timezone:
+              userDetails?.timezone ||
+              item.timezone ||
+              "Asia/Kolkata",
+
+            la:
+              language || "hi",
+          };
+
+          const savedCoords = {
+            latitude:
+              savedPayload.latitude,
+
+            longitude:
+              savedPayload.longitude,
+
+            timezone:
+              savedPayload.timezone,
+          };
+
+          const kundliPayload =
+            prepareKundliScreenData(
+              savedResponse,
+              savedPayload,
+              savedCoords
+            );
+
+          openKundliScreen(
+            kundliPayload
+          );
+
+          return;
+        }
+
+        // ==================================================
+        // FALLBACK:
+        // If apiResponse is not stored,
+        // regenerate from saved birth details.
+        // ==================================================
+
+        const place =
+          item?.city ||
+          item?.birthPlace ||
+          "Delhi";
+
+        const placeCoordinates =
+          getCoordinatesForPlace(
+            place
+          );
+
+        const savedPayload = {
+          name:
+            item?.name ||
+            "User",
+
+          gender:
+            normalizeGender(
+              item?.gender
+            ),
+
+          dob:
+            formatDobForApi(
+              item?.dob
+            ),
+
+          tob:
+            item?.tob ||
+            "12:00:00",
+
+          city: place,
+
+          birthPlace: place,
+
+          latitude:
+            item?.latitude ??
+            placeCoordinates.latitude,
+
+          longitude:
+            item?.longitude ??
+            placeCoordinates.longitude,
+
+          timezone:
+            item?.timezone ||
+            "Asia/Kolkata",
+
+          la:
+            language || "hi",
+        };
+
+        await handleGenerateKundli(
+          savedPayload
+        );
+      } catch (error) {
+        console.log(
+          "❌ OPEN SAVED KUNDLI ERROR:",
+          error
+        );
+      }
+    };
+
+  // ==================================================
+  // DELETE SAVED KUNDLI
+  // ==================================================
+
+  const handleDeleteSaved =
+    async (id) => {
+      try {
+        if (!id) {
+          console.log(
+            "❌ Saved Kundli ID missing"
+          );
+
+          return;
+        }
+
+        console.log(
+          "🗑️ DELETE SAVED KUNDLI:",
+          id
+        );
+
+        await deleteSavedKundli(
+          id
+        ).unwrap();
+
+        await refetchSavedKundli();
+      } catch (error) {
+        console.log(
+          "❌ DELETE SAVED KUNDLI ERROR:",
+          error
+        );
+
+        console.log(
+          "STATUS:",
+          error?.status
+        );
+
+        console.log(
+          "DATA:",
+          error?.data
+        );
+      }
+    };
+
+  // ==================================================
+  // DISPLAY TIME
+  // ==================================================
+
+  const getDisplayTime = () => {
+    if (!birthTime) {
+      return "Select Birth Time (AM/PM)";
     }
+
+    const parts =
+      birthTime.split(":");
+
+    if (parts.length < 2) {
+      return birthTime;
+    }
+
+    const hour24 =
+      Number(parts[0]);
+
+    const minute =
+      parts[1];
+
+    let hour12;
+    let period;
+
+    if (hour24 === 0) {
+      hour12 = 12;
+      period = "AM";
+    } else if (hour24 < 12) {
+      hour12 = hour24;
+      period = "AM";
+    } else if (hour24 === 12) {
+      hour12 = 12;
+      period = "PM";
+    } else {
+      hour12 =
+        hour24 - 12;
+      period = "PM";
+    }
+
+    return `${String(hour12).padStart(
+      2,
+      "0"
+    )}:${minute} ${period}`;
   };
 
-  // ==========================================
+  // ==================================================
+  // SAVED DATA NORMALIZATION
+  // ==================================================
+
+  const savedKundlis =
+    Array.isArray(
+      savedData?.data
+    )
+      ? savedData.data
+      : Array.isArray(
+          savedData
+        )
+      ? savedData
+      : Array.isArray(
+          savedData?.kundalis
+        )
+      ? savedData.kundalis
+      : [];
+
+  // ==================================================
   // UI
-  // ==========================================
+  // ==================================================
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={styles.container}
+    >
       <KeyboardAwareScrollView
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         keyboardShouldPersistTaps="handled"
-        enableOnAndroid={true}
+        enableOnAndroid
         extraScrollHeight={20}
         extraHeight={120}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={
+          styles.content
+        }
       >
-        {/* HEADER */}
+        {/* ==================================================
+            HEADER
+        ================================================== */}
 
-        <View style={styles.header}>
+        <View
+          style={styles.header}
+        >
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.back()}
+            onPress={() =>
+              router.back()
+            }
           >
             <Ionicons
               name="arrow-back"
               size={RF(24)}
-              color={Colors.darkBrown}
+              color={
+                Colors.darkBrown
+              }
             />
           </TouchableOpacity>
 
-          <Text style={styles.logo}>
+          <Text
+            style={styles.logo}
+          >
             VAVI
           </Text>
 
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() =>
-              router.push("/Notification")
+              router.push(
+                "/Notification"
+              )
             }
           >
             <Ionicons
               name="notifications-outline"
               size={RF(23)}
-              color={Colors.darkBrown}
+              color={
+                Colors.darkBrown
+              }
             />
           </TouchableOpacity>
         </View>
 
-        {/* HEADING */}
+        {/* ==================================================
+            HEADING
+        ================================================== */}
 
-        <Text style={styles.heading}>
+        <Text
+          style={styles.heading}
+        >
           Free Kundli Online
         </Text>
 
-        {/* TABS */}
+        {/* ==================================================
+            LANGUAGE
+        ================================================== */}
 
-        <View style={styles.tabContainer}>
+        <View
+          style={
+            styles.languageWrapper
+          }
+        >
+          <Text
+            style={
+              styles.languageLabel
+            }
+          >
+            Kundli Language
+          </Text>
+
+          <View
+            style={
+              styles.languageContainer
+            }
+          >
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                setLanguage("hi")
+              }
+              style={[
+                styles.languageButton,
+                language === "hi" &&
+                  styles.languageButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  language === "hi" &&
+                    styles.languageButtonTextActive,
+                ]}
+              >
+                हिन्दी
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() =>
+                setLanguage("en")
+              }
+              style={[
+                styles.languageButton,
+                language === "en" &&
+                  styles.languageButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.languageButtonText,
+                  language === "en" &&
+                    styles.languageButtonTextActive,
+                ]}
+              >
+                English
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ==================================================
+            TABS
+        ================================================== */}
+
+        <View
+          style={
+            styles.tabContainer
+          }
+        >
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={() =>
@@ -474,19 +1328,27 @@ export default function FreeKundli() {
           </TouchableOpacity>
         </View>
 
-        {/* ========================= */}
-        {/* NEW KUNDLI TAB */}
-        {/* ========================= */}
+        {/* ==================================================
+            NEW KUNDLI
+        ================================================== */}
 
         {activeTab === "new" && (
-          <View style={styles.formCard}>
-            {/* CARD HEADER */}
-
-            <View style={styles.cardHeader}>
+          <View
+            style={
+              styles.formCard
+            }
+          >
+            <View
+              style={
+                styles.cardHeader
+              }
+            >
               <Ionicons
                 name="document-text-outline"
                 size={RF(20)}
-                color={Colors.primary}
+                color={
+                  Colors.primary
+                }
               />
 
               <View
@@ -495,13 +1357,17 @@ export default function FreeKundli() {
                 }}
               >
                 <Text
-                  style={styles.cardTitle}
+                  style={
+                    styles.cardTitle
+                  }
                 >
                   Enter Details
                 </Text>
 
                 <Text
-                  style={styles.cardSubtitle}
+                  style={
+                    styles.cardSubtitle
+                  }
                 >
                   Please enter your birth
                   details to generate Kundli
@@ -511,22 +1377,30 @@ export default function FreeKundli() {
 
             {/* NAME */}
 
-            <Text style={styles.label}>
+            <Text
+              style={styles.label}
+            >
               Name
             </Text>
 
             <View
-              style={styles.inputContainer}
+              style={
+                styles.inputContainer
+              }
             >
               <Ionicons
                 name="person-outline"
                 size={RF(18)}
-                color={Colors.primary}
+                color={
+                  Colors.primary
+                }
               />
 
               <TextInput
                 value={name}
-                onChangeText={setName}
+                onChangeText={
+                  setName
+                }
                 placeholder="Enter Name"
                 placeholderTextColor="#999"
                 style={styles.input}
@@ -535,11 +1409,17 @@ export default function FreeKundli() {
 
             {/* GENDER */}
 
-            <Text style={styles.label}>
+            <Text
+              style={styles.label}
+            >
               Gender
             </Text>
 
-            <View style={styles.genderRow}>
+            <View
+              style={
+                styles.genderRow
+              }
+            >
               {[
                 {
                   label: "Male",
@@ -558,23 +1438,32 @@ export default function FreeKundli() {
                 },
               ].map((item) => {
                 const isSelected =
-                  gender === item.value;
+                  gender ===
+                  item.value;
 
                 return (
                   <TouchableOpacity
-                    key={item.value}
-                    activeOpacity={0.8}
+                    key={
+                      item.value
+                    }
+                    activeOpacity={
+                      0.8
+                    }
                     style={[
                       styles.genderOption,
                       isSelected &&
                         styles.genderOptionActive,
                     ]}
                     onPress={() =>
-                      setGender(item.value)
+                      setGender(
+                        item.value
+                      )
                     }
                   >
                     <Ionicons
-                      name={item.icon}
+                      name={
+                        item.icon
+                      }
                       size={RF(16)}
                       color={
                         isSelected
@@ -590,16 +1479,20 @@ export default function FreeKundli() {
                           styles.genderOptionTextActive,
                       ]}
                     >
-                      {item.label}
+                      {
+                        item.label
+                      }
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
-            {/* DATE OF BIRTH */}
+            {/* DOB */}
 
-            <Text style={styles.label}>
+            <Text
+              style={styles.label}
+            >
               Date of Birth
             </Text>
 
@@ -609,16 +1502,22 @@ export default function FreeKundli() {
                 styles.pickerInputContainer
               }
               onPress={() =>
-                setShowDobPicker(true)
+                setShowDobPicker(
+                  true
+                )
               }
             >
               <View
-                style={styles.pickerInputLeft}
+                style={
+                  styles.pickerInputLeft
+                }
               >
                 <Ionicons
                   name="calendar-outline"
                   size={RF(18)}
-                  color={Colors.primary}
+                  color={
+                    Colors.primary
+                  }
                 />
 
                 <Text
@@ -628,8 +1527,11 @@ export default function FreeKundli() {
                       styles.placeholderText,
                   ]}
                 >
-                  {dob ||
-                    "Select Date of Birth"}
+                  {dob
+                    ? formatDobForUI(
+                        dob
+                      )
+                    : "Select Date of Birth"}
                 </Text>
               </View>
 
@@ -642,7 +1544,9 @@ export default function FreeKundli() {
 
             {/* BIRTH TIME */}
 
-            <Text style={styles.label}>
+            <Text
+              style={styles.label}
+            >
               Birth Time
             </Text>
 
@@ -653,13 +1557,19 @@ export default function FreeKundli() {
                 unknownTime &&
                   styles.disabledPicker,
               ]}
-              disabled={unknownTime}
+              disabled={
+                unknownTime
+              }
               onPress={() =>
-                setShowTimePicker(true)
+                setShowTimePicker(
+                  true
+                )
               }
             >
               <View
-                style={styles.pickerInputLeft}
+                style={
+                  styles.pickerInputLeft
+                }
               >
                 <Ionicons
                   name="time-outline"
@@ -680,12 +1590,8 @@ export default function FreeKundli() {
                   ]}
                 >
                   {unknownTime
-                    ? "Time Unknown (12:00:00)"
-                    : birthTime
-                      ? birthTime.length === 5
-                        ? `${birthTime}:00`
-                        : birthTime
-                      : "Select Birth Time (HH:MM:SS)"}
+                    ? "Time Unknown (12:00 PM)"
+                    : getDisplayTime()}
                 </Text>
               </View>
 
@@ -700,16 +1606,24 @@ export default function FreeKundli() {
 
             <TouchableOpacity
               activeOpacity={0.8}
-              style={styles.checkboxRow}
+              style={
+                styles.checkboxRow
+              }
               onPress={() => {
                 const next =
                   !unknownTime;
 
-                setUnknownTime(next);
+                setUnknownTime(
+                  next
+                );
 
                 if (next) {
                   setBirthTime(
                     "12:00:00"
+                  );
+                } else {
+                  setBirthTime(
+                    ""
                   );
                 }
               }}
@@ -721,20 +1635,26 @@ export default function FreeKundli() {
                     : "square-outline"
                 }
                 size={RF(20)}
-                color={Colors.primary}
+                color={
+                  Colors.primary
+                }
               />
 
               <Text
-                style={styles.checkboxText}
+                style={
+                  styles.checkboxText
+                }
               >
-                I don't know my exact time
-                of birth
+                I don't know my exact
+                time of birth
               </Text>
             </TouchableOpacity>
 
             {/* BIRTH PLACE */}
 
-            <Text style={styles.label}>
+            <Text
+              style={styles.label}
+            >
               Birth Place
             </Text>
 
@@ -744,16 +1664,22 @@ export default function FreeKundli() {
                 styles.pickerInputContainer
               }
               onPress={() =>
-                setShowPlacePicker(true)
+                setShowPlacePicker(
+                  true
+                )
               }
             >
               <View
-                style={styles.pickerInputLeft}
+                style={
+                  styles.pickerInputLeft
+                }
               >
                 <Ionicons
                   name="location-outline"
                   size={RF(18)}
-                  color={Colors.primary}
+                  color={
+                    Colors.primary
+                  }
                 />
 
                 <Text
@@ -779,278 +1705,597 @@ export default function FreeKundli() {
 
             <TouchableOpacity
               activeOpacity={0.8}
+              disabled={
+                generating ||
+                saving
+              }
               style={[
                 styles.continueButton,
-                generating && {
+                (generating ||
+                  saving) && {
                   opacity: 0.7,
                 },
               ]}
-              disabled={generating}
               onPress={() =>
                 handleGenerateKundli()
               }
             >
-              <Text
-                style={styles.continueText}
-              >
-                {generating
-                  ? "Generating..."
-                  : "Continue"}
-              </Text>
+              {generating ||
+              saving ? (
+                <View
+                  style={
+                    styles.loadingRow
+                  }
+                >
+                  <ActivityIndicator
+                    size="small"
+                    color="#FFF"
+                  />
+
+                  <Text
+                    style={[
+                      styles.continueText,
+                      {
+                        marginLeft:
+                          wp(2),
+                      },
+                    ]}
+                  >
+                    {generating
+                      ? "Generating..."
+                      : "Saving..."}
+                  </Text>
+                </View>
+              ) : (
+                <Text
+                  style={
+                    styles.continueText
+                  }
+                >
+                  Continue
+                </Text>
+              )}
             </TouchableOpacity>
           </View>
         )}
 
-        {/* ========================= */}
-        {/* SAVED KUNDLI TAB */}
-        {/* ========================= */}
+        {/* ==================================================
+            SAVED KUNDLI
+        ================================================== */}
 
         {activeTab === "saved" && (
-          <FlatList
-            data={savedData?.data || []}
-            keyExtractor={(item) =>
-              item.id.toString()
-            }
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() =>
-                  handleOpenSavedKundli(item)
+          <View>
+            {savedLoading ? (
+              <View
+                style={
+                  styles.loadingContainer
                 }
-                style={styles.savedCard}
               >
-                <View
-                  style={styles.savedTopRow}
-                >
-                  <View
-                    style={styles.userSection}
-                  >
-                    <View
-                      style={styles.avatar}
-                    >
-                      <Ionicons
-                        name="person"
-                        size={RF(26)}
-                        color="#FFF"
-                      />
-                    </View>
-
-                    <View
-                      style={styles.userInfo}
-                    >
-                      <Text
-                        style={styles.userName}
-                      >
-                        {item.name}
-
-                        <Text
-                          style={styles.gender}
-                        >
-                          {" "}
-                          ({item.gender})
-                        </Text>
-                      </Text>
-
-                      <Text
-                        style={styles.dateText}
-                      >
-                        {item.dob},{" "}
-                        {item.tob}
-                      </Text>
-
-                      <Text
-                        style={styles.placeText}
-                      >
-                        {item.birthPlace ||
-                          item.city}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View
-                    style={styles.actionRow}
-                  >
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      style={
-                        styles.actionButton
-                      }
-                      onPress={() =>
-                        handleOpenSavedKundli(
-                          item
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name="eye-outline"
-                        size={RF(16)}
-                        color={Colors.primary}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      style={
-                        styles.actionButton
-                      }
-                      onPress={() =>
-                        handleDeleteSaved(
-                          item.id
-                        )
-                      }
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={RF(16)}
-                        color="#F44336"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View
-                  style={styles.divider}
+                <ActivityIndicator
+                  size="large"
+                  color={
+                    Colors.primary
+                  }
                 />
 
-                <View
-                  style={styles.detailRow}
+                <Text
+                  style={
+                    styles.loadingText
+                  }
                 >
-                  <View
-                    style={styles.detailItem}
+                  Loading Saved Kundli...
+                </Text>
+              </View>
+            ) : savedKundlis.length ===
+              0 ? (
+              <View
+                style={
+                  styles.emptyContainer
+                }
+              >
+                <Ionicons
+                  name="document-text-outline"
+                  size={RF(45)}
+                  color="#CCC"
+                />
+
+                <Text
+                  style={
+                    styles.emptyTitle
+                  }
+                >
+                  No Saved Kundli
+                </Text>
+
+                <Text
+                  style={
+                    styles.emptyText
+                  }
+                >
+                  Generate a new Kundli
+                  to save it here.
+                </Text>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={
+                    styles.emptyButton
+                  }
+                  onPress={() =>
+                    setActiveTab(
+                      "new"
+                    )
+                  }
+                >
+                  <Text
+                    style={
+                      styles.emptyButtonText
+                    }
                   >
-                    <Ionicons
-                      name="calendar-outline"
-                      size={RF(17)}
-                      color={Colors.primary}
+                    Create New Kundli
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <FlatList
+                data={
+                  savedKundlis
+                }
+                keyExtractor={(
+                  item,
+                  index
+                ) =>
+                  String(
+                    item?.id ??
+                      item?._id ??
+                      index
+                  )
+                }
+                scrollEnabled={
+                  false
+                }
+                renderItem={({
+                  item,
+                }) => (
+                  <TouchableOpacity
+                    activeOpacity={
+                      0.85
+                    }
+                    onPress={() =>
+                      handleOpenSavedKundli(
+                        item
+                      )
+                    }
+                    style={
+                      styles.savedCard
+                    }
+                  >
+                    <View
+                      style={
+                        styles.savedTopRow
+                      }
+                    >
+                      <View
+                        style={
+                          styles.userSection
+                        }
+                      >
+                        <View
+                          style={
+                            styles.avatar
+                          }
+                        >
+                          <Ionicons
+                            name="person"
+                            size={RF(
+                              26
+                            )}
+                            color="#FFF"
+                          />
+                        </View>
+
+                        <View
+                          style={
+                            styles.userInfo
+                          }
+                        >
+                          <Text
+                            style={
+                              styles.userName
+                            }
+                            numberOfLines={
+                              1
+                            }
+                          >
+                            {item?.name ||
+                              "User"}
+
+                            <Text
+                              style={
+                                styles.gender
+                              }
+                            >
+                              {" "}
+                              (
+                              {item?.gender ||
+                                "MALE"}
+                              )
+                            </Text>
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.dateText
+                            }
+                          >
+                            {formatDobForUI(
+                              item?.dob
+                            )}
+                            {item?.tob
+                              ? `, ${item.tob}`
+                              : ""}
+                          </Text>
+
+                          <Text
+                            style={
+                              styles.placeText
+                            }
+                            numberOfLines={
+                              1
+                            }
+                          >
+                            {item?.birthPlace ||
+                              item?.city ||
+                              "Delhi"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View
+                        style={
+                          styles.actionRow
+                        }
+                      >
+                        {/* VIEW */}
+
+                        <TouchableOpacity
+                          activeOpacity={
+                            0.8
+                          }
+                          style={
+                            styles.actionButton
+                          }
+                          onPress={() =>
+                            handleOpenSavedKundli(
+                              item
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name="eye-outline"
+                            size={RF(
+                              16
+                            )}
+                            color={
+                              Colors.primary
+                            }
+                          />
+                        </TouchableOpacity>
+
+                        {/* DELETE */}
+
+                        <TouchableOpacity
+                          activeOpacity={
+                            0.8
+                          }
+                          disabled={
+                            deleting
+                          }
+                          style={
+                            styles.actionButton
+                          }
+                          onPress={() =>
+                            handleDeleteSaved(
+                              item?.id ??
+                                item?._id
+                            )
+                          }
+                        >
+                          <Ionicons
+                            name="trash-outline"
+                            size={RF(
+                              16
+                            )}
+                            color="#F44336"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+
+                    <View
+                      style={
+                        styles.divider
+                      }
                     />
 
-                    <Text
-                      style={styles.detailLabel}
+                    <View
+                      style={
+                        styles.detailRow
+                      }
                     >
-                      Date
-                    </Text>
+                      {/* DATE */}
 
-                    <Text
-                      style={styles.detailValue}
-                    >
-                      {item.dob}
-                    </Text>
-                  </View>
+                      <View
+                        style={
+                          styles.detailItem
+                        }
+                      >
+                        <Ionicons
+                          name="calendar-outline"
+                          size={RF(
+                            17
+                          )}
+                          color={
+                            Colors.primary
+                          }
+                        />
 
-                  <View
-                    style={styles.detailItem}
-                  >
-                    <Ionicons
-                      name="time-outline"
-                      size={RF(17)}
-                      color={Colors.primary}
-                    />
+                        <Text
+                          style={
+                            styles.detailLabel
+                          }
+                        >
+                          Date
+                        </Text>
 
-                    <Text
-                      style={styles.detailLabel}
-                    >
-                      Time
-                    </Text>
+                        <Text
+                          style={
+                            styles.detailValue
+                          }
+                        >
+                          {formatDobForUI(
+                            item?.dob
+                          ) ||
+                            "--"}
+                        </Text>
+                      </View>
 
-                    <Text
-                      style={styles.detailValue}
-                    >
-                      {item.tob}
-                    </Text>
-                  </View>
+                      {/* TIME */}
 
-                  <View
-                    style={styles.detailItem}
-                  >
-                    <Ionicons
-                      name="location-outline"
-                      size={RF(17)}
-                      color={Colors.primary}
-                    />
+                      <View
+                        style={
+                          styles.detailItem
+                        }
+                      >
+                        <Ionicons
+                          name="time-outline"
+                          size={RF(
+                            17
+                          )}
+                          color={
+                            Colors.primary
+                          }
+                        />
 
-                    <Text
-                      style={styles.detailLabel}
-                    >
-                      Place
-                    </Text>
+                        <Text
+                          style={
+                            styles.detailLabel
+                          }
+                        >
+                          Time
+                        </Text>
 
-                    <Text
-                      style={styles.detailValue}
-                    >
-                      {item.birthPlace}
-                    </Text>
-                  </View>
+                        <Text
+                          style={
+                            styles.detailValue
+                          }
+                        >
+                          {item?.tob ||
+                            "--"}
+                        </Text>
+                      </View>
 
-                  <View
-                    style={styles.detailItem}
-                  >
-                    <Ionicons
-                      name="male-female-outline"
-                      size={RF(17)}
-                      color={Colors.primary}
-                    />
+                      {/* PLACE */}
 
-                    <Text
-                      style={styles.detailLabel}
-                    >
-                      Gender
-                    </Text>
+                      <View
+                        style={
+                          styles.detailItem
+                        }
+                      >
+                        <Ionicons
+                          name="location-outline"
+                          size={RF(
+                            17
+                          )}
+                          color={
+                            Colors.primary
+                          }
+                        />
 
-                    <Text
-                      style={styles.detailValue}
-                    >
-                      {item.gender}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
+                        <Text
+                          style={
+                            styles.detailLabel
+                          }
+                        >
+                          Place
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.detailValue
+                          }
+                          numberOfLines={
+                            1
+                          }
+                        >
+                          {item?.birthPlace ||
+                            item?.city ||
+                            "--"}
+                        </Text>
+                      </View>
+
+                      {/* GENDER */}
+
+                      <View
+                        style={
+                          styles.detailItem
+                        }
+                      >
+                        <Ionicons
+                          name="male-female-outline"
+                          size={RF(
+                            17
+                          )}
+                          color={
+                            Colors.primary
+                          }
+                        />
+
+                        <Text
+                          style={
+                            styles.detailLabel
+                          }
+                        >
+                          Gender
+                        </Text>
+
+                        <Text
+                          style={
+                            styles.detailValue
+                          }
+                        >
+                          {item?.gender ||
+                            "--"}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
             )}
-          />
+          </View>
         )}
       </KeyboardAwareScrollView>
 
-      {/* DATE PICKER */}
+      {/* ==================================================
+          DATE PICKER
+      ================================================== */}
 
       <DatePickerModal
-        visible={showDobPicker}
+        visible={
+          showDobPicker
+        }
         onClose={() =>
-          setShowDobPicker(false)
+          setShowDobPicker(
+            false
+          )
         }
-        onSelectDate={(date) =>
-          setDob(date)
-        }
+        onSelectDate={(date) => {
+          const apiDate =
+            formatDobForApi(
+              date
+            );
+
+          console.log(
+            "DOB selected:",
+            date
+          );
+
+          console.log(
+            "DOB for API:",
+            apiDate
+          );
+
+          console.log(
+            "DOB for UI:",
+            formatDobForUI(
+              apiDate
+            )
+          );
+
+          setDob(
+            apiDate
+          );
+
+          setShowDobPicker(
+            false
+          );
+        }}
         initialDate={dob}
       />
 
-      {/* TIME PICKER */}
+      {/* ==================================================
+          TIME PICKER
+      ================================================== */}
 
       <TimePickerModal
-        visible={showTimePicker}
+        visible={
+          showTimePicker
+        }
         onClose={() =>
-          setShowTimePicker(false)
+          setShowTimePicker(
+            false
+          )
         }
-        onSelectTime={(time) =>
-          setBirthTime(time)
+        onSelectTime={(time) => {
+          console.log(
+            "Time received in FreeKundli:",
+            time
+          );
+
+          setBirthTime(
+            time
+          );
+
+          setUnknownTime(
+            false
+          );
+
+          setShowTimePicker(
+            false
+          );
+        }}
+        initialTime={
+          birthTime
         }
-        initialTime={birthTime}
       />
 
-      {/* PLACE PICKER */}
+      {/* ==================================================
+          PLACE PICKER
+      ================================================== */}
 
       <StatePickerModal
-        visible={showPlacePicker}
-        onClose={() =>
-          setShowPlacePicker(false)
+        visible={
+          showPlacePicker
         }
-        onSelectState={(place, item) => {
-          setBirthPlace(place);
+        onClose={() =>
+          setShowPlacePicker(
+            false
+          )
+        }
+        onSelectState={(
+          place,
+          item
+        ) => {
+          setBirthPlace(
+            place
+          );
 
           if (
             item &&
-            item.latitude
+            item.latitude != null &&
+            item.longitude != null
           ) {
-            setCoordinates(item);
+            setCoordinates({
+              latitude:
+                Number(
+                  item.latitude
+                ),
+              longitude:
+                Number(
+                  item.longitude
+                ),
+            });
           } else {
             setCoordinates(
               getCoordinatesForPlace(
@@ -1058,360 +2303,700 @@ export default function FreeKundli() {
               )
             );
           }
+
+          setShowPlacePicker(
+            false
+          );
         }}
-        selectedState={birthPlace}
+        selectedState={
+          birthPlace
+        }
         title="Select Birth Place"
       />
     </SafeAreaView>
   );
 }
 
-// ==========================================
+// ==================================================
 // STYLES
-// ==========================================
+// ==================================================
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFF8F4",
-  },
-
-  content: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(12),
-  },
-
-  header: {
-    marginTop: hp(1),
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  logo: {
-    fontSize: RF(28),
-    color: Colors.primary,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-
-  heading: {
-    marginTop: hp(2),
-    textAlign: "center",
-    color: Colors.darkBrown,
-    fontSize: RF(20),
-    fontWeight: "600",
-  },
-
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    borderRadius: wp(8),
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    overflow: "hidden",
-    marginTop: hp(2),
-    marginBottom: hp(2),
-  },
-
-  tab: {
-    flex: 1,
-    height: hp(6),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  activeTab: {
-    backgroundColor: Colors.primary,
-  },
-
-  tabText: {
-    color: Colors.darkBrown,
-    fontSize: RF(14),
-    fontWeight: "500",
-  },
-
-  activeTabText: {
-    color: "#FFF",
-    fontWeight: "600",
-  },
-
-  formCard: {
-    backgroundColor: "#FFF",
-    borderRadius: wp(4),
-    padding: wp(4),
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 3,
+const styles =
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor:
+        "#FFF8F4",
     },
-    elevation: 3,
-  },
 
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: hp(2),
-  },
-
-  cardTitle: {
-    color: Colors.darkBrown,
-    fontSize: RF(15),
-    fontWeight: "600",
-  },
-
-  cardSubtitle: {
-    marginTop: hp(0.2),
-    color: "#888",
-    fontSize: RF(11),
-    fontWeight: "400",
-  },
-
-  label: {
-    marginBottom: hp(0.8),
-    marginTop: hp(1.4),
-    color: Colors.darkBrown,
-    fontSize: RF(13),
-    fontWeight: "500",
-  },
-
-  inputContainer: {
-    height: hp(6.5),
-    borderWidth: 1,
-    borderColor: "#E7E7E7",
-    borderRadius: wp(3),
-    backgroundColor: "#FFF",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: wp(3),
-  },
-
-  input: {
-    flex: 1,
-    marginLeft: wp(3),
-    color: Colors.darkBrown,
-    fontSize: RF(14),
-    fontWeight: "400",
-  },
-
-  genderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: hp(0.5),
-  },
-
-  genderOption: {
-    flex: 1,
-    height: hp(5.5),
-    marginHorizontal: wp(1),
-    borderRadius: wp(2.5),
-    borderWidth: 1.2,
-    borderColor: "#E7E7E7",
-    backgroundColor: "#FAFAFA",
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: wp(2),
-  },
-
-  genderOptionActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-
-  genderOptionText: {
-    marginLeft: wp(1.5),
-    fontSize: RF(13),
-    fontWeight: "500",
-    color: Colors.darkBrown,
-  },
-
-  genderOptionTextActive: {
-    color: "#FFF",
-    fontWeight: "700",
-  },
-
-  pickerInputContainer: {
-    height: hp(6.5),
-    borderWidth: 1,
-    borderColor: "#E7E7E7",
-    borderRadius: wp(3),
-    backgroundColor: "#FFF",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: wp(3),
-  },
-
-  pickerInputLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-
-  pickerInputText: {
-    marginLeft: wp(3),
-    color: Colors.darkBrown,
-    fontSize: RF(14),
-    fontWeight: "500",
-  },
-
-  placeholderText: {
-    color: "#999",
-    fontWeight: "400",
-  },
-
-  disabledPicker: {
-    backgroundColor: "#F7F7F7",
-    borderColor: "#EFEFEF",
-    opacity: 0.6,
-  },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: hp(1.8),
-  },
-
-  checkboxText: {
-    marginLeft: wp(2),
-    color: "#666",
-    fontSize: RF(12),
-    fontWeight: "400",
-  },
-
-  continueButton: {
-    height: hp(6),
-    backgroundColor: Colors.primary,
-    borderRadius: wp(3),
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: hp(3),
-  },
-
-  continueText: {
-    color: "#FFF",
-    fontSize: RF(15),
-    fontWeight: "600",
-  },
-
-  savedCard: {
-    backgroundColor: "#FFF",
-    borderRadius: wp(4),
-    padding: wp(4),
-    marginBottom: hp(2),
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: {
-      width: 0,
-      height: 3,
+    content: {
+      paddingHorizontal:
+        wp(4),
+      paddingBottom:
+        hp(12),
     },
-    elevation: 3,
-  },
 
-  savedTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
+    header: {
+      marginTop:
+        hp(1),
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+    },
 
-  userSection: {
-    flexDirection: "row",
-    flex: 1,
-    alignItems: "center",
-  },
+    logo: {
+      fontSize:
+        RF(28),
+      color:
+        Colors.primary,
+      fontWeight:
+        "700",
+      letterSpacing: 1,
+    },
 
-  avatar: {
-    width: wp(16),
-    height: wp(16),
-    borderRadius: wp(8),
-    backgroundColor: Colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
+    heading: {
+      marginTop:
+        hp(2),
+      textAlign:
+        "center",
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(20),
+      fontWeight:
+        "600",
+    },
 
-  userInfo: {
-    flex: 1,
-    marginLeft: wp(3),
-  },
+    languageWrapper: {
+      marginTop:
+        hp(1.5),
+      alignItems:
+        "center",
+    },
 
-  userName: {
-    color: Colors.darkBrown,
-    fontSize: RF(15),
-    fontWeight: "600",
-  },
+    languageLabel: {
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(12),
+      fontWeight:
+        "600",
+      marginBottom:
+        hp(0.7),
+    },
 
-  gender: {
-    color: Colors.primary,
-    fontSize: RF(12),
-    fontWeight: "500",
-  },
+    languageContainer: {
+      flexDirection:
+        "row",
+      backgroundColor:
+        "#FFF",
+      borderRadius:
+        wp(8),
+      borderWidth: 1,
+      borderColor:
+        Colors.primary,
+      overflow:
+        "hidden",
+      width:
+        wp(48),
+      height:
+        hp(5.2),
+    },
 
-  dateText: {
-    marginTop: hp(0.4),
-    color: "#666",
-    fontSize: RF(12),
-    fontWeight: "400",
-  },
+    languageButton: {
+      flex: 1,
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      backgroundColor:
+        "#FFF",
+    },
 
-  placeText: {
-    marginTop: hp(0.3),
-    color: "#888",
-    fontSize: RF(12),
-    fontWeight: "400",
-  },
+    languageButtonActive: {
+      backgroundColor:
+        Colors.primary,
+    },
 
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+    languageButtonText: {
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(13),
+      fontWeight:
+        "500",
+    },
 
-  actionButton: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
-    backgroundColor: "#FFF5EF",
-    justifyContent: "center",
-    alignItems: "center",
-    marginLeft: wp(2),
-  },
+    languageButtonTextActive: {
+      color:
+        "#FFF",
+      fontWeight:
+        "700",
+    },
 
-  divider: {
-    height: 1,
-    backgroundColor: "#EEEEEE",
-    marginVertical: hp(2),
-  },
+    tabContainer: {
+      flexDirection:
+        "row",
+      backgroundColor:
+        "#FFF",
+      borderRadius:
+        wp(8),
+      borderWidth: 1,
+      borderColor:
+        Colors.primary,
+      overflow:
+        "hidden",
+      marginTop:
+        hp(2),
+      marginBottom:
+        hp(2),
+    },
 
-  detailRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
+    tab: {
+      flex: 1,
+      height:
+        hp(6),
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+    },
 
-  detailItem: {
-    width: "48%",
-    backgroundColor: "#FAFAFA",
-    borderRadius: wp(3),
-    paddingVertical: hp(1.3),
-    paddingHorizontal: wp(3),
-    marginBottom: hp(1.5),
-  },
+    activeTab: {
+      backgroundColor:
+        Colors.primary,
+    },
 
-  detailLabel: {
-    marginTop: hp(0.6),
-    color: "#888",
-    fontSize: RF(11),
-    fontWeight: "500",
-  },
+    tabText: {
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(14),
+      fontWeight:
+        "500",
+    },
 
-  detailValue: {
-    marginTop: hp(0.4),
-    color: Colors.darkBrown,
-    fontSize: RF(13),
-    fontWeight: "600",
-  },
-});
+    activeTabText: {
+      color:
+        "#FFF",
+      fontWeight:
+        "600",
+    },
+
+    formCard: {
+      backgroundColor:
+        "#FFF",
+      borderRadius:
+        wp(4),
+      padding:
+        wp(4),
+      shadowColor:
+        "#000",
+      shadowOpacity:
+        0.06,
+      shadowRadius:
+        10,
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      elevation: 3,
+    },
+
+    cardHeader: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      marginBottom:
+        hp(2),
+    },
+
+    cardTitle: {
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(15),
+      fontWeight:
+        "600",
+    },
+
+    cardSubtitle: {
+      marginTop:
+        hp(0.2),
+      color:
+        "#888",
+      fontSize:
+        RF(11),
+      fontWeight:
+        "400",
+    },
+
+    label: {
+      marginBottom:
+        hp(0.8),
+      marginTop:
+        hp(1.4),
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(13),
+      fontWeight:
+        "500",
+    },
+
+    inputContainer: {
+      height:
+        hp(6.5),
+      borderWidth: 1,
+      borderColor:
+        "#E7E7E7",
+      borderRadius:
+        wp(3),
+      backgroundColor:
+        "#FFF",
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      paddingHorizontal:
+        wp(3),
+    },
+
+    input: {
+      flex: 1,
+      marginLeft:
+        wp(3),
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(14),
+      fontWeight:
+        "400",
+    },
+
+    genderRow: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "space-between",
+      alignItems:
+        "center",
+      marginBottom:
+        hp(0.5),
+    },
+
+    genderOption: {
+      flex: 1,
+      height:
+        hp(5.5),
+      marginHorizontal:
+        wp(1),
+      borderRadius:
+        wp(2.5),
+      borderWidth:
+        1.2,
+      borderColor:
+        "#E7E7E7",
+      backgroundColor:
+        "#FAFAFA",
+      flexDirection:
+        "row",
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      paddingHorizontal:
+        wp(2),
+    },
+
+    genderOptionActive: {
+      backgroundColor:
+        Colors.primary,
+      borderColor:
+        Colors.primary,
+    },
+
+    genderOptionText: {
+      marginLeft:
+        wp(1.5),
+      fontSize:
+        RF(13),
+      fontWeight:
+        "500",
+      color:
+        Colors.darkBrown,
+    },
+
+    genderOptionTextActive: {
+      color:
+        "#FFF",
+      fontWeight:
+        "700",
+    },
+
+    pickerInputContainer: {
+      height:
+        hp(6.5),
+      borderWidth: 1,
+      borderColor:
+        "#E7E7E7",
+      borderRadius:
+        wp(3),
+      backgroundColor:
+        "#FFF",
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "space-between",
+      paddingHorizontal:
+        wp(3),
+    },
+
+    pickerInputLeft: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      flex: 1,
+    },
+
+    pickerInputText: {
+      marginLeft:
+        wp(3),
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(14),
+      fontWeight:
+        "500",
+    },
+
+    placeholderText: {
+      color:
+        "#999",
+      fontWeight:
+        "400",
+    },
+
+    disabledPicker: {
+      backgroundColor:
+        "#F7F7F7",
+      borderColor:
+        "#EFEFEF",
+      opacity: 0.6,
+    },
+
+    checkboxRow: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      marginTop:
+        hp(1.8),
+    },
+
+    checkboxText: {
+      marginLeft:
+        wp(2),
+      color:
+        "#666",
+      fontSize:
+        RF(12),
+      fontWeight:
+        "400",
+    },
+
+    continueButton: {
+      height:
+        hp(6),
+      backgroundColor:
+        Colors.primary,
+      borderRadius:
+        wp(3),
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      marginTop:
+        hp(3),
+    },
+
+    continueText: {
+      color:
+        "#FFF",
+      fontSize:
+        RF(15),
+      fontWeight:
+        "600",
+    },
+
+    loadingRow: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+    },
+
+    loadingContainer: {
+      minHeight:
+        hp(25),
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+    },
+
+    loadingText: {
+      marginTop:
+        hp(1.5),
+      color:
+        "#777",
+      fontSize:
+        RF(13),
+    },
+
+    emptyContainer: {
+      backgroundColor:
+        "#FFF",
+      borderRadius:
+        wp(4),
+      padding:
+        wp(7),
+      alignItems:
+        "center",
+      justifyContent:
+        "center",
+      minHeight:
+        hp(35),
+      elevation: 2,
+    },
+
+    emptyTitle: {
+      marginTop:
+        hp(1.5),
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(17),
+      fontWeight:
+        "600",
+    },
+
+    emptyText: {
+      marginTop:
+        hp(0.8),
+      color:
+        "#888",
+      fontSize:
+        RF(12),
+      textAlign:
+        "center",
+    },
+
+    emptyButton: {
+      marginTop:
+        hp(2),
+      backgroundColor:
+        Colors.primary,
+      borderRadius:
+        wp(3),
+      paddingHorizontal:
+        wp(6),
+      paddingVertical:
+        hp(1.4),
+    },
+
+    emptyButtonText: {
+      color:
+        "#FFF",
+      fontSize:
+        RF(13),
+      fontWeight:
+        "600",
+    },
+
+    savedCard: {
+      backgroundColor:
+        "#FFF",
+      borderRadius:
+        wp(4),
+      padding:
+        wp(4),
+      marginBottom:
+        hp(2),
+      shadowColor:
+        "#000",
+      shadowOpacity:
+        0.06,
+      shadowRadius:
+        10,
+      shadowOffset: {
+        width: 0,
+        height: 3,
+      },
+      elevation: 3,
+    },
+
+    savedTopRow: {
+      flexDirection:
+        "row",
+      justifyContent:
+        "space-between",
+      alignItems:
+        "center",
+    },
+
+    userSection: {
+      flexDirection:
+        "row",
+      flex: 1,
+      alignItems:
+        "center",
+    },
+
+    avatar: {
+      width:
+        wp(16),
+      height:
+        wp(16),
+      borderRadius:
+        wp(8),
+      backgroundColor:
+        Colors.primary,
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+    },
+
+    userInfo: {
+      flex: 1,
+      marginLeft:
+        wp(3),
+    },
+
+    userName: {
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(15),
+      fontWeight:
+        "600",
+    },
+
+    gender: {
+      color:
+        Colors.primary,
+      fontSize:
+        RF(12),
+      fontWeight:
+        "500",
+    },
+
+    dateText: {
+      marginTop:
+        hp(0.4),
+      color:
+        "#666",
+      fontSize:
+        RF(12),
+      fontWeight:
+        "400",
+    },
+
+    placeText: {
+      marginTop:
+        hp(0.3),
+      color:
+        "#888",
+      fontSize:
+        RF(12),
+      fontWeight:
+        "400",
+    },
+
+    actionRow: {
+      flexDirection:
+        "row",
+      alignItems:
+        "center",
+    },
+
+    actionButton: {
+      width:
+        wp(10),
+      height:
+        wp(10),
+      borderRadius:
+        wp(5),
+      backgroundColor:
+        "#FFF5EF",
+      justifyContent:
+        "center",
+      alignItems:
+        "center",
+      marginLeft:
+        wp(2),
+    },
+
+    divider: {
+      height: 1,
+      backgroundColor:
+        "#EEEEEE",
+      marginVertical:
+        hp(2),
+    },
+
+    detailRow: {
+      flexDirection:
+        "row",
+      flexWrap:
+        "wrap",
+      justifyContent:
+        "space-between",
+    },
+
+    detailItem: {
+      width: "48%",
+      backgroundColor:
+        "#FAFAFA",
+      borderRadius:
+        wp(3),
+      paddingVertical:
+        hp(1.3),
+      paddingHorizontal:
+        wp(3),
+      marginBottom:
+        hp(1.5),
+    },
+
+    detailLabel: {
+      marginTop:
+        hp(0.6),
+      color:
+        "#888",
+      fontSize:
+        RF(11),
+      fontWeight:
+        "500",
+    },
+
+    detailValue: {
+      marginTop:
+        hp(0.4),
+      color:
+        Colors.darkBrown,
+      fontSize:
+        RF(13),
+      fontWeight:
+        "600",
+    },
+  });

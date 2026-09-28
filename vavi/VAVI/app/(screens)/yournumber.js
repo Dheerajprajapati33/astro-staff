@@ -14,13 +14,18 @@ import { LinearGradient } from "expo-linear-gradient";
 
 import { Ionicons } from "@expo/vector-icons";
 
-import Colors from "../../constants/Colors";import { hp, RF, wp } from "../../utils/responsive";
+import Colors from "../../constants/Colors";
+import { hp, RF, wp } from "../../utils/responsive";
 
 const YourNumber = () => {
   const router = useRouter();
 
-  const { lifePathNumber, title, description, aiInsight } =
-    useLocalSearchParams();
+  const {
+    lifePathNumber,
+    title,
+    description,
+    aiInsight,
+  } = useLocalSearchParams();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,23 +33,34 @@ const YourNumber = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
-        {/* Header */}
+        {/* HEADER */}
 
         <View style={styles.header}>
-          <TouchableOpacity activeOpacity={0.8} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={RF(22)} color={Colors.primary} />
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => router.back()}
+          >
+            <Ionicons
+              name="arrow-back"
+              size={RF(22)}
+              color={Colors.primary}
+            />
           </TouchableOpacity>
 
-          <Text style={styles.headerTitle}>Your Numbers</Text>
+          <Text style={styles.headerTitle}>
+            Your Numbers
+          </Text>
 
-          <Ionicons name="sparkles" size={RF(20)} color={Colors.primary} />
+          <Ionicons
+            name="sparkles"
+            size={RF(20)}
+            color={Colors.primary}
+          />
         </View>
 
-        {/* Result Card */}
+        {/* RESULT CARD */}
 
         <View style={styles.resultCard}>
-          {/* Decorative Sparkles */}
-
           <Ionicons
             name="sparkles"
             size={RF(13)}
@@ -59,42 +75,51 @@ const YourNumber = () => {
             style={styles.sparkleRight}
           />
 
-          {/* Big Number */}
+          {/* NUMBER */}
 
-          <Text style={styles.numberText}>{lifePathNumber || "0"}</Text>
+          <Text style={styles.numberText}>
+            {lifePathNumber || "0"}
+          </Text>
 
-          {/* Title */}
+          {/* TITLE */}
 
-          <Text style={styles.resultTitle}>{title || "Your Life Path"}</Text>
+          <Text style={styles.resultTitle}>
+            {title || "Your Life Path"}
+          </Text>
 
-          {/* Badge */}
+          {/* BADGE */}
 
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Life Path Number</Text>
+            <Text style={styles.badgeText}>
+              Life Path Number
+            </Text>
           </View>
 
-          {/* Divider */}
+          {/* DIVIDER */}
 
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
 
-            <Ionicons name="star" size={RF(14)} color={Colors.primary} />
+            <Ionicons
+              name="star"
+              size={RF(14)}
+              color={Colors.primary}
+            />
 
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Description */}
+          {/* DESCRIPTION */}
 
           <Text style={styles.resultDescription}>
-            {description || "Your numerology details will appear here."}
+            {description ||
+              "Your numerology details will appear here."}
           </Text>
         </View>
 
-        {/* AI Insight Card */}
+        {/* INSIGHT CARD */}
 
         <View style={styles.insightCard}>
-          {/* AI Insight Header */}
-
           <View style={styles.insightHeader}>
             <View style={styles.insightIcon}>
               <LinearGradient
@@ -103,39 +128,43 @@ const YourNumber = () => {
                 end={{ x: 1, y: 1 }}
                 style={styles.insightGradient}
               >
-                <Ionicons name="sparkles-outline" size={RF(20)} color="#FFF" />
+                <Ionicons
+                  name="sparkles-outline"
+                  size={RF(20)}
+                  color="#FFF"
+                />
               </LinearGradient>
             </View>
 
-            <Text style={styles.insightTitle}>AI Insight</Text>
+            <Text style={styles.insightTitle}>
+              AI Insight
+            </Text>
           </View>
-
-          {/* Divider */}
 
           <View style={styles.dividerContainer}>
             <View style={styles.dividerLine} />
 
-            <Ionicons name="star" size={RF(13)} color={Colors.primary} />
+            <Ionicons
+              name="star"
+              size={RF(13)}
+              color={Colors.primary}
+            />
 
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Insight Description */}
-
           <Text style={styles.insightDescription}>
-            {aiInsight || "AI insight will appear here after calculation."}
+            {aiInsight ||
+              "Your personalized insight will appear here."}
           </Text>
         </View>
 
-        {/* Bottom Button starts in Part 4 */}
-        {/* Bottom Button */}
+        {/* CONSULT BUTTON */}
 
         <TouchableOpacity
           activeOpacity={0.9}
           style={styles.buttonWrapper}
-          onPress={() => {
-            // TODO: Navigate to Consult Screen
-          }}
+          onPress={() => router.push("/(tabs)")}
         >
           <LinearGradient
             colors={["#FFB300", "#F57C00"]}
@@ -143,26 +172,23 @@ const YourNumber = () => {
             end={{ x: 1, y: 0 }}
             style={styles.consultButton}
           >
-            {/* Left Icon */}
-
             <View style={styles.buttonIconContainer}>
-              <Ionicons name="sparkles" size={RF(18)} color="#F39C12" />
+              <Ionicons
+                name="sparkles"
+                size={RF(18)}
+                color="#F39C12"
+              />
             </View>
 
-            {/* Button Text */}
+            <Text style={styles.buttonText}>
+              Consult with Your Astrologer
+            </Text>
 
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push("/(tabs)")}
-            >
-              <Text style={styles.buttonText}>
-                Consult with Your Astrologer
-              </Text>
-            </TouchableOpacity>
-
-            {/* Right Arrow */}
-
-            <Ionicons name="arrow-forward" size={RF(20)} color="#FFF" />
+            <Ionicons
+              name="arrow-forward"
+              size={RF(20)}
+              color="#FFF"
+            />
           </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
@@ -210,6 +236,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 10,
+
     shadowOffset: {
       width: 0,
       height: 4,
@@ -248,17 +275,11 @@ const styles = StyleSheet.create({
 
   badge: {
     marginTop: hp(1.3),
-
     backgroundColor: "#FFF4E6",
-
     borderRadius: wp(6),
-
     paddingHorizontal: wp(4),
-
     paddingVertical: hp(0.8),
-
     borderWidth: 1,
-
     borderColor: "#FFE0B3",
   },
 
@@ -292,17 +313,12 @@ const styles = StyleSheet.create({
 
   insightCard: {
     marginTop: hp(2),
-
     backgroundColor: "#FFF",
-
     borderRadius: wp(5),
-
     padding: wp(5),
 
     shadowColor: "#000",
-
     shadowOpacity: 0.06,
-
     shadowRadius: 10,
 
     shadowOffset: {
@@ -335,6 +351,7 @@ const styles = StyleSheet.create({
     shadowColor: "#F4A300",
     shadowOpacity: 0.25,
     shadowRadius: 10,
+
     shadowOffset: {
       width: 0,
       height: 4,
@@ -364,22 +381,18 @@ const styles = StyleSheet.create({
 
   consultButton: {
     height: hp(6.8),
-
     borderRadius: wp(4),
 
     flexDirection: "row",
-
     alignItems: "center",
-
     justifyContent: "space-between",
 
     paddingHorizontal: wp(4),
 
     shadowColor: "#F39C12",
-
     shadowOpacity: 0.3,
-
     shadowRadius: 12,
+
     width: "100%",
 
     shadowOffset: {

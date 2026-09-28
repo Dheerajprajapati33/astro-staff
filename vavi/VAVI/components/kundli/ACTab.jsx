@@ -30,6 +30,10 @@ const ORANGE = "#ff5a00";
 const BORDER = "#ff8a50";
 const GREEN = "#0b6b1c";
 
+/* =========================================================
+   TABS
+========================================================= */
+
 const tabs = [
   "Sarv",
   "Sun",
@@ -42,92 +46,179 @@ const tabs = [
 ];
 
 /* =========================================================
+   SIGN FONT
+========================================================= */
+
+const SIGN_FONT_SIZE = 11;
+
+/* =========================================================
    NORTH INDIAN CHART COORDINATES
+
+   IMPORTANT:
+   These are SIGN positions.
+
+   Score positions are separate.
+
+   Every house has its own safe position so that
+   zodiac names stay inside the house and away
+   from diagonal lines.
 ========================================================= */
 
 const COORDINATES = {
+  /* -------------------------------------------------------
+     HOUSE 1
+     Top center
+  ------------------------------------------------------- */
+
   1: {
     signX: 200,
-    signY: 165,
+    signY: 155,
+
     scoreX: 200,
     scoreY: 80,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 2
+     Top-left
+  ------------------------------------------------------- */
+
   2: {
-    signX: 130,
-    signY: 70,
-    scoreX: 75,
-    scoreY: 40,
+    signX: 115,
+    signY: 65,
+
+    scoreX: 72,
+    scoreY: 42,
   },
+
+  /* -------------------------------------------------------
+     HOUSE 3
+     Left upper
+  ------------------------------------------------------- */
 
   3: {
-    signX: 70,
-    signY: 130,
+    signX: 62,
+    signY: 125,
+
     scoreX: 35,
-    scoreY: 75,
+    scoreY: 78,
   },
+
+  /* -------------------------------------------------------
+     HOUSE 4
+     Left center
+  ------------------------------------------------------- */
 
   4: {
-    signX: 165,
-    signY: 200,
+    signX: 155,
+    signY: 205,
+
     scoreX: 85,
-    scoreY: 200,
+    scoreY: 198,
   },
+
+  /* -------------------------------------------------------
+     HOUSE 5
+     Left lower
+  ------------------------------------------------------- */
 
   5: {
-    signX: 70,
-    signY: 270,
+    signX: 62,
+    signY: 275,
+
     scoreX: 35,
-    scoreY: 325,
+    scoreY: 322,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 6
+     Bottom-left
+  ------------------------------------------------------- */
+
   6: {
-    signX: 130,
-    signY: 330,
-    scoreX: 75,
+    signX: 115,
+    signY: 335,
+
+    scoreX: 72,
     scoreY: 360,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 7
+     Bottom center
+  ------------------------------------------------------- */
+
   7: {
     signX: 200,
-    signY: 235,
+    signY: 245,
+
     scoreX: 200,
     scoreY: 320,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 8
+     Bottom-right
+  ------------------------------------------------------- */
+
   8: {
-    signX: 270,
-    signY: 330,
-    scoreX: 325,
+    signX: 285,
+    signY: 335,
+
+    scoreX: 328,
     scoreY: 360,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 9
+     Right lower
+  ------------------------------------------------------- */
+
   9: {
-    signX: 330,
-    signY: 270,
+    signX: 338,
+    signY: 275,
+
     scoreX: 365,
-    scoreY: 325,
+    scoreY: 322,
   },
+
+  /* -------------------------------------------------------
+     HOUSE 10
+     Right center
+  ------------------------------------------------------- */
 
   10: {
-    signX: 235,
-    signY: 200,
+    signX: 245,
+    signY: 205,
+
     scoreX: 315,
-    scoreY: 200,
+    scoreY: 198,
   },
+
+  /* -------------------------------------------------------
+     HOUSE 11
+     Right upper
+  ------------------------------------------------------- */
 
   11: {
-    signX: 330,
-    signY: 130,
+    signX: 338,
+    signY: 125,
+
     scoreX: 365,
-    scoreY: 75,
+    scoreY: 78,
   },
 
+  /* -------------------------------------------------------
+     HOUSE 12
+     Top-right
+  ------------------------------------------------------- */
+
   12: {
-    signX: 270,
-    signY: 70,
-    scoreX: 325,
-    scoreY: 40,
+    signX: 285,
+    signY: 65,
+
+    scoreX: 328,
+    scoreY: 42,
   },
 };
 
@@ -135,29 +226,36 @@ const COORDINATES = {
    GET ASHTAKAVARGA SECTION
 ========================================================= */
 
-const getAshtakavargaSection = (apiRoot) => {
+const getAshtakavargaSection = (
+  apiRoot
+) => {
   if (!apiRoot) {
     return null;
   }
 
-  return getSection(apiRoot, [
-    "8_ashtakavarga_points",
+  return getSection(
+    apiRoot,
+    [
+      "8_ashtakavarga_points",
 
-    // Fallbacks
-    "8_ashtakvarga_points",
-    "8_ashtakvarga",
-    "8_ashtakavarga",
-    "ashtakvarga",
-    "ashtakavarga",
-    "ashtak_varga",
-  ]);
+      // Fallbacks
+      "8_ashtakvarga_points",
+      "8_ashtakvarga",
+      "8_ashtakavarga",
+      "ashtakvarga",
+      "ashtakavarga",
+      "ashtak_varga",
+    ]
+  );
 };
 
 /* =========================================================
    DEBUG RAW API
 ========================================================= */
 
-const printRawAshtakavarga = (section) => {
+const printRawAshtakavarga = (
+  section
+) => {
   if (!section) {
     console.log(
       "========== ASHTAKAVARGA =========="
@@ -222,7 +320,9 @@ const printRawAshtakavarga = (section) => {
    CHECK NUMERIC
 ========================================================= */
 
-const isNumericValue = (value) => {
+const isNumericValue = (
+  value
+) => {
   if (
     value === null ||
     value === undefined ||
@@ -255,36 +355,40 @@ const isNumericValue = (value) => {
    NORMALIZE ARRAY
 ========================================================= */
 
-const normalizeArray = (source) => {
+const normalizeArray = (
+  source
+) => {
   if (!Array.isArray(source)) {
     return [];
   }
 
-  return source.map((item) => {
-    if (
-      item === null ||
-      item === undefined
-    ) {
-      return "-";
-    }
+  return source.map(
+    (item) => {
+      if (
+        item === null ||
+        item === undefined
+      ) {
+        return "-";
+      }
 
-    if (
-      typeof item === "object"
-    ) {
-      return (
-        item.score ??
-        item.value ??
-        item.bindu ??
-        item.points ??
-        item.total ??
-        item.sarva ??
-        item.count ??
-        "-"
-      );
-    }
+      if (
+        typeof item === "object"
+      ) {
+        return (
+          item.score ??
+          item.value ??
+          item.bindu ??
+          item.points ??
+          item.total ??
+          item.sarva ??
+          item.count ??
+          "-"
+        );
+      }
 
-    return item;
-  });
+      return item;
+    }
+  );
 };
 
 /* =========================================================
@@ -317,6 +421,7 @@ const findTwelveValues = (
     /*
      * Exact 12 values
      */
+
     if (
       normalized.length === 12
     ) {
@@ -326,6 +431,7 @@ const findTwelveValues = (
     /*
      * More than 12
      */
+
     if (
       normalized.length > 12
     ) {
@@ -348,12 +454,14 @@ const findTwelveValues = (
     /*
      * Search nested objects
      */
+
     for (
       const item of source
     ) {
       if (
         item &&
-        typeof item === "object"
+        typeof item ===
+          "object"
       ) {
         const result =
           findTwelveValues(
@@ -385,6 +493,7 @@ const findTwelveValues = (
     /*
      * Important keys first.
      */
+
     const priorityKeys = [
       "values",
       "scores",
@@ -444,7 +553,9 @@ const findTwelveValues = (
       numericKeys.length === 12
     ) {
       const sortedKeys =
-        [...numericKeys].sort(
+        [
+          ...numericKeys,
+        ].sort(
           (a, b) =>
             Number(a) -
             Number(b)
@@ -468,7 +579,8 @@ const findTwelveValues = (
 
       if (
         value &&
-        typeof value === "object"
+        typeof value ===
+          "object"
       ) {
         const result =
           findTwelveValues(
@@ -499,24 +611,23 @@ const getSarvValues = (
     return [];
   }
 
-  /*
-   * Keep current working logic first.
-   *
-   * We will verify this against total_points
-   * using the raw console output.
-   */
-
   const candidates = [
     section?.houses,
 
     section?.sarvashtakavarga,
+
     section?.sarvashtakvarga,
+
     section?.sarv,
+
     section?.total,
+
     section?.scores,
+
     section?.values,
 
     section?.chart?.houses,
+
     section?.chart?.values,
   ];
 
@@ -546,8 +657,7 @@ const getSarvValues = (
       );
 
     if (
-      recursive.length ===
-      12
+      recursive.length === 12
     ) {
       return recursive;
     }
@@ -651,7 +761,8 @@ const findPlanetData = (
 ) => {
   if (
     !source ||
-    typeof source !== "object" ||
+    typeof source !==
+      "object" ||
     depth > 8
   ) {
     return null;
@@ -701,7 +812,8 @@ const findPlanetData = (
 
     if (
       value &&
-      typeof value === "object"
+      typeof value ===
+        "object"
     ) {
       const result =
         findPlanetData(
@@ -936,17 +1048,21 @@ const getSignsFromApi = (
         length: 12,
       },
       (_, index) =>
-        ((numericLagna -
-          1 +
-          index) %
-          12) +
+        (
+          (
+            numericLagna -
+            1 +
+            index
+          ) %
+          12
+        ) +
         1
     );
   }
 
   /*
-   * Final fallback based on your current
-   * Kundli: Sagittarius Lagna = 9.
+   * Final fallback based on current
+   * working Kundli.
    */
 
   return [
@@ -982,32 +1098,34 @@ const ACTab = ({
    * API ROOT
    */
 
-  const apiRoot = useMemo(
-    () =>
-      getApiRoot(
+  const apiRoot =
+    useMemo(
+      () =>
+        getApiRoot(
+          data,
+          fullData
+        ),
+      [
         data,
-        fullData
-      ),
-    [
-      data,
-      fullData,
-    ]
-  );
+        fullData,
+      ]
+    );
 
   /*
    * ASHTAKAVARGA SECTION
    */
 
-  const section = useMemo(
-    () =>
-      getAshtakavargaSection(
-        apiRoot
-      ),
-    [apiRoot]
-  );
+  const section =
+    useMemo(
+      () =>
+        getAshtakavargaSection(
+          apiRoot
+        ),
+      [apiRoot]
+    );
 
   /*
-   * PRINT RAW API ONCE WHEN SECTION CHANGES
+   * PRINT RAW API ONCE
    */
 
   useEffect(() => {
@@ -1020,33 +1138,35 @@ const ACTab = ({
    * CURRENT TAB VALUES
    */
 
-  const scores = useMemo(
-    () =>
-      getValues(
+  const scores =
+    useMemo(
+      () =>
+        getValues(
+          section,
+          active
+        ),
+      [
         section,
-        active
-      ),
-    [
-      section,
-      active,
-    ]
-  );
+        active,
+      ]
+    );
 
   /*
    * SIGNS
    */
 
-  const signs = useMemo(
-    () =>
-      getSignsFromApi(
+  const signs =
+    useMemo(
+      () =>
+        getSignsFromApi(
+          section,
+          apiRoot
+        ),
+      [
         section,
-        apiRoot
-      ),
-    [
-      section,
-      apiRoot,
-    ]
-  );
+        apiRoot,
+      ]
+    );
 
   /*
    * DEBUG TOTAL
@@ -1086,7 +1206,9 @@ const ACTab = ({
       ================================================= */}
 
       <Text
-        style={styles.title}
+        style={
+          styles.title
+        }
       >
         Ashtakavarga Chart
       </Text>
@@ -1173,7 +1295,10 @@ const ACTab = ({
           : `${scores.length} values loaded`}
       </Text>
 
-      {/* Show Sarv comparison */}
+      {/* =================================================
+          SHOW SARV COMPARISON
+      ================================================= */}
+
       {active ===
         "Sarv" &&
         scores.length ===
@@ -1200,7 +1325,9 @@ const ACTab = ({
       ================================================= */}
 
       <Text
-        style={styles.desc}
+        style={
+          styles.desc
+        }
       >
         Ashtakavarga is a
         Vedic mathematical
@@ -1252,6 +1379,7 @@ const AshtakChart = ({
         width="100%"
         height="100%"
         viewBox="0 0 400 400"
+        preserveAspectRatio="xMidYMid meet"
       >
         {/* =================================================
             OUTER BORDER
@@ -1270,7 +1398,7 @@ const AshtakChart = ({
         />
 
         {/* =================================================
-            DIAGONALS
+            DIAGONAL 1
         ================================================= */}
 
         <Line
@@ -1283,6 +1411,10 @@ const AshtakChart = ({
           }
           strokeWidth="1.8"
         />
+
+        {/* =================================================
+            DIAGONAL 2
+        ================================================= */}
 
         <Line
           x1="0"
@@ -1296,7 +1428,7 @@ const AshtakChart = ({
         />
 
         {/* =================================================
-            DIAMOND
+            DIAMOND TOP-LEFT
         ================================================= */}
 
         <Line
@@ -1310,6 +1442,10 @@ const AshtakChart = ({
           strokeWidth="1.8"
         />
 
+        {/* =================================================
+            DIAMOND BOTTOM-LEFT
+        ================================================= */}
+
         <Line
           x1="0"
           y1="200"
@@ -1321,6 +1457,10 @@ const AshtakChart = ({
           strokeWidth="1.8"
         />
 
+        {/* =================================================
+            DIAMOND BOTTOM-RIGHT
+        ================================================= */}
+
         <Line
           x1="200"
           y1="400"
@@ -1331,6 +1471,10 @@ const AshtakChart = ({
           }
           strokeWidth="1.8"
         />
+
+        {/* =================================================
+            DIAMOND TOP-RIGHT
+        ================================================= */}
 
         <Line
           x1="400"
@@ -1376,9 +1520,15 @@ const AshtakChart = ({
                   house
                 }
               >
-                {/* -----------------------------------------
-                    ZODIAC SIGN
-                ----------------------------------------- */}
+                {/* =================================================
+                    SIGN
+
+                    IMPORTANT:
+                    No font shrinking.
+                    No line wrapping.
+                    Position is controlled only
+                    by signX / signY.
+                ================================================= */}
 
                 <SvgText
                   x={
@@ -1390,18 +1540,21 @@ const AshtakChart = ({
                   fill={
                     ORANGE
                   }
-                  fontSize="15"
-                  fontWeight="bold"
+                  fontSize={
+                    SIGN_FONT_SIZE
+                  }
+                  fontWeight="700"
                   textAnchor="middle"
+                  alignmentBaseline="middle"
                 >
                   {getValue(
                     sign
                   )}
                 </SvgText>
 
-                {/* -----------------------------------------
+                {/* =================================================
                     SCORE
-                ----------------------------------------- */}
+                ================================================= */}
 
                 <SvgText
                   x={
@@ -1416,6 +1569,7 @@ const AshtakChart = ({
                   fontSize="20"
                   fontWeight="bold"
                   textAnchor="middle"
+                  alignmentBaseline="middle"
                 >
                   {getValue(
                     score
@@ -1448,7 +1602,8 @@ const styles =
         RF(16),
       fontWeight:
         "700",
-      color: "#111",
+      color:
+        "#111",
       marginBottom:
         hp(1.5),
     },
@@ -1494,11 +1649,13 @@ const styles =
     pillText: {
       fontSize:
         RF(10.5),
-      color: "#111",
+      color:
+        "#111",
     },
 
     activeText: {
-      color: "#fff",
+      color:
+        "#fff",
       fontWeight:
         "700",
     },
@@ -1506,12 +1663,22 @@ const styles =
     chartWrapper: {
       width:
         wp(90),
+
       height:
         wp(90),
+
+      maxWidth:
+        430,
+
+      maxHeight:
+        430,
+
       alignSelf:
         "center",
+
       marginBottom:
         hp(1),
+
       backgroundColor:
         "#fff",
     },
@@ -1519,9 +1686,13 @@ const styles =
     statusText: {
       textAlign:
         "center",
+
       fontSize:
         RF(9),
-      color: "#777",
+
+      color:
+        "#777",
+
       marginBottom:
         hp(0.5),
     },
@@ -1529,12 +1700,16 @@ const styles =
     totalText: {
       textAlign:
         "center",
+
       fontSize:
         RF(9),
+
       fontWeight:
         "600",
+
       color:
         ORANGE,
+
       marginBottom:
         hp(1),
     },
@@ -1542,9 +1717,13 @@ const styles =
     desc: {
       fontSize:
         RF(11.5),
-      color: "#333",
+
+      color:
+        "#333",
+
       lineHeight:
         hp(2.3),
+
       marginBottom:
         hp(2),
     },
@@ -1552,20 +1731,27 @@ const styles =
     button: {
       height:
         hp(5.4),
+
       backgroundColor:
         ORANGE,
+
       borderRadius:
         wp(2),
+
       alignItems:
         "center",
+
       justifyContent:
         "center",
     },
 
     buttonText: {
-      color: "#fff",
+      color:
+        "#fff",
+
       fontSize:
         RF(13),
+
       fontWeight:
         "700",
     },

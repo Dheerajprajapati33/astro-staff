@@ -19,7 +19,7 @@ try {
 } catch (_e) {
   // Native module not available (Expo Go) — mic feature will be hidden
 }
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   AppState,
@@ -27,6 +27,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -54,13 +55,20 @@ import {
   onEvent,
   sendChatMessage,
   emitTypingIndicator,
+  deleteChatMessageSocket,
 } from "../../utils/socket";
 import {
+  useDeleteChatMessageMutation,
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useMarkRoomReadMutation,
   useSendChatMessageMutation,
 } from "../../redux/ChatApi";
+import {
+  useGetBlockStatusQuery,
+  useReportUserMutation,
+  useToggleBlockUserMutation,
+} from "../../redux/blockReportApi";
 
 const ORANGE = "#ff6a00";
 const LOG_TAG = "[ChatScreen]";
@@ -77,6 +85,7 @@ export default function Chat() {
     initials = "C",
     maxDurationSeconds,
   } = useLocalSearchParams();
+  const targetUserId = Array.isArray(userId) ? userId[0] : userId;
 
   // Two independent chat systems share this screen (see ChatApi.js note):
   // - consultationId present -> paid, timed /consultation flow (socket-driven).
@@ -98,6 +107,8 @@ export default function Chat() {
   // wrong (e.g. the chat had already ended by the time this mounts).
   const [chatActive, setChatActive] = useState(isConsultationMode);
   const [chatEnded, setChatEnded] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isBlockedByOther, setIsBlockedByOther] = useState(false);
   const [remoteTyping, setRemoteTyping] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(
     maxDurationSeconds ? Number(maxDurationSeconds) : null,
@@ -160,7 +171,25 @@ export default function Chat() {
   }, [refetchMessages]);
 
   const [sendChatMessageMutation] = useSendChatMessageMutation();
+  const [deleteChatMessageMutation] = useDeleteChatMessageMutation();
   const [markRoomRead] = useMarkRoomReadMutation();
+  const [toggleBlockUserMutation] = useToggleBlockUserMutation();
+  const [reportUserMutation] = useReportUserMutation();
+  const { data: blockStatusData } = useGetBlockStatusQuery(targetUserId, {
+    skip: !targetUserId,
+  });
+
+  useEffect(() => {
+    const status = blockStatusData?.data ?? blockStatusData;
+    setIsBlocked(
+      Boolean(
+        status?.isBlockedByMe ??
+          status?.isBlocked ??
+          false,
+      ),
+    );
+    setIsBlockedByOther(Boolean(status?.isBlockedByThem ?? false));
+  }, [blockStatusData]);
 
   // Room mode renders directly from the polled query (REST is the source of
   // truth). Consultation mode seeds once from history then appends live via
@@ -174,7 +203,248 @@ export default function Chat() {
   // ahead of "chat_started"/the wall-clock fallback resolving) and not after
   // it's ended. Room mode has no such live/active concept, so it's always
   // sendable until the thread itself is gone.
-  const canMessage = !chatEnded && (!isConsultationMode || chatActive);
+  const canMessage =
+    !chatEnded &&
+    !isBlocked &&
+    !isBlockedByOther &&
+    (!isConsultationMode || chatActive);
+
+  const handleChatMessageDeleted = useCallback(
+    (data) => {
+      if (
+        data?.consultationId &&
+        data.consultationId !== consultationId
+      ) {
+        return;
+      }
+
+      const messageId = data?.messageId || data?.id;
+      if (!messageId) return;
+
+      setMessages((previous) =>
+        data?.deleteType === "me"
+          ? previous.filter(
+              (message) =>
+                String(message?.id || message?._id) !==
+                String(messageId),
+            )
+          : previous.map((message) =>
+              String(message?.id || message?._id) ===
+              String(messageId)
+                ? {
+                    ...message,
+                    message: "This message was deleted",
+                    isDeleted: true,
+                  }
+                : message,
+            ),
+      );
+    },
+    [consultationId],
+  );
+
+  const handleBlockUser = useCallback((targetId = targetUserId) => {
+    if (!targetId) return;
+
+    const nextBlocked = !isBlocked;
+    Alert.alert(
+      nextBlocked ? "Block user" : "Unblock user",
+      `Are you sure you want to ${
+        nextBlocked ? "block" : "unblock"
+      } ${name || "this user"}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: nextBlocked ? "Block" : "Unblock",
+          style: nextBlocked ? "destructive" : "default",
+          onPress: async () => {
+            try {
+              const response = await toggleBlockUserMutation({
+                targetUserId: targetId,
+              }).unwrap();
+              const status = response?.data ?? response;
+              setIsBlocked(
+                typeof status?.isBlocked === "boolean"
+                  ? status.isBlocked
+                  : nextBlocked,
+              );
+              Alert.alert(
+                nextBlocked ? "User blocked" : "User unblocked",
+                response?.message ||
+                  (nextBlocked
+                    ? "This user has been blocked."
+                    : "This user has been unblocked."),
+              );
+            } catch (error) {
+              console.log(LOG_TAG, "Block/unblock failed:", error);
+              Alert.alert(
+                "Error",
+                error?.data?.message || "Unable to update block status.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [isBlocked, name, targetUserId, toggleBlockUserMutation]);
+
+  const handleReportUser = useCallback((targetId = targetUserId) => {
+    if (!targetId) return;
+
+    const submitReport = async (reason) => {
+      try {
+        const response = await reportUserMutation({
+          reportedUserId: targetId,
+          reason,
+        }).unwrap();
+        const result = response?.data ?? response;
+        if (result?.isUserBlocked) setIsBlocked(true);
+        Alert.alert(
+          "Report submitted",
+          response?.message || "Your report was submitted successfully.",
+        );
+      } catch (error) {
+        console.log(LOG_TAG, "Report submission failed:", error);
+        Alert.alert(
+          "Error",
+          error?.data?.message || "Unable to submit the report.",
+        );
+      }
+    };
+
+    const showMoreReasons = () =>
+      Alert.alert("Report user", "Select a reason", [
+        {
+          text: "Harassment",
+          onPress: () => submitReport("Harassment"),
+        },
+        { text: "Other", onPress: () => submitReport("Other") },
+        { text: "Cancel", style: "cancel" },
+      ]);
+
+    Alert.alert("Report user", "Select a reason", [
+      {
+        text: "Abusive Language",
+        onPress: () => submitReport("Abusive Language"),
+      },
+      { text: "Fraud", onPress: () => submitReport("Fraud") },
+      { text: "More", onPress: showMoreReasons },
+    ]);
+  }, [reportUserMutation, targetUserId]);
+
+  const handleMessageAction = useCallback(
+    (message) => {
+      const messageId = message?.id || message?._id;
+      if (!messageId) {
+        Alert.alert("Delete message", "This message has no message ID.");
+        return;
+      }
+
+      const isOwnMessage =
+        message?.senderId === astrologer?.id ||
+        message?.senderRole === "astrologer" ||
+        message?.senderRole === "user" ||
+        message?.senderId === targetUserId;
+
+      const messageUserId =
+        message?.senderRole === "astrologer" ||
+        message?.senderId === astrologer?.id
+          ? astrologer?.id
+          : targetUserId;
+
+      const deleteMessage = async (deleteType) => {
+        try {
+          await deleteChatMessageMutation({
+            messageId,
+            deleteType,
+          }).unwrap();
+
+          if (deleteType === "everyone") {
+            if (isConsultationMode) {
+              deleteChatMessageSocket({
+                consultationId,
+                messageId,
+                deleteType,
+              });
+              setMessages((previous) =>
+                previous.map((item) =>
+                  String(item?.id || item?._id) === String(messageId)
+                    ? {
+                        ...item,
+                        message: "This message was deleted",
+                        isDeleted: true,
+                      }
+                    : item,
+                ),
+              );
+            } else {
+              refetchMessages();
+            }
+          } else if (isConsultationMode) {
+            setMessages((previous) =>
+              previous.filter(
+                (item) =>
+                  String(item?.id || item?._id) !== String(messageId),
+              ),
+            );
+          } else {
+            refetchMessages();
+          }
+        } catch (error) {
+          console.log(LOG_TAG, "Delete message failed:", error);
+          Alert.alert(
+            "Delete failed",
+            error?.data?.message || "Unable to delete this message.",
+          );
+        }
+      };
+
+      const options = [
+        {
+          text: "Delete for me",
+          onPress: () => deleteMessage("me"),
+        },
+      ];
+      if (isOwnMessage) {
+        options.push({
+          text: "Delete for everyone",
+          style: "destructive",
+          onPress: () => deleteMessage("everyone"),
+        });
+      }
+      if (messageUserId) {
+        options.push({
+          text: "More",
+          onPress: () =>
+            Alert.alert("Sender options", "Choose an action", [
+              {
+                text: "Block sender",
+                style: "destructive",
+                onPress: () => handleBlockUser(messageUserId),
+              },
+              {
+                text: "Report sender",
+                onPress: () => handleReportUser(messageUserId),
+              },
+              { text: "Cancel", style: "cancel" },
+            ]),
+        });
+      } else {
+        options.push({ text: "Cancel", style: "cancel" });
+      }
+      Alert.alert("Message options", "Choose an action", options);
+    },
+    [
+      astrologer?.id,
+      consultationId,
+      deleteChatMessageMutation,
+      handleBlockUser,
+      handleReportUser,
+      isConsultationMode,
+      refetchMessages,
+      targetUserId,
+    ],
+  );
 
   useEffect(() => {
     console.log(LOG_TAG, "history query state:", {
@@ -501,6 +771,7 @@ export default function Chat() {
       socket.on("new_chat_message", onNewMessage);
       socket.on("user_typing", onTyping);
       socket.on("chat_ended", onChatEnded);
+      socket.on("chat_message_deleted", handleChatMessageDeleted);
 
       // Rejoin the room + backfill anything we missed. Rejoining alone only
       // restores *future* events - it does nothing for messages, a
@@ -579,6 +850,11 @@ export default function Chat() {
         () => socket.off("new_chat_message", onNewMessage),
         () => socket.off("user_typing", onTyping),
         () => socket.off("chat_ended", onChatEnded),
+        () =>
+          socket.off(
+            "chat_message_deleted",
+            handleChatMessageDeleted,
+          ),
         () => appStateSub.remove(),
       );
     };
@@ -592,7 +868,11 @@ export default function Chat() {
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consultationId, isConsultationMode]);
+  }, [
+    consultationId,
+    isConsultationMode,
+    handleChatMessageDeleted,
+  ]);
 
   // Countdown timer while chat is active (consultation mode only)
   useEffect(() => {
@@ -889,17 +1169,26 @@ export default function Chat() {
       item.senderRole === "astrologer" || item.senderId === astrologer?.id;
 
     return (
-      <View style={isMine ? styles.rightBubble : styles.leftBubble}>
-        <Text style={styles.msgText}>{item.message}</Text>
-        <Text style={isMine ? styles.rightTime : styles.leftTime}>
-          {item.createdAt
-            ? new Date(item.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : ""}
-        </Text>
-      </View>
+      <Pressable
+        onLongPress={() => handleMessageAction(item)}
+        delayLongPress={450}
+      >
+        <View style={isMine ? styles.rightBubble : styles.leftBubble}>
+          <Text style={styles.msgText}>
+            {item.isDeleted || item.deleted
+              ? "This message was deleted"
+              : item.message}
+          </Text>
+          <Text style={isMine ? styles.rightTime : styles.leftTime}>
+            {item.createdAt
+              ? new Date(item.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : ""}
+          </Text>
+        </View>
+      </Pressable>
     );
   };
 
@@ -946,18 +1235,52 @@ export default function Chat() {
             )}
           </View>
 
-          {isConsultationMode ? (
-            <TouchableOpacity onPress={handleEndChat} disabled={chatEnded}>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert(name || "Client", "Choose an action", [
+                  {
+                    text: isBlocked ? "Unblock user" : "Block user",
+                    onPress: handleBlockUser,
+                  },
+                  {
+                    text: "Report user",
+                    onPress: handleReportUser,
+                  },
+                  { text: "Cancel", style: "cancel" },
+                ])
+              }
+              accessibilityLabel="Chat user actions"
+            >
               <Ionicons
-                name="close-circle-outline"
-                size={RF(22)}
-                color={chatEnded ? "#c9c9c9" : "#dc2626"}
+                name="ellipsis-vertical"
+                size={RF(20)}
+                color="#607086"
               />
             </TouchableOpacity>
-          ) : (
-            <View style={{ width: RF(22) }} />
-          )}
+            {isConsultationMode ? (
+              <TouchableOpacity
+                onPress={handleEndChat}
+                disabled={chatEnded}
+                accessibilityLabel="End chat"
+              >
+                <Ionicons
+                  name="close-circle-outline"
+                  size={RF(22)}
+                  color={chatEnded ? "#c9c9c9" : "#dc2626"}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
         </View>
+
+        {isBlocked ? (
+          <View style={styles.blockedBanner}>
+            <Text style={styles.blockedText}>
+              You blocked this user. Unblock to continue messaging.
+            </Text>
+          </View>
+        ) : null}
 
         {isConsultationMode && connStatus !== "connected" && !chatEnded && (
           <View style={styles.warningBanner}>
@@ -975,7 +1298,9 @@ export default function Chat() {
         <FlatList
           ref={listRef}
           data={displayMessages}
-          keyExtractor={(item, index) => item.id || String(index)}
+          keyExtractor={(item, index) =>
+            String(item.id || item._id || index)
+          }
           renderItem={renderMessage}
           contentContainerStyle={styles.chatContent}
           showsVerticalScrollIndicator={false}
@@ -1020,6 +1345,10 @@ export default function Chat() {
             placeholder={
               chatEnded
                 ? "Chat has ended"
+                : isBlockedByOther
+                  ? "This user has blocked you"
+                  : isBlocked
+                    ? "You blocked this user"
                 : !canMessage
                   ? "Waiting for chat to start..."
                   : "Type a message..."
@@ -1076,6 +1405,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#f2f2f2",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(4),
+    marginLeft: wp(2),
+  },
+  blockedBanner: {
+    paddingVertical: hp(0.8),
+    paddingHorizontal: wp(4),
+    backgroundColor: "#fee2e2",
+    alignItems: "center",
+  },
+  blockedText: {
+    color: "#991b1b",
+    fontSize: RF(10),
+    fontWeight: "700",
+    textAlign: "center",
+    fontFamily: Typography?.bold,
   },
   avatar: {
     width: wp(11),

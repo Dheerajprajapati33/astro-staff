@@ -24,6 +24,7 @@ export default function ChatHeader({
   connectionStatus,
   onEndChat,
   onBack,
+  onMenuPress, // <-- Add this prop
 }) {
   const isReconnecting = connectionStatus && connectionStatus !== "connected";
 
@@ -64,20 +65,29 @@ export default function ChatHeader({
           )}
         </View>
       </View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: wp(2) }}>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          style={styles.iconButton}
+          onPress={onMenuPress}
+        >
+          <Ionicons name="ellipsis-vertical" size={RF(20)} color={Colors.textGray} />
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        activeOpacity={0.8}
-        style={styles.iconButton}
-        onPress={onEndChat}
-        disabled={chatEnded}
-      >
-        <Ionicons
-          name="close-circle-outline"
-          size={RF(22)}
-          color={chatEnded ? "#c9c9c9" : "#dc2626"}
-        />
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.iconButton}
+          onPress={onEndChat}
+          disabled={chatEnded}
+        >
+          <Ionicons
+            name="close-circle-outline"
+            size={RF(22)}
+            color={chatEnded ? "#c9c9c9" : "#dc2626"}
+          />
+        </TouchableOpacity>
+      </View>
+      </View>
   );
 }
 
