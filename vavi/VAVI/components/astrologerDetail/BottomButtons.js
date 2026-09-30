@@ -4,13 +4,16 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-import Colors from "../../constants/Colors";import { useCreateConsultationMutation } from "../../redux/consultationApi";
+import Colors from "../../constants/Colors";
+import { useCreateConsultationMutation } from "../../redux/consultationApi";
 import { hp, RF, wp } from "../../utils/responsive";
+import CallInputModal from "../call/callInputModal";
 
 const LOG_TAG = "[BottomButtons]";
 
 export default function BottomButtons({ astrologer = {} }) {
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const [showCallInputModal, setShowCallInputModal] = useState(false);
 
   const [createConsultation] = useCreateConsultationMutation();
   const callPrice =
@@ -75,7 +78,7 @@ export default function BottomButtons({ astrologer = {} }) {
 
   const [isStartingCall, setIsStartingCall] = useState(false);
 
-  const handleCall = async () => {
+  const handleCall = () => {
     if (isBusy) {
       showBusyAlert();
       return;
@@ -87,8 +90,12 @@ export default function BottomButtons({ astrologer = {} }) {
     }
 
     if (isStartingCall) return;
-    setIsStartingCall(true);
+    setShowCallInputModal(true);
+  };
 
+  const handleCallWithBirthDetails = async (birthDetails = {}) => {
+    if (isStartingCall) return false;
+    setIsStartingCall(true);
     console.log(LOG_TAG, "Creating call consultation for astrologer:", astrologer?.id);
 
     try {
@@ -112,7 +119,7 @@ export default function BottomButtons({ astrologer = {} }) {
 
       if (!consultationId) {
         Alert.alert("Error", "Could not start call. Please try again.");
-        return;
+        return false;
       }
 
       router.push({
@@ -124,14 +131,18 @@ export default function BottomButtons({ astrologer = {} }) {
           astrologerName: astrologer?.name || "",
           astrologerImage: astrologer?.profilePic || "",
           ratePerMinute: String(callPrice || "25"),
+          birthDetails: JSON.stringify(birthDetails),
         },
       });
+      setShowCallInputModal(false);
+      return true;
     } catch (error) {
       console.log(LOG_TAG, "Create call consultation failed:", error);
       Alert.alert(
         "Unable to Start Call",
         error?.data?.message || "Something went wrong. Please try again.",
       );
+      return false;
     } finally {
       setIsStartingCall(false);
     }
@@ -215,12 +226,21 @@ export default function BottomButtons({ astrologer = {} }) {
         activeOpacity={0.8}
         style={[styles.callButton, !isCallOnline && styles.disabledCallButton]}
         onPress={handleCall}
+        disabled={isStartingCall}
       >
-        <Ionicons name="call-outline" size={RF(22)} color={Colors.white} />
+        {isStartingCall ? (
+          <ActivityIndicator size="small" color={Colors.white} />
+        ) : (
+          <Ionicons name="call-outline" size={RF(22)} color={Colors.white} />
+        )}
 
         <View style={styles.textContainer}>
           <Text style={styles.title}>
-            {isCallOnline ? "Call Now" : "Call Offline"}
+            {isStartingCall
+              ? "Connecting..."
+              : isCallOnline
+                ? "Call Now"
+                : "Call Offline"}
           </Text>
 
           <Text style={styles.price}>₹{callPrice}/min</Text>
@@ -259,6 +279,13 @@ export default function BottomButtons({ astrologer = {} }) {
           </Text>
         </View>
       </TouchableOpacity>
+      <CallInputModal
+        visible={showCallInputModal}
+        onClose={() => setShowCallInputModal(false)}
+        onCall={handleCallWithBirthDetails}
+        astrologerName={astrologer?.name || "Astrologer"}
+        loading={isStartingCall}
+      />
     </View>
   );
 }

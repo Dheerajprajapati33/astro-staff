@@ -115,10 +115,21 @@ export const sendChatMessage = (payload) => {
     return false;
   }
 
+  const isPrivateKundliDetails =
+    typeof payload?.message === "string" &&
+    payload.message.startsWith("__VAVI_KUNDLI_DETAILS_V1__:");
+
   console.log(
     LOG_TAG,
     "Emitting send_chat_message on unified socket:",
-    payload,
+    isPrivateKundliDetails
+      ? {
+          consultationId: payload.consultationId,
+          senderRole: payload.senderRole,
+          messageType: payload.messageType,
+          privateKundliDetails: true,
+        }
+      : payload,
   );
 
   socket.emit("send_chat_message", payload);

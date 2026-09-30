@@ -95,6 +95,22 @@ export default function ChatRequestProvider({ children }) {
         roomId: next.id,
         userId: next.userId,
         userName: next?.user?.name || "Client",
+        birthDetails:
+          next?.birthDetails ||
+          next?.clientBirthDetails ||
+          next?.user?.birthDetails ||
+          null,
+        gender: next?.user?.gender || next?.gender,
+        dob: next?.user?.dob || next?.dob,
+        tob: next?.user?.tob || next?.tob,
+        pob:
+          next?.user?.pob ||
+          next?.user?.birthPlace ||
+          next?.pob ||
+          next?.user?.city,
+        lat: next?.user?.lat || next?.lat,
+        lon: next?.user?.lon || next?.lon,
+        timezone: next?.user?.timezone || next?.timezone,
         problem: next.problem,
         maxDurationSeconds: next.maxDuration,
       });
@@ -109,6 +125,14 @@ export default function ChatRequestProvider({ children }) {
       roomId,
       userId,
       userName,
+      gender,
+      dob,
+      tob,
+      pob,
+      lat,
+      lon,
+      timezone,
+      birthDetails,
       problem,
       maxDurationSeconds,
     } = incomingRequest;
@@ -127,6 +151,17 @@ export default function ChatRequestProvider({ children }) {
         roomId: roomId || consultationId,
         userId,
         name: userName,
+        gender,
+        dob,
+        tob,
+        pob,
+        lat,
+        lon,
+        timezone,
+        birthDetails:
+          typeof birthDetails === "object"
+            ? JSON.stringify(birthDetails)
+            : birthDetails,
         problem,
         maxDurationSeconds,
       },

@@ -11,16 +11,24 @@ import {
   View,
 } from "react-native";
 
-import { BASE_URL, resolveImageUri } from "../../config/api";
+import { resolveImageUri } from "../../config/api";
 import Colors from "../../constants/Colors";
 import { useCreateConsultationMutation } from "../../redux/consultationApi";
 import { hp, RF, wp } from "../../utils/responsive";
 import Shadows from "../../utils/shadows";
 
+// IMPORTANT:
+// Apne project ke existing path ke according ye path rakho.
+// Agar chatInputModal.js components/chat/ ke andar hai,
+// to ye path correct hai.
+import ChatInputModal from "../chat/chatInputModal";
+import CallInputModal from "../call/callInputModal";
+
 const LOG_TAG = "[AstrologerCard]";
 
 export default function AstrologerCard({ item = {} }) {
   const [isStartingChat, setIsStartingChat] = useState(false);
+  const [showChatInputModal, setShowChatInputModal] = useState(false);
 
   const [createConsultation] = useCreateConsultationMutation();
 
@@ -51,7 +59,9 @@ export default function AstrologerCard({ item = {} }) {
     item?.isOnline || item?.isCallOnline || item?.isChatOnline,
   );
 
-  const profileImage = resolveImageUri(item?.profilePic) || require("../../assets/images/placeholder.jpeg");
+  const profileImage =
+    resolveImageUri(item?.profilePic) ||
+    require("../../assets/images/placeholder.jpeg");
 
   const handleCardPress = () => {
     if (!item?.id) {
@@ -74,6 +84,7 @@ export default function AstrologerCard({ item = {} }) {
   };
 
   const [isStartingCall, setIsStartingCall] = useState(false);
+  const [showCallInputModal, setShowCallInputModal] = useState(false);
 
   const handleInternetCall = async (event) => {
     event?.stopPropagation?.();
@@ -97,9 +108,18 @@ export default function AstrologerCard({ item = {} }) {
     }
 
     if (isStartingCall) return;
-    setIsStartingCall(true);
 
-    console.log(LOG_TAG, "Creating call consultation for astrologer:", item?.id);
+    setShowCallInputModal(true);
+  };
+
+  const handleCallWithBirthDetails = async (birthDetails = {}) => {
+    if (isStartingCall) return false;
+    setIsStartingCall(true);
+    console.log(
+      LOG_TAG,
+      "Creating call consultation for astrologer:",
+      item?.id,
+    );
 
     try {
       const response = await createConsultation({
@@ -111,10 +131,12 @@ export default function AstrologerCard({ item = {} }) {
       console.log(LOG_TAG, "Call Consultation created:", response);
 
       const consultation = response?.data?.consultation || response?.data;
+
       const consultationId =
         consultation?.id ||
         response?.data?.consultationId ||
         response?.consultationId;
+
       const maxDuration =
         consultation?.maxDuration ||
         response?.data?.maxDuration ||
@@ -122,7 +144,7 @@ export default function AstrologerCard({ item = {} }) {
 
       if (!consultationId) {
         Alert.alert("Error", "Could not start call. Please try again.");
-        return;
+        return false;
       }
 
       const agora = response?.data?.agora || response?.agora;
@@ -141,20 +163,29 @@ export default function AstrologerCard({ item = {} }) {
           agoraToken,
           channelName,
           userUid,
+          birthDetails: JSON.stringify(birthDetails),
         },
       });
+      setShowCallInputModal(false);
+      return true;
     } catch (error) {
       console.log(LOG_TAG, "Create call consultation failed:", error);
+
       Alert.alert(
         "Unable to Start Call",
         error?.data?.message || "Something went wrong. Please try again.",
       );
+      return false;
     } finally {
       setIsStartingCall(false);
     }
   };
 
-  const handleChat = async (event) => {
+  // =========================================================
+  // FIRST STEP:
+  // Chat button sirf birth-details modal open karega
+  // =========================================================
+  const handleChat = (event) => {
     event?.stopPropagation?.();
 
     if (isBusy) {
@@ -172,12 +203,26 @@ export default function AstrologerCard({ item = {} }) {
         "Astrologer is currently not available for chat. Please try again later.",
         [{ text: "OK" }],
       );
-
       return;
     }
 
     if (isStartingChat) {
       return;
+    }
+
+    // IMPORTANT:
+    // Yahan consultation create nahi hogi.
+    // Pehle birth details modal open hoga.
+    setShowChatInputModal(true);
+  };
+
+  // =========================================================
+  // SECOND STEP:
+  // Modal se birth details milne ke baad consultation create
+  // =========================================================
+  const handleChatWithBirthDetails = async (birthDetails = {}) => {
+    if (isStartingChat) {
+      return false;
     }
 
     setIsStartingChat(true);
@@ -195,27 +240,37 @@ export default function AstrologerCard({ item = {} }) {
         problem: item?.expertises?.[0]?.name || "General Consultation",
       }).unwrap();
 
-      console.log(LOG_TAG, "Consultation created:", response);
-
-      const consultation = response?.data?.consultation || response?.data;
+      const consultation =
+        response?.data?.consultation || response?.data;
 
       const consultationId =
         consultation?.id ||
         response?.data?.consultationId ||
         response?.consultationId;
+
       const maxDuration =
         consultation?.maxDuration ||
         response?.data?.maxDuration ||
         1500;
 
       if (!consultationId) {
-        console.log(LOG_TAG, "No consultationId returned from create API");
+        console.log(
+          LOG_TAG,
+          "No consultationId returned from create API",
+        );
 
-        Alert.alert("Error", "Could not start chat. Please try again.");
+        Alert.alert(
+          "Error",
+          "Could not start chat. Please try again.",
+        );
 
-        return;
+        return false;
       }
 
+      // Modal close
+      setShowChatInputModal(false);
+
+      // Existing ChatConsultation flow exactly same
       router.push({
         pathname: "/ChatConsultation",
         params: {
@@ -224,199 +279,335 @@ export default function AstrologerCard({ item = {} }) {
           maxDuration: String(maxDuration),
           astrologerName: item?.name || "",
           astrologerImage: item?.profilePic || "",
+          birthDetails: JSON.stringify({
+            name: birthDetails?.name || "",
+            gender: birthDetails?.gender || "MALE",
+            dob: birthDetails?.dob || "",
+            tob: birthDetails?.tob || "12:00:00",
+            birthPlace: birthDetails?.birthPlace || "",
+            city:
+              birthDetails?.city ||
+              birthDetails?.birthPlace ||
+              "",
+            latitude: birthDetails?.latitude ?? null,
+            longitude: birthDetails?.longitude ?? null,
+            timezone: birthDetails?.timezone || "Asia/Kolkata",
+          }),
         },
       });
+
+      return true;
     } catch (error) {
-      console.log(LOG_TAG, "Create consultation failed:", error);
+      console.log(
+        LOG_TAG,
+        "Create consultation failed:",
+        error,
+      );
 
       Alert.alert(
         "Unable to Start Chat",
-        error?.data?.message || "Something went wrong. Please try again.",
+        error?.data?.message ||
+          error?.message ||
+          "Something went wrong. Please try again.",
       );
+
+      return false;
     } finally {
       setIsStartingChat(false);
     }
   };
 
+  const handleCloseChatModal = () => {
+    if (isStartingChat) {
+      return;
+    }
+
+    setShowChatInputModal(false);
+  };
+
   return (
-    <TouchableOpacity activeOpacity={0.9} onPress={handleCardPress}>
-      <View style={styles.card}>
-        {/* Top Section */}
-        <View style={styles.topRow}>
-          <View style={styles.imageContainer}>
-            {isBusy ? (
-              <View style={[styles.onlineBadge, { borderColor: "#FF9800", backgroundColor: "#FFF3E0" }]}>
-                <View style={[styles.onlineDot, { backgroundColor: "#FF9800" }]} />
-                <Text style={[styles.onlineText, { color: "#FF9800" }]}>Busy</Text>
-              </View>
-            ) : isOnline ? (
-              <View style={styles.onlineBadge}>
-                <View style={styles.onlineDot} />
-
-                <Text style={styles.onlineText}>Online</Text>
-              </View>
-            ) : null}
-
-            <Image
-              source={profileImage}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          </View>
-
-          <View style={styles.info}>
-            <View style={styles.nameRow}>
-              <View style={styles.nameContainer}>
-                <Text style={styles.name} numberOfLines={2}>
-                  {item?.name || "Astrologer"}
-                </Text>
-
-                {/* {item?.verified === true && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={RF(18)}
-                    color="#14AE5C"
+    <>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={handleCardPress}
+      >
+        <View style={styles.card}>
+          {/* Top Section */}
+          <View style={styles.topRow}>
+            <View style={styles.imageContainer}>
+              {isBusy ? (
+                <View
+                  style={[
+                    styles.onlineBadge,
+                    {
+                      borderColor: "#FF9800",
+                      backgroundColor: "#FFF3E0",
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.onlineDot,
+                      {
+                        backgroundColor: "#FF9800",
+                      },
+                    ]}
                   />
-                )} */}
-              </View>
 
-              {/* <TouchableOpacity activeOpacity={0.7} onPress={handleFavourite}>
-                <Ionicons name="heart-outline" size={RF(24)} color="#333333" />
-              </TouchableOpacity> */}
-            </View>
-
-            <View style={styles.chipRow}>
-              {skills.length > 0 ? (
-                skills.slice(0, 4).map((expertise, index) => (
-                  <View key={`${expertise}-${index}`} style={styles.chip}>
-                    <Text style={styles.chipText}>{expertise}</Text>
-                  </View>
-                ))
-              ) : (
-                <View style={styles.chip}>
-                  <Text style={styles.chipText}>General Astrology</Text>
-                </View>
-              )}
-            </View>
-
-            <Text style={styles.exp}>
-              {item?.experience || "0"} Years Experience
-            </Text>
-
-            {/* <View style={styles.skillRow}>
-              {skills.length > 0 ? (
-                <View style={styles.skillBadge}>
-                  <Text style={styles.skill}>
-                    {skills.length > 1
-                      ? `${skills[0]} + ${skills.length - 1} more`
-                      : skills[0]}
+                  <Text
+                    style={[
+                      styles.onlineText,
+                      {
+                        color: "#FF9800",
+                      },
+                    ]}
+                  >
+                    Busy
                   </Text>
                 </View>
+              ) : isOnline ? (
+                <View style={styles.onlineBadge}>
+                  <View style={styles.onlineDot} />
+
+                  <Text style={styles.onlineText}>
+                    Online
+                  </Text>
+                </View>
+              ) : null}
+
+              <Image
+                source={profileImage}
+                style={styles.image}
+                resizeMode="cover"
+              />
+            </View>
+
+            <View style={styles.info}>
+              <View style={styles.nameRow}>
+                <View style={styles.nameContainer}>
+                  <Text
+                    style={styles.name}
+                    numberOfLines={2}
+                  >
+                    {item?.name || "Astrologer"}
+                  </Text>
+
+                  {/* {item?.verified === true && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={RF(18)}
+                      color="#14AE5C"
+                    />
+                  )} */}
+                </View>
+
+                {/* <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={handleFavourite}
+                >
+                  <Ionicons
+                    name="heart-outline"
+                    size={RF(24)}
+                    color="#333333"
+                  />
+                </TouchableOpacity> */}
+              </View>
+
+              <View style={styles.chipRow}>
+                {skills.length > 0 ? (
+                  skills.slice(0, 4).map(
+                    (expertise, index) => (
+                      <View
+                        key={`${expertise}-${index}`}
+                        style={styles.chip}
+                      >
+                        <Text style={styles.chipText}>
+                          {expertise}
+                        </Text>
+                      </View>
+                    ),
+                  )
+                ) : (
+                  <View style={styles.chip}>
+                    <Text style={styles.chipText}>
+                      General Astrology
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              <Text style={styles.exp}>
+                {item?.experience || "0"} Years Experience
+              </Text>
+
+              {/* <View style={styles.skillRow}>
+                {skills.length > 0 ? (
+                  <View style={styles.skillBadge}>
+                    <Text style={styles.skill}>
+                      {skills.length > 1
+                        ? `${skills[0]} + ${skills.length - 1} more`
+                        : skills[0]}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.noSkillText}>
+                    General Astrology
+                  </Text>
+                )}
+              </View> */}
+
+              <View style={styles.ratingRow}>
+                <Ionicons
+                  name="star"
+                  size={RF(16)}
+                  color="#FDBA12"
+                />
+
+                <Text style={styles.rating}>
+                  {item?.rating || "0.0"}
+                </Text>
+
+                <Text style={styles.review}>
+                  ({item?.totalReviews || 0})
+                </Text>
+              </View>
+
+              <Text style={styles.people}>
+                Rated by {item?.totalReviews || 0} people
+              </Text>
+            </View>
+          </View>
+
+          {item?.availability ? (
+            <View style={styles.availabilityRow}>
+              <Ionicons
+                name="time-outline"
+                size={RF(15)}
+                color={Colors.primary}
+              />
+
+              <Text style={styles.availabilityText}>
+                Available: {item.availability}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Bottom Buttons */}
+          <View style={styles.bottomRow}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.internetBtn,
+                !item?.isCallOnline &&
+                  styles.offlineButton,
+              ]}
+              onPress={handleInternetCall}
+              disabled={isStartingCall}
+            >
+              {isStartingCall ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#2E7D32"
+                />
               ) : (
-                <Text style={styles.noSkillText}>General Astrology</Text>
+                <Ionicons
+                  name="wifi"
+                  size={RF(18)}
+                  color={
+                    item?.isCallOnline
+                      ? "#2E7D32"
+                      : "#999999"
+                  }
+                />
               )}
-            </View> */}
 
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={RF(16)} color="#FDBA12" />
+              <View style={styles.buttonContent}>
+                <Text
+                  style={[
+                    styles.internetTitle,
+                    !item?.isCallOnline &&
+                      styles.offlineText,
+                  ]}
+                >
+                  {isStartingCall
+                    ? "Connecting..."
+                    : "Call"}
+                </Text>
 
-              <Text style={styles.rating}>{item?.rating || "0.0"}</Text>
+                <Text style={styles.price}>
+                  ₹{item?.internetCallPrice || "0"}/min
+                </Text>
+              </View>
+            </TouchableOpacity>
 
-              <Text style={styles.review}>({item?.totalReviews || 0})</Text>
-            </View>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={[
+                styles.chatBtn,
+                !item?.isChatOnline &&
+                  styles.offlineButton,
+              ]}
+              onPress={handleChat}
+              disabled={isStartingChat}
+            >
+              {isStartingChat ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#2E7D32"
+                />
+              ) : (
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={RF(18)}
+                  color={
+                    item?.isChatOnline
+                      ? "#2E7D32"
+                      : "#999999"
+                  }
+                />
+              )}
 
-            <Text style={styles.people}>
-              Rated by {item?.totalReviews || 0} people
-            </Text>
+              <View style={styles.buttonContent}>
+                <Text
+                  style={[
+                    styles.chatTitle,
+                    !item?.isChatOnline &&
+                      styles.offlineText,
+                  ]}
+                >
+                  {isStartingChat
+                    ? "Connecting..."
+                    : "Chat"}
+                </Text>
+
+                <Text style={styles.price}>
+                  ₹{item?.chatPrice || "0"}/min
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
+      </TouchableOpacity>
 
-        {item?.availability ? (
-          <View style={styles.availabilityRow}>
-            <Ionicons
-              name="time-outline"
-              size={RF(15)}
-              color={Colors.primary}
-            />
-
-            <Text style={styles.availabilityText}>
-              Available: {item.availability}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* Bottom Buttons */}
-        <View style={styles.bottomRow}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.internetBtn,
-              !item?.isCallOnline && styles.offlineButton,
-            ]}
-            onPress={handleInternetCall}
-            disabled={isStartingCall}
-          >
-            {isStartingCall ? (
-              <ActivityIndicator size="small" color="#2E7D32" />
-            ) : (
-              <Ionicons
-                name="wifi"
-                size={RF(18)}
-                color={item?.isCallOnline ? "#2E7D32" : "#999999"}
-              />
-            )}
-
-            <View style={styles.buttonContent}>
-              <Text
-                style={[
-                  styles.internetTitle,
-                  !item?.isCallOnline && styles.offlineText,
-                ]}
-              >
-                {isStartingCall ? "Connecting..." : "Call"}
-              </Text>
-
-              <Text style={styles.price}>
-                ₹{item?.internetCallPrice || "0"}/min
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.chatBtn,
-              !item?.isChatOnline && styles.offlineButton,
-            ]}
-            onPress={handleChat}
-            disabled={isStartingChat}
-          >
-            {isStartingChat ? (
-              <ActivityIndicator size="small" color="#2E7D32" />
-            ) : (
-              <Ionicons
-                name="chatbubble-outline"
-                size={RF(18)}
-                color={item?.isChatOnline ? "#2E7D32" : "#999999"}
-              />
-            )}
-
-            <View style={styles.buttonContent}>
-              <Text
-                style={[
-                  styles.chatTitle,
-                  !item?.isChatOnline && styles.offlineText,
-                ]}
-              >
-                {isStartingChat ? "Connecting..." : "Chat"}
-              </Text>
-
-              <Text style={styles.price}>₹{item?.chatPrice || "0"}/min</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </TouchableOpacity>
+      {/* =====================================================
+          CHAT INPUT MODAL
+          Card ke baaki UI/font/style ko touch nahi kiya hai.
+          ===================================================== */}
+      <ChatInputModal
+        visible={showChatInputModal}
+        onClose={handleCloseChatModal}
+        onChat={handleChatWithBirthDetails}
+        astrologerName={item?.name || "Astrologer"}
+        loading={isStartingChat}
+      />
+      <CallInputModal
+        visible={showCallInputModal}
+        onClose={() => setShowCallInputModal(false)}
+        onCall={handleCallWithBirthDetails}
+        astrologerName={item?.name || "Astrologer"}
+        loading={isStartingCall}
+      />
+    </>
   );
 }
 

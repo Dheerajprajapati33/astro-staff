@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { chatApi } from "./ChatApi";
+import { kundliApi } from "./KundliApi";
 import { contentApi } from "./contentApi";
 import { expertiseApi } from "./expertiseApi";
 import { followerApi } from "./FollowerApi";
@@ -32,6 +33,7 @@ export const store = configureStore({
     [reviewApi.reducerPath]: reviewApi.reducer,
     [priceUpdateApi.reducerPath]: priceUpdateApi.reducer,
     [chatApi.reducerPath]: chatApi.reducer,
+    [kundliApi.reducerPath]: kundliApi.reducer,
     [blockReportApi.reducerPath]: blockReportApi.reducer,
     [liveApi.reducerPath]: liveApi.reducer,
     [walletApi.reducerPath]: walletApi.reducer,
@@ -53,6 +55,7 @@ export const store = configureStore({
       reviewApi.middleware,
       priceUpdateApi.middleware,
       chatApi.middleware,
+      kundliApi.middleware,
       blockReportApi.middleware,
       liveApi.middleware,
       walletApi.middleware,

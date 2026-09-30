@@ -27,7 +27,8 @@ import DatePickerModal from "../../components/common/DatePickerModal";
 import StatePickerModal from "../../components/common/StatePickerModal";
 
 // ============================================================
-// DATE FORMAT
+// INTERNAL / API DATE FORMAT
+// YYYY-MM-DD
 // ============================================================
 
 const getFormattedDate = (d = new Date()) => {
@@ -36,6 +37,53 @@ const getFormattedDate = (d = new Date()) => {
   const day = String(d.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+};
+
+// ============================================================
+// UI DATE FORMAT
+// DD:MM:YYYY
+//
+// Example:
+// API/Internal -> 2026-09-28
+// UI           -> 28:09:2026
+// ============================================================
+
+const formatDateForUI = (dateString) => {
+  if (!dateString) return "";
+
+  try {
+    const value = String(dateString).trim();
+
+    // Take only YYYY-MM-DD
+    const datePart = value.substring(0, 10);
+
+    const parts = datePart.split("-");
+
+    if (parts.length !== 3) {
+      return value;
+    }
+
+    const [year, month, day] = parts;
+
+    if (
+      !year ||
+      !month ||
+      !day ||
+      year.length !== 4
+    ) {
+      return value;
+    }
+
+    // UI format: DD:MM:YYYY
+    return `${day}:${month}:${year}`;
+  } catch (error) {
+    console.log(
+      "Date UI formatting error:",
+      error
+    );
+
+    return dateString;
+  }
 };
 
 // ============================================================
@@ -71,11 +119,18 @@ const formatTime = (val) => {
 // ============================================================
 
 const formatValue = (val) => {
-  if (val === null || val === undefined || val === "") {
+  if (
+    val === null ||
+    val === undefined ||
+    val === ""
+  ) {
     return "--";
   }
 
-  if (typeof val === "string" || typeof val === "number") {
+  if (
+    typeof val === "string" ||
+    typeof val === "number"
+  ) {
     return String(val);
   }
 
@@ -89,7 +144,10 @@ const formatValue = (val) => {
             return item;
           }
 
-          if (typeof item === "object" && item !== null) {
+          if (
+            typeof item === "object" &&
+            item !== null
+          ) {
             const name =
               item?.name ||
               item?.title ||
@@ -102,17 +160,26 @@ const formatValue = (val) => {
 
             let timing = "";
 
-            if (item?.start && item?.end) {
-              timing = ` [${formatTime(item.start)} - ${formatTime(
-                item.end
-              )}]`;
+            if (
+              item?.start &&
+              item?.end
+            ) {
+              timing = ` [${formatTime(
+                item.start
+              )} - ${formatTime(item.end)}]`;
             } else if (item?.end) {
-              timing = ` (till ${formatTime(item.end)})`;
+              timing = ` (till ${formatTime(
+                item.end
+              )})`;
             }
 
-            const label = `${name}${paksha}${timing}`.trim();
+            const label =
+              `${name}${paksha}${timing}`.trim();
 
-            return label || JSON.stringify(item);
+            return (
+              label ||
+              JSON.stringify(item)
+            );
           }
 
           return String(item);
@@ -132,7 +199,9 @@ const formatValue = (val) => {
     }
 
     if (val.start && val.end) {
-      return `${formatTime(val.start)} - ${formatTime(val.end)}`;
+      return `${formatTime(
+        val.start
+      )} - ${formatTime(val.end)}`;
     }
 
     if (val.start) {
@@ -161,19 +230,31 @@ const formatValue = (val) => {
 // GET PERIOD
 // ============================================================
 
-const getPeriod = (periods, nameQuery) => {
-  if (!Array.isArray(periods)) return null;
+const getPeriod = (
+  periods,
+  nameQuery
+) => {
+  if (!Array.isArray(periods)) {
+    return null;
+  }
 
   const found = periods.find((p) =>
     (p?.name || p?.title || "")
       .toLowerCase()
-      .includes(nameQuery.toLowerCase())
+      .includes(
+        nameQuery.toLowerCase()
+      )
   );
 
   if (!found) return null;
 
-  if (found.start && found.end) {
-    return `${formatTime(found.start)} to ${formatTime(found.end)}`;
+  if (
+    found.start &&
+    found.end
+  ) {
+    return `${formatTime(
+      found.start
+    )} to ${formatTime(found.end)}`;
   }
 
   return formatValue(found);
@@ -190,21 +271,33 @@ export default function Panchang() {
   // STATES
   // ==========================================================
 
-  const [date, setDate] = useState(getFormattedDate());
+  // Internal date always remains YYYY-MM-DD
+  const [date, setDate] =
+    useState(getFormattedDate());
 
-  const [place, setPlace] = useState("Delhi");
+  const [place, setPlace] =
+    useState("Delhi");
 
-  const [language, setLanguage] = useState("hi");
+  const [language, setLanguage] =
+    useState("hi");
 
-  const [panchang, setPanchang] = useState(null);
+  const [panchang, setPanchang] =
+    useState(null);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [
+    showDatePicker,
+    setShowDatePicker,
+  ] = useState(false);
 
-  const [showLocationPicker, setShowLocationPicker] =
-    useState(false);
+  const [
+    showLocationPicker,
+    setShowLocationPicker,
+  ] = useState(false);
 
-  const [getPanchang, { isLoading }] =
-    useGetPanchangMutation();
+  const [
+    getPanchang,
+    { isLoading },
+  ] = useGetPanchangMutation();
 
   // ==========================================================
   // GET PANCHANG
@@ -215,11 +308,14 @@ export default function Panchang() {
     targetPlace = place,
     targetLa = language
   ) => {
-    const queryDate = targetDate || date;
+    const queryDate =
+      targetDate || date;
 
-    const queryPlace = targetPlace || place;
+    const queryPlace =
+      targetPlace || place;
 
-    const queryLa = targetLa || language || "hi";
+    const queryLa =
+      targetLa || language || "hi";
 
     // --------------------------------------------------------
     // VALIDATION
@@ -243,8 +339,7 @@ export default function Panchang() {
 
     try {
       // ------------------------------------------------------
-      // IMPORTANT:
-      // API expects birthPlace, NOT place
+      // API FORMAT REMAINS YYYY-MM-DD
       // ------------------------------------------------------
 
       const requestBody = {
@@ -259,7 +354,9 @@ export default function Panchang() {
       );
 
       const response =
-        await getPanchang(requestBody).unwrap();
+        await getPanchang(
+          requestBody
+        ).unwrap();
 
       console.log(
         "Panchang Response:",
@@ -274,12 +371,19 @@ export default function Panchang() {
         response?.success &&
         response?.data
       ) {
-        setPanchang(response.data);
-      } else if (response?.data) {
-        setPanchang(response.data);
+        setPanchang(
+          response.data
+        );
+      } else if (
+        response?.data
+      ) {
+        setPanchang(
+          response.data
+        );
       } else if (
         response &&
-        typeof response === "object" &&
+        typeof response ===
+          "object" &&
         !response?.message
       ) {
         setPanchang(response);
@@ -316,8 +420,10 @@ export default function Panchang() {
   // ==========================================================
 
   useEffect(() => {
-    const today = getFormattedDate();
+    const today =
+      getFormattedDate();
 
+    // Internal/API value
     setDate(today);
 
     handleGetPanchang(
@@ -329,15 +435,19 @@ export default function Panchang() {
 
   // ==========================================================
   // QUICK DATE
+  // Yesterday / Today / Tomorrow
   // ==========================================================
 
-  const handleQuickDate = (offsetDays) => {
+  const handleQuickDate = (
+    offsetDays
+  ) => {
     const d = new Date();
 
     d.setDate(
       d.getDate() + offsetDays
     );
 
+    // Still YYYY-MM-DD internally
     const newDate =
       getFormattedDate(d);
 
@@ -398,8 +508,10 @@ export default function Panchang() {
   // ==========================================================
 
   const abhijitStart =
-    panchang?.abhijitMuhurta?.start ||
-    panchang?.abhijit_muhurta?.start ||
+    panchang?.abhijitMuhurta
+      ?.start ||
+    panchang?.abhijit_muhurta
+      ?.start ||
     panchang?.abhijit?.start ||
     (Array.isArray(
       panchang?.auspicious_period
@@ -413,8 +525,10 @@ export default function Panchang() {
       : null);
 
   const abhijitEnd =
-    panchang?.abhijitMuhurta?.end ||
-    panchang?.abhijit_muhurta?.end ||
+    panchang?.abhijitMuhurta
+      ?.end ||
+    panchang?.abhijit_muhurta
+      ?.end ||
     panchang?.abhijit?.end ||
     (Array.isArray(
       panchang?.auspicious_period
@@ -560,7 +674,9 @@ export default function Panchang() {
       style={styles.container}
     >
       <ScrollView
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={
+          false
+        }
         contentContainerStyle={
           styles.content
         }
@@ -569,7 +685,9 @@ export default function Panchang() {
         {/* HEADER */}
         {/* ================================================== */}
 
-        <View style={styles.header}>
+        <View
+          style={styles.header}
+        >
           <TouchableOpacity
             onPress={() =>
               router.back()
@@ -767,8 +885,9 @@ export default function Panchang() {
                 styles.pickerValueText
               }
             >
-              {date ||
-                "Select Date (YYYY-MM-DD)"}
+              {date
+                ? formatDateForUI(date)
+                : "Select Date (DD:MM:YYYY)"}
             </Text>
 
             <Ionicons
@@ -974,7 +1093,7 @@ export default function Panchang() {
                     styles.dateBadgeText
                   }
                 >
-                  {formatValue(
+                  {formatDateForUI(
                     panchang?.date ||
                       date
                   )}
@@ -1358,6 +1477,8 @@ export default function Panchang() {
           onSelectDate={(
             selectedDateStr
           ) => {
+            // DatePicker returns YYYY-MM-DD.
+            // Keep it unchanged internally/API.
             setDate(
               selectedDateStr
             );

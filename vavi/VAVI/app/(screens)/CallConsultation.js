@@ -36,7 +36,6 @@ import {
   disconnectCallSocket,
   endCallConsultation,
   joinCallConsultation,
-  onCallConnectionStatusChange,
   removeCallListeners,
 } from "../../services/callSocketService";
 
@@ -53,7 +52,6 @@ try {
 
 const LOG_TAG = "[CallConsultation]";
 const ORANGE = "#ff6a00";
-
 export default function CallConsultation() {
   const params = useLocalSearchParams();
   const {
@@ -64,6 +62,19 @@ export default function CallConsultation() {
     maxDuration = "1500",
     ratePerMinute = "25",
   } = params;
+  const birthDetailsParam = Array.isArray(params?.birthDetails)
+    ? params.birthDetails[0]
+    : params?.birthDetails;
+
+  const birthDetails = (() => {
+    if (!birthDetailsParam) return null;
+    if (typeof birthDetailsParam !== "string") return birthDetailsParam;
+    try {
+      return JSON.parse(birthDetailsParam);
+    } catch (_error) {
+      return null;
+    }
+  })();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [callStatus, setCallStatus] = useState("ringing"); // "ringing" | "connected" | "ended"
@@ -597,17 +608,10 @@ export default function CallConsultation() {
       return;
 
     let isMounted = true;
-
     const setup = async () => {
       console.log(LOG_TAG, "Setting up Call Socket for:", consultationId);
       const socket = await connectCallSocket();
       if (!isMounted || callStatusRef.current === "ended") return;
-
-      joinCallConsultation({
-        consultationId,
-        userId: currentUser.id,
-        role: "user",
-      });
 
       const onStarted = (data) => handleCallStartedRef.current?.(data);
       const onEnded = (data) => handleCallEndedEventRef.current?.(data);
@@ -616,6 +620,12 @@ export default function CallConsultation() {
       socket.on("consultation_started", onStarted);
       socket.on("call_accepted", onStarted);
       socket.on("call_ended", onEnded);
+
+      joinCallConsultation({
+        consultationId,
+        userId: currentUser.id,
+        role: "user",
+      });
     };
 
     setup();

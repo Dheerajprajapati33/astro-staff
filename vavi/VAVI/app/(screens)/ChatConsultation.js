@@ -60,6 +60,10 @@ import {
 const SEND_TIMEOUT_MS = 10000;
 
 const LOG_TAG = "[ChatConsultation]";
+const KUNDLI_DETAILS_PREFIX = "__VAVI_KUNDLI_DETAILS_V1__:";
+const KUNDLI_DETAILS_ACK_PREFIX = "__VAVI_KUNDLI_DETAILS_ACK_V1__:";
+const KUNDLI_DETAILS_RETRY_MS = 2000;
+const KUNDLI_DETAILS_MAX_ATTEMPTS = 5;
 
 export default function ChatConsultation() {
   const params = useLocalSearchParams();
@@ -79,6 +83,10 @@ export default function ChatConsultation() {
   const astrologerName = Array.isArray(params?.astrologerName)
     ? params.astrologerName[0]
     : params?.astrologerName;
+
+  const birthDetailsParam = Array.isArray(params?.birthDetails)
+    ? params.birthDetails[0]
+    : params?.birthDetails;
 
   const initialMaxDuration =
     Number(
@@ -102,6 +110,7 @@ export default function ChatConsultation() {
     useState(initialMaxDuration);
 
   const [messages, setMessages] = useState([]);
+  const kundliDetailsSentRef = useRef(false);
 
   const [isAstrologerTyping, setIsAstrologerTyping] =
     useState(false);
@@ -875,6 +884,24 @@ export default function ChatConsultation() {
       socket.on(
         "new_chat_message",
         (data) => {
+          const receivedMessage =
+            typeof data?.message === "string"
+              ? data.message
+              : "";
+
+          if (receivedMessage.startsWith(KUNDLI_DETAILS_PREFIX)) {
+            return;
+          }
+
+          if (receivedMessage.startsWith(KUNDLI_DETAILS_ACK_PREFIX)) {
+            kundliDetailsSentRef.current = true;
+            console.log(
+              LOG_TAG,
+              "ASTRO acknowledged receipt of client Kundli details.",
+            );
+            return;
+          }
+
           console.log(
             LOG_TAG,
             "new_chat_message event:",
@@ -1024,6 +1051,71 @@ export default function ChatConsultation() {
     consultationId,
     currentUserId,
     handleChatMessageDeleted,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isChatActive ||
+      !consultationId ||
+      !currentUserId ||
+      !birthDetailsParam ||
+      kundliDetailsSentRef.current
+    ) {
+      return;
+    }
+
+    const clientTempId =
+      `${currentUserId}-kundli-${consultationId}`;
+    let attempts = 0;
+    let retryTimeout;
+
+    const sendDetails = () => {
+      if (kundliDetailsSentRef.current) {
+        return;
+      }
+
+      if (attempts >= KUNDLI_DETAILS_MAX_ATTEMPTS) {
+        console.log(
+          LOG_TAG,
+          "ASTRO did not acknowledge client Kundli details after retries.",
+        );
+        return;
+      }
+
+      attempts += 1;
+      const emitted = sendChatMessage({
+        consultationId,
+        senderId: currentUserId,
+        senderRole: "user",
+        message: `${KUNDLI_DETAILS_PREFIX}${birthDetailsParam}`,
+        messageType: "TEXT",
+        clientTempId,
+      });
+
+      if (emitted && attempts === 1) {
+        console.log(
+          LOG_TAG,
+          "Sent client Kundli details; waiting for ASTRO receipt acknowledgement.",
+        );
+      }
+
+      if (attempts < KUNDLI_DETAILS_MAX_ATTEMPTS) {
+        retryTimeout = setTimeout(
+          sendDetails,
+          KUNDLI_DETAILS_RETRY_MS,
+        );
+      }
+    };
+
+    sendDetails();
+
+    return () => clearTimeout(retryTimeout);
+  }, [
+    isChatActive,
+    consultationId,
+    currentUserId,
+    birthDetailsParam,
+    connectionStatus,
   ]);
 
   // ==========================

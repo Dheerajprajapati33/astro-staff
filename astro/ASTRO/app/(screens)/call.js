@@ -8,6 +8,7 @@ import {
   Animated,
   BackHandler,
   Image,
+  Modal,
   PermissionsAndroid,
   Platform,
   StyleSheet,
@@ -23,8 +24,16 @@ import Typography from "../../constants/Typography";
 import { AGORA_APP_ID } from "../../constants/AgoraConfig";
 import { RF, hp, wp } from "../../utils/responsive";
 import { getStoredUser } from "../../utils/auth";
-import { emitEvent, onEvent, clearLastJoinParams } from "../../utils/socket";
+import {
+  clearLastJoinParams,
+  connectSocket,
+  emitEvent,
+  joinCallConsultation,
+  onEvent,
+} from "../../utils/socket";
 import { useGetCallTokenMutation } from "../../redux/ChatApi";
+import { useGetFullKundliMutation } from "../../redux/KundliApi";
+import KundliScreen from "./Kundli";
 
 // Safe Agora loader for dev/web resilience
 let createAgoraRtcEngine = null;
@@ -40,6 +49,52 @@ try {
 const LOG_TAG = "[AstroCall]";
 const ORANGE = "#ff6a00";
 
+const parseBirthDetails = (value) => {
+  if (!value) return null;
+  if (typeof value === "object" && !Array.isArray(value)) return value;
+  if (typeof value !== "string") return null;
+
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed
+      : null;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const normalizeKundliResponse = (response) => {
+  if (response?.data && typeof response.data === "object") {
+    return { ...response, ...response.data };
+  }
+  if (response?.kundli && typeof response.kundli === "object") {
+    return { ...response, ...response.kundli };
+  }
+  return response;
+};
+
+const normalizeBirthDate = (value) => {
+  const date = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+  const match = date.match(/^(\d{2})[-/:](\d{2})[-/:](\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : date;
+};
+
+const normalizeBirthTime = (value) => {
+  const time = String(value || "").trim();
+  const amPm = time.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (amPm) {
+    let hour = Number(amPm[1]);
+    const period = amPm[4].toUpperCase();
+    if (period === "AM" && hour === 12) hour = 0;
+    if (period === "PM" && hour !== 12) hour += 12;
+    return `${String(hour).padStart(2, "0")}:${amPm[2]}:${amPm[3] || "00"}`;
+  }
+  if (/^\d{2}:\d{2}$/.test(time)) return `${time}:00`;
+  return /^\d{2}:\d{2}:\d{2}$/.test(time) ? time : "12:00:00";
+};
+
 export default function CallScreen() {
   const params = useLocalSearchParams();
   const {
@@ -51,6 +106,9 @@ export default function CallScreen() {
     maxDurationSeconds = "1500",
     ratePerMinute = "25",
   } = params;
+  const birthDetailsParam = Array.isArray(params?.birthDetails)
+    ? params.birthDetails[0]
+    : params?.birthDetails;
 
   const [currentUser, setCurrentUser] = useState(null);
   const [callStatus, setCallStatus] = useState("connected"); // "connected" | "ended"
@@ -67,12 +125,19 @@ export default function CallScreen() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [endedReason, setEndedReason] = useState("");
+  const [clientBirthDetails, setClientBirthDetails] = useState(() =>
+    parseBirthDetails(birthDetailsParam),
+  );
+  const [clientKundliData, setClientKundliData] = useState(null);
+  const [showClientKundli, setShowClientKundli] = useState(false);
+  const [isLoadingClientKundli, setIsLoadingClientKundli] = useState(false);
 
   // Video Feeds (Web & Native)
   const [clientVideoFrame, setClientVideoFrame] = useState(null);
   const [localStream, setLocalStream] = useState(null);
 
   const [getCallToken] = useGetCallTokenMutation();
+  const [getFullKundli] = useGetFullKundliMutation();
 
   const agoraEngineRef = useRef(null);
   const timerIntervalRef = useRef(null);
@@ -503,6 +568,98 @@ export default function CallScreen() {
     [cleanupAgora, ratePerMinute],
   );
 
+  const handleOpenClientKundli = async () => {
+    if (clientKundliData) {
+      setShowClientKundli(true);
+      return;
+    }
+
+    if (!clientBirthDetails) {
+      Alert.alert(
+        "Client Kundli",
+        "Client birth details have not arrived yet. Please try again shortly.",
+      );
+      return;
+    }
+
+    const dob = normalizeBirthDate(
+      clientBirthDetails.dob ||
+        clientBirthDetails.dateOfBirth ||
+        clientBirthDetails.birthDate,
+    );
+    const birthPlace =
+      clientBirthDetails.birthPlace ||
+      clientBirthDetails.placeOfBirth ||
+      clientBirthDetails.city;
+
+    if (!dob || !birthPlace) {
+      Alert.alert(
+        "Client Kundli",
+        "The client's date of birth or birth place is missing.",
+      );
+      return;
+    }
+
+    const genderValue = String(
+      clientBirthDetails.gender || clientBirthDetails.sex || "MALE",
+    ).toUpperCase();
+    const payload = {
+      name:
+        clientBirthDetails.name ||
+        clientBirthDetails.clientName ||
+        userName ||
+        "Client",
+      gender:
+        genderValue === "FEMALE" || genderValue === "F"
+          ? "FEMALE"
+          : genderValue === "OTHER"
+            ? "OTHER"
+            : "MALE",
+      dob,
+      tob: normalizeBirthTime(
+        clientBirthDetails.tob ||
+          clientBirthDetails.birthTime ||
+          clientBirthDetails.timeOfBirth,
+      ),
+      birthPlace,
+      city: clientBirthDetails.city || birthPlace,
+      timezone: clientBirthDetails.timezone || "Asia/Kolkata",
+      la: "hi",
+    };
+
+    const latitude =
+      clientBirthDetails.latitude ?? clientBirthDetails.lat;
+    const longitude =
+      clientBirthDetails.longitude ?? clientBirthDetails.lng;
+    if (latitude !== undefined && latitude !== null && latitude !== "") {
+      payload.latitude = Number(latitude);
+    }
+    if (longitude !== undefined && longitude !== null && longitude !== "") {
+      payload.longitude = Number(longitude);
+    }
+
+    setIsLoadingClientKundli(true);
+    try {
+      const response = await getFullKundli(payload).unwrap();
+      const data = normalizeKundliResponse(response);
+      if (!data || typeof data !== "object") {
+        throw new Error("Kundli response did not contain chart data.");
+      }
+      setClientKundliData(data);
+      setShowClientKundli(true);
+    } catch (error) {
+      console.log(LOG_TAG, "Client Kundli generation failed:", error);
+      Alert.alert(
+        "Client Kundli",
+        error?.data?.message ||
+          error?.message ||
+          "Could not generate the client's Kundli.",
+      );
+    } finally {
+      setIsLoadingClientKundli(false);
+    }
+  };
+
   const handleCallStartedRef = useRef(handleCallStarted);
   handleCallStartedRef.current = handleCallStarted;
   const handleCallEndedEventRef = useRef(handleCallEndedEvent);
@@ -520,7 +677,10 @@ export default function CallScreen() {
       const astrologerUser = await getStoredUser();
       if (!isMounted || callStatusRef.current === "ended") return;
 
-      emitEvent("join_consultation", {
+      await connectSocket(astrologerUser?.token);
+      if (!isMounted || callStatusRef.current === "ended") return;
+
+      joinCallConsultation({
         consultationId,
         userId: astrologerUser?.id,
         role: "astrologer",
@@ -806,6 +966,20 @@ export default function CallScreen() {
               </Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.controlBtn}
+              onPress={handleOpenClientKundli}
+              activeOpacity={0.8}
+              accessibilityLabel="View client Kundli"
+            >
+              <Ionicons
+                name={isLoadingClientKundli ? "hourglass-outline" : "planet-outline"}
+                size={RF(24)}
+                color="#fff"
+              />
+              <Text style={styles.controlBtnLabel}>Kundli</Text>
+            </TouchableOpacity>
+
             {/* End Call Button */}
             <TouchableOpacity
               style={styles.endCallBtn}
@@ -876,6 +1050,17 @@ export default function CallScreen() {
           </View>
         </View>
       )}
+
+      <Modal
+        visible={showClientKundli}
+        animationType="slide"
+        onRequestClose={() => setShowClientKundli(false)}
+      >
+        <KundliScreen
+          data={clientKundliData}
+          onClose={() => setShowClientKundli(false)}
+        />
+      </Modal>
     </View>
   );
 }
