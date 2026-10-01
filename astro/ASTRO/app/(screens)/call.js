@@ -8,7 +8,7 @@ import {
   Animated,
   BackHandler,
   Image,
-  Modal,
+  PanResponder,
   PermissionsAndroid,
   Platform,
   StyleSheet,
@@ -48,6 +48,34 @@ try {
 
 const LOG_TAG = "[AstroCall]";
 const ORANGE = "#ff6a00";
+const MAX_AGORA_DATA_PACKET_BYTES = 1024;
+
+const encodeAgoraMessage = (message) => {
+  const encoded = encodeURIComponent(JSON.stringify(message));
+  const bytes = [];
+  for (let index = 0; index < encoded.length; index += 1) {
+    if (encoded[index] === "%") {
+      bytes.push(parseInt(encoded.slice(index + 1, index + 3), 16));
+      index += 2;
+    } else {
+      bytes.push(encoded.charCodeAt(index));
+    }
+  }
+  return Uint8Array.from(bytes);
+};
+
+const decodeAgoraMessage = (data, length) => {
+  try {
+    const bytes = Array.from(data).slice(0, length);
+    const encoded = bytes
+      .map((byte) => `%${byte.toString(16).padStart(2, "0")}`)
+      .join("");
+    return JSON.parse(decodeURIComponent(encoded));
+  } catch (error) {
+    console.log(LOG_TAG, "Could not decode Agora call data message:", error);
+    return null;
+  }
+};
 
 const parseBirthDetails = (value) => {
   if (!value) return null;
@@ -130,7 +158,16 @@ export default function CallScreen() {
   );
   const [clientKundliData, setClientKundliData] = useState(null);
   const [showClientKundli, setShowClientKundli] = useState(false);
+  const [isClientKundliMinimized, setIsClientKundliMinimized] =
+    useState(false);
+  const [isClientKundliExpanded, setIsClientKundliExpanded] =
+    useState(false);
+  const [kundliOverlaySize, setKundliOverlaySize] = useState({
+    width: 0,
+    height: 0,
+  });
   const [isLoadingClientKundli, setIsLoadingClientKundli] = useState(false);
+  const [isAgoraDataStreamReady, setIsAgoraDataStreamReady] = useState(false);
 
   // Video Feeds (Web & Native)
   const [clientVideoFrame, setClientVideoFrame] = useState(null);
@@ -149,6 +186,124 @@ export default function CallScreen() {
   const endAlertShownRef = useRef(false);
   const callDurationSecondsRef = useRef(0);
   const hasJoinedAgoraRef = useRef(false);
+  const agoraDataStreamIdRef = useRef(null);
+  const pendingKundliAckRef = useRef(false);
+  const kundliPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const kundliPositionRef = useRef({ x: 0, y: 0 });
+  const kundliDragStartRef = useRef({ x: 0, y: 0 });
+  const kundliBoundsRef = useRef({
+    width: 0,
+    height: 0,
+    windowWidth: 0,
+    windowHeight: 0,
+  });
+  const centerKundliOnOpenRef = useRef(false);
+
+  const kundliWindowWidth = Math.max(
+    0,
+    Math.min(
+      kundliOverlaySize.width - 12,
+      kundliOverlaySize.width * (isClientKundliExpanded ? 0.98 : 0.9),
+    ),
+  );
+  const kundliWindowHeight = Math.max(
+    0,
+    Math.min(
+      kundliOverlaySize.height - 12,
+      kundliOverlaySize.height * (isClientKundliExpanded ? 0.9 : 0.72),
+    ),
+  );
+  const kundliBubbleSize = 58;
+  const renderedKundliWidth = isClientKundliMinimized
+    ? kundliBubbleSize
+    : kundliWindowWidth;
+  const renderedKundliHeight = isClientKundliMinimized
+    ? kundliBubbleSize
+    : kundliWindowHeight;
+
+  kundliBoundsRef.current = {
+    width: kundliOverlaySize.width,
+    height: kundliOverlaySize.height,
+    windowWidth: renderedKundliWidth,
+    windowHeight: renderedKundliHeight,
+  };
+
+  const kundliPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3,
+      onPanResponderGrant: () => {
+        kundliDragStartRef.current = { ...kundliPositionRef.current };
+      },
+      onPanResponderMove: (_, gestureState) => {
+        const bounds = kundliBoundsRef.current;
+        const maxX = Math.max(0, bounds.width - bounds.windowWidth);
+        const maxY = Math.max(0, bounds.height - bounds.windowHeight);
+
+        kundliPosition.setValue({
+          x: Math.min(
+            maxX,
+            Math.max(0, kundliDragStartRef.current.x + gestureState.dx),
+          ),
+          y: Math.min(
+            maxY,
+            Math.max(0, kundliDragStartRef.current.y + gestureState.dy),
+          ),
+        });
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const bounds = kundliBoundsRef.current;
+        const maxX = Math.max(0, bounds.width - bounds.windowWidth);
+        const maxY = Math.max(0, bounds.height - bounds.windowHeight);
+        const position = {
+          x: Math.min(
+            maxX,
+            Math.max(0, kundliDragStartRef.current.x + gestureState.dx),
+          ),
+          y: Math.min(
+            maxY,
+            Math.max(0, kundliDragStartRef.current.y + gestureState.dy),
+          ),
+        };
+
+        kundliPositionRef.current = position;
+        kundliPosition.setValue(position);
+      },
+    }),
+  ).current;
+
+  useEffect(() => {
+    if (
+      !showClientKundli ||
+      !kundliOverlaySize.width ||
+      !kundliOverlaySize.height ||
+      !renderedKundliWidth ||
+      !renderedKundliHeight
+    ) {
+      return;
+    }
+
+    const maxX = Math.max(0, kundliOverlaySize.width - renderedKundliWidth);
+    const maxY = Math.max(0, kundliOverlaySize.height - renderedKundliHeight);
+    const currentPosition = centerKundliOnOpenRef.current
+      ? { x: maxX / 2, y: maxY / 2 }
+      : kundliPositionRef.current;
+    const position = {
+      x: Math.min(maxX, Math.max(0, currentPosition.x)),
+      y: Math.min(maxY, Math.max(0, currentPosition.y)),
+    };
+
+    centerKundliOnOpenRef.current = false;
+    kundliPositionRef.current = position;
+    kundliPosition.setValue(position);
+  }, [
+    showClientKundli,
+    kundliOverlaySize,
+    kundliPosition,
+    renderedKundliHeight,
+    renderedKundliWidth,
+  ]);
 
   // Callback ref for resilient video element attachment
   const localVideoRefCallback = useCallback(
@@ -328,6 +483,9 @@ export default function CallScreen() {
   // Cleanup Agora Engine
   const cleanupAgora = useCallback(async () => {
     hasJoinedAgoraRef.current = false;
+    agoraDataStreamIdRef.current = null;
+    pendingKundliAckRef.current = false;
+    setIsAgoraDataStreamReady(false);
     clearLastJoinParams(); // 👈 Call khatam hone par purana call ID socket se clear karein
 
     if (agoraEngineRef.current) {
@@ -464,6 +622,29 @@ export default function CallScreen() {
                   "Agora Host onJoinChannelSuccess:",
                   connection.channelId,
                 );
+                try {
+                  const streamId = engine.createDataStream({
+                    syncWithAudio: false,
+                    ordered: true,
+                  });
+                  if (streamId < 0) {
+                    console.log(
+                      LOG_TAG,
+                      "Could not create Agora Kundli data stream:",
+                      streamId,
+                    );
+                  } else {
+                    agoraDataStreamIdRef.current = streamId;
+                    setIsAgoraDataStreamReady(true);
+                    console.log(LOG_TAG, "Agora Kundli data stream ready.");
+                  }
+                } catch (error) {
+                  console.log(
+                    LOG_TAG,
+                    "Agora Kundli data stream setup failed:",
+                    error,
+                  );
+                }
                 if (engine.enableLocalAudio) engine.enableLocalAudio(true);
                 if (engine.setDefaultAudioRouteToSpeakerphone)
                   engine.setDefaultAudioRouteToSpeakerphone(false);
@@ -497,6 +678,35 @@ export default function CallScreen() {
                   state,
                   reason,
                 );
+              },
+              onStreamMessage: (
+                connection,
+                remoteUid,
+                streamId,
+                data,
+                length,
+              ) => {
+                const message = decodeAgoraMessage(data, length);
+                if (
+                  message?.type !== "client_kundli_details" ||
+                  String(message.consultationId) !== String(consultationId)
+                ) {
+                  return;
+                }
+
+                const details = parseBirthDetails(message.birthDetails);
+                if (!details) {
+                  console.log(LOG_TAG, "Received invalid client Kundli details.");
+                  return;
+                }
+
+                setClientBirthDetails(details);
+                pendingKundliAckRef.current = true;
+                console.log(
+                  LOG_TAG,
+                  "Client Kundli details received over Agora data stream.",
+                );
+                sendKundliDetailsAck();
               },
               onError: (err, msg) => {
                 console.log(LOG_TAG, "Agora Host RTC Error:", err, msg);
@@ -568,8 +778,44 @@ export default function CallScreen() {
     [cleanupAgora, ratePerMinute],
   );
 
+  const sendKundliDetailsAck = useCallback(() => {
+    const streamId = agoraDataStreamIdRef.current;
+    const engine = agoraEngineRef.current;
+    if (streamId == null || !engine || !pendingKundliAckRef.current) {
+      return false;
+    }
+
+    const message = encodeAgoraMessage({
+      type: "client_kundli_details_ack",
+      consultationId: String(consultationId),
+    });
+    if (message.length > MAX_AGORA_DATA_PACKET_BYTES) {
+      console.log(
+        LOG_TAG,
+        "Kundli acknowledgement exceeds Agora's 1 KB limit.",
+      );
+      return false;
+    }
+
+    const result = engine.sendStreamMessage(streamId, message, message.length);
+    if (result !== 0) {
+      console.log(LOG_TAG, "Agora Kundli acknowledgement send failed:", result);
+      return false;
+    }
+
+    pendingKundliAckRef.current = false;
+    return true;
+  }, [consultationId]);
+
+  useEffect(() => {
+    if (isAgoraDataStreamReady) sendKundliDetailsAck();
+  }, [isAgoraDataStreamReady, sendKundliDetailsAck]);
+
   const handleOpenClientKundli = async () => {
     if (clientKundliData) {
+      centerKundliOnOpenRef.current = true;
+      setIsClientKundliMinimized(false);
+      setIsClientKundliExpanded(false);
       setShowClientKundli(true);
       return;
     }
@@ -646,6 +892,9 @@ export default function CallScreen() {
         throw new Error("Kundli response did not contain chart data.");
       }
       setClientKundliData(data);
+      centerKundliOnOpenRef.current = true;
+      setIsClientKundliMinimized(false);
+      setIsClientKundliExpanded(false);
       setShowClientKundli(true);
     } catch (error) {
       console.log(LOG_TAG, "Client Kundli generation failed:", error);
@@ -1051,16 +1300,119 @@ export default function CallScreen() {
         </View>
       )}
 
-      <Modal
-        visible={showClientKundli}
-        animationType="slide"
-        onRequestClose={() => setShowClientKundli(false)}
-      >
-        <KundliScreen
-          data={clientKundliData}
-          onClose={() => setShowClientKundli(false)}
-        />
-      </Modal>
+      {showClientKundli && (
+        <View
+          pointerEvents="box-none"
+          style={styles.kundliOverlayHost}
+          onLayout={({ nativeEvent }) => {
+            const { width, height } = nativeEvent.layout;
+            setKundliOverlaySize((current) =>
+              current.width === width && current.height === height
+                ? current
+                : { width, height },
+            );
+          }}
+        >
+          <Animated.View
+            pointerEvents="auto"
+            style={[
+              styles.kundliWindow,
+              {
+                width: renderedKundliWidth,
+                height: renderedKundliHeight,
+                transform: kundliPosition.getTranslateTransform(),
+              },
+            ]}
+          >
+            <View
+              pointerEvents={isClientKundliMinimized ? "none" : "auto"}
+              style={[
+                styles.kundliWindowToolbar,
+                isClientKundliMinimized && styles.kundliHidden,
+              ]}
+            >
+              <View
+                style={styles.kundliDragHandle}
+                {...kundliPanResponder.panHandlers}
+              >
+                <Ionicons name="move" size={RF(16)} color="#fff" />
+                <Text style={styles.kundliWindowTitle}>Client Kundli</Text>
+              </View>
+
+              <View style={styles.kundliWindowActions}>
+                <TouchableOpacity
+                  accessibilityLabel="Minimize client Kundli"
+                  onPress={() => setIsClientKundliMinimized(true)}
+                  style={styles.kundliWindowAction}
+                >
+                  <Ionicons name="remove" size={RF(19)} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityLabel={
+                    isClientKundliExpanded
+                      ? "Restore client Kundli size"
+                      : "Expand client Kundli"
+                  }
+                  onPress={() =>
+                    setIsClientKundliExpanded((expanded) => !expanded)
+                  }
+                  style={styles.kundliWindowAction}
+                >
+                  <Ionicons
+                    name={
+                      isClientKundliExpanded
+                        ? "contract-outline"
+                        : "expand-outline"
+                    }
+                    size={RF(16)}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityLabel="Close client Kundli"
+                  onPress={() => setShowClientKundli(false)}
+                  style={styles.kundliWindowAction}
+                >
+                  <Ionicons name="close" size={RF(18)} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View
+              pointerEvents={isClientKundliMinimized ? "none" : "auto"}
+              style={[
+                styles.kundliWindowContent,
+                isClientKundliMinimized && styles.kundliHiddenContent,
+              ]}
+            >
+              <KundliScreen
+                data={clientKundliData}
+                availableWidth={kundliWindowWidth}
+                onClose={() => setShowClientKundli(false)}
+              />
+            </View>
+
+            {isClientKundliMinimized && (
+              <View
+                style={styles.kundliBubble}
+                {...kundliPanResponder.panHandlers}
+              >
+                <TouchableOpacity
+                  accessibilityLabel="Restore client Kundli"
+                  onPress={() => setIsClientKundliMinimized(false)}
+                  style={styles.kundliBubbleButton}
+                >
+                  <Ionicons
+                    name="planet-outline"
+                    size={RF(27)}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1069,6 +1421,85 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#0b0914",
+    position: "relative",
+  },
+  kundliOverlayHost: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 150,
+    elevation: 150,
+  },
+  kundliWindow: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    overflow: "hidden",
+    borderRadius: wp(3),
+    borderWidth: 1,
+    borderColor: "#e8e8e8",
+    backgroundColor: "#fff",
+    elevation: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+  },
+  kundliWindowToolbar: {
+    height: hp(5.5),
+    paddingLeft: wp(3),
+    paddingRight: wp(1.5),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: ORANGE,
+  },
+  kundliDragHandle: {
+    flex: 1,
+    height: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: wp(2),
+  },
+  kundliWindowTitle: {
+    color: "#fff",
+    fontSize: RF(13),
+    fontWeight: "700",
+  },
+  kundliWindowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  kundliWindowAction: {
+    width: wp(9),
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  kundliWindowContent: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  kundliHidden: {
+    display: "none",
+  },
+  kundliHiddenContent: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0,
+  },
+  kundliBubble: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: ORANGE,
+    borderRadius: wp(3),
+  },
+  kundliBubbleButton: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   // Incoming Call Screen
   incomingSafeArea: {

@@ -52,6 +52,37 @@ try {
 
 const LOG_TAG = "[CallConsultation]";
 const ORANGE = "#ff6a00";
+const KUNDLI_DETAILS_MAX_ATTEMPTS = 5;
+const KUNDLI_DETAILS_RETRY_MS = 2000;
+const MAX_AGORA_DATA_PACKET_BYTES = 1024;
+
+const encodeAgoraMessage = (message) => {
+  const encoded = encodeURIComponent(JSON.stringify(message));
+  const bytes = [];
+  for (let index = 0; index < encoded.length; index += 1) {
+    if (encoded[index] === "%") {
+      bytes.push(parseInt(encoded.slice(index + 1, index + 3), 16));
+      index += 2;
+    } else {
+      bytes.push(encoded.charCodeAt(index));
+    }
+  }
+  return Uint8Array.from(bytes);
+};
+
+const decodeAgoraMessage = (data, length) => {
+  try {
+    const bytes = Array.from(data).slice(0, length);
+    const encoded = bytes
+      .map((byte) => `%${byte.toString(16).padStart(2, "0")}`)
+      .join("");
+    return JSON.parse(decodeURIComponent(encoded));
+  } catch (error) {
+    console.log(LOG_TAG, "Could not decode Agora call data message:", error);
+    return null;
+  }
+};
+
 export default function CallConsultation() {
   const params = useLocalSearchParams();
   const {
@@ -109,6 +140,11 @@ export default function CallConsultation() {
   const endAlertShownRef = useRef(false);
   const callDurationSecondsRef = useRef(0);
   const hasJoinedAgoraRef = useRef(false);
+  const kundliDetailsAttemptsRef = useRef(0);
+  const kundliDetailsAckedRef = useRef(false);
+  const kundliDetailsRetryRef = useRef(null);
+  const agoraDataStreamIdRef = useRef(null);
+  const [isAgoraDataStreamReady, setIsAgoraDataStreamReady] = useState(false);
 
   // Callback ref for resilient video element attachment
   const localVideoRefCallback = useCallback(
@@ -302,6 +338,12 @@ export default function CallConsultation() {
   // Cleanup Agora Engine
   const cleanupAgora = useCallback(async () => {
     hasJoinedAgoraRef.current = false;
+    agoraDataStreamIdRef.current = null;
+    setIsAgoraDataStreamReady(false);
+    if (kundliDetailsRetryRef.current) {
+      clearTimeout(kundliDetailsRetryRef.current);
+      kundliDetailsRetryRef.current = null;
+    }
     if (agoraEngineRef.current) {
       try {
         await agoraEngineRef.current.leaveChannel();
@@ -316,6 +358,66 @@ export default function CallConsultation() {
       localWebStreamRef.current = null;
     }
   }, []);
+
+  const sendClientKundliDetails = useCallback(() => {
+    if (
+      !birthDetails ||
+      kundliDetailsAckedRef.current ||
+      kundliDetailsAttemptsRef.current >= KUNDLI_DETAILS_MAX_ATTEMPTS ||
+      agoraDataStreamIdRef.current == null ||
+      !agoraEngineRef.current
+    ) {
+      return;
+    }
+
+    const streamId = agoraDataStreamIdRef.current;
+    const message = encodeAgoraMessage({
+      type: "client_kundli_details",
+      consultationId: String(consultationId),
+      birthDetails,
+    });
+    if (message.length > MAX_AGORA_DATA_PACKET_BYTES) {
+      console.log(
+        LOG_TAG,
+        "Client birth details exceed Agora's 1 KB data packet limit.",
+      );
+      return;
+    }
+
+    kundliDetailsAttemptsRef.current += 1;
+    const result = agoraEngineRef.current.sendStreamMessage(
+      streamId,
+      message,
+      message.length,
+    );
+    if (result !== 0) {
+      console.log(LOG_TAG, "Agora Kundli details send failed:", result);
+    } else if (kundliDetailsAttemptsRef.current === 1) {
+      console.log(LOG_TAG, "Sent client Kundli details over Agora data stream.");
+    }
+
+    if (
+      !kundliDetailsAckedRef.current &&
+      kundliDetailsAttemptsRef.current < KUNDLI_DETAILS_MAX_ATTEMPTS
+    ) {
+      kundliDetailsRetryRef.current = setTimeout(
+        sendClientKundliDetails,
+        KUNDLI_DETAILS_RETRY_MS,
+      );
+    }
+  }, [birthDetails, consultationId]);
+
+  useEffect(() => {
+    if (
+      callStatus === "connected" &&
+      isAgoraDataStreamReady &&
+      birthDetails &&
+      !kundliDetailsAckedRef.current
+    ) {
+      kundliDetailsAttemptsRef.current = 0;
+      sendClientKundliDetails();
+    }
+  }, [birthDetails, callStatus, isAgoraDataStreamReady, sendClientKundliDetails]);
 
   // Setup Agora RTC immediately on screen mount
   const setupAgora = useCallback(async () => {
@@ -408,6 +510,29 @@ export default function CallConsultation() {
                 "Agora User onJoinChannelSuccess:",
                 connection.channelId,
               );
+              try {
+                const streamId = engine.createDataStream({
+                  syncWithAudio: false,
+                  ordered: true,
+                });
+                if (streamId < 0) {
+                  console.log(
+                    LOG_TAG,
+                    "Could not create Agora Kundli data stream:",
+                    streamId,
+                  );
+                } else {
+                  agoraDataStreamIdRef.current = streamId;
+                  setIsAgoraDataStreamReady(true);
+                  console.log(LOG_TAG, "Agora Kundli data stream ready.");
+                }
+              } catch (error) {
+                console.log(
+                  LOG_TAG,
+                  "Agora Kundli data stream setup failed:",
+                  error,
+                );
+              }
               if (engine.enableLocalAudio) engine.enableLocalAudio(true);
               if (engine.setDefaultAudioRouteToSpeakerphone)
                 engine.setDefaultAudioRouteToSpeakerphone(false);
@@ -442,6 +567,26 @@ export default function CallConsultation() {
                 state,
                 reason,
               );
+            },
+            onStreamMessage: (
+              connection,
+              remoteUid,
+              streamId,
+              data,
+              length,
+            ) => {
+              const message = decodeAgoraMessage(data, length);
+              if (
+                message?.type === "client_kundli_details_ack" &&
+                String(message.consultationId) === String(consultationId)
+              ) {
+                kundliDetailsAckedRef.current = true;
+                if (kundliDetailsRetryRef.current) {
+                  clearTimeout(kundliDetailsRetryRef.current);
+                  kundliDetailsRetryRef.current = null;
+                }
+                console.log(LOG_TAG, "ASTRO acknowledged client Kundli details.");
+              }
             },
             onError: (err, msg) => {
               console.log(LOG_TAG, "Agora User RTC Error:", err, msg);
@@ -488,6 +633,9 @@ export default function CallConsultation() {
     async (data) => {
       console.log(LOG_TAG, "call_started event received:", data);
       setCallStatus("connected");
+      if (kundliDetailsAttemptsRef.current === 0) {
+        sendClientKundliDetails();
+      }
 
       const duration = data?.maxDurationSeconds || Number(maxDuration) || 1500;
       setSecondsLeft(duration);
@@ -515,7 +663,7 @@ export default function CallConsultation() {
         setCallDurationSeconds(callDurationSecondsRef.current);
       }, 1000);
     },
-    [maxDuration],
+    [maxDuration, sendClientKundliDetails],
   );
 
   // Step 4: Handle Call Ended Event
@@ -633,6 +781,10 @@ export default function CallConsultation() {
     return () => {
       isMounted = false;
       removeCallListeners();
+      if (kundliDetailsRetryRef.current) {
+        clearTimeout(kundliDetailsRetryRef.current);
+        kundliDetailsRetryRef.current = null;
+      }
     };
   }, [consultationId, currentUser?.id]);
 
