@@ -10,6 +10,7 @@ import IncomingCallModal from "./IncomingCallModal";
 import { getStoredUser } from "../../utils/auth";
 import { connectSocket, emitEvent, getSocket } from "../../utils/socket";
 import { useGetConsultationHistoryQuery } from "../../redux/ChatApi";
+import useIncomingRequestRingtone from "../../hooks/useIncomingRequestRingtone";
 
 const LOG_TAG = "[CallRequestProvider]";
 const POLL_INTERVAL_MS = 6000;
@@ -20,6 +21,8 @@ export default function CallRequestProvider({ children }) {
   const [hasToken, setHasToken] = useState(false);
   const listenerAttachedRef = useRef(false);
   const dismissedIdsRef = useRef(new Set());
+
+  useIncomingRequestRingtone(!!incomingCall);
 
   useEffect(() => {
     let isMounted = true;

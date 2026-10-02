@@ -118,6 +118,8 @@ export const sendChatMessage = (payload) => {
   const isPrivateKundliDetails =
     typeof payload?.message === "string" &&
     payload.message.startsWith("__VAVI_KUNDLI_DETAILS_V1__:");
+  const isImageMessage =
+    String(payload?.messageType || "").toUpperCase() === "IMAGE";
 
   console.log(
     LOG_TAG,
@@ -129,6 +131,23 @@ export const sendChatMessage = (payload) => {
           messageType: payload.messageType,
           privateKundliDetails: true,
         }
+      : isImageMessage
+        ? {
+            consultationId: payload.consultationId,
+            senderRole: payload.senderRole,
+            messageType: payload.messageType,
+            imagePayload: {
+              kind:
+                typeof payload.message === "string" &&
+                payload.message.startsWith("data:image/")
+                  ? "data-uri"
+                  : typeof payload.message,
+              length:
+                typeof payload.message === "string"
+                  ? payload.message.length
+                  : undefined,
+            },
+          }
       : payload,
   );
 

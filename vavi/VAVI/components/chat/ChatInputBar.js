@@ -17,10 +17,17 @@ import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function ChatInputBar({ disabled, onSend, onTyping }) {
+export default function ChatInputBar({
+  disabled,
+  onSend,
+  onSendImage,
+  onTyping,
+}) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const stripAsciiDigits = (value) =>
+    typeof value === "string" ? value.replace(/[0-9]/g, "") : "";
 
   // ==========================================
   // SPEECH STARTED
@@ -42,9 +49,10 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
     const transcript = event.results?.[0]?.transcript;
 
     if (isListening && transcript !== undefined && transcript !== null) {
-      setText(transcript);
+      const safeTranscript = stripAsciiDigits(transcript);
+      setText(safeTranscript);
 
-      onTyping?.(transcript.trim().length > 0);
+      onTyping?.(safeTranscript.trim().length > 0);
     }
   });
 
@@ -100,9 +108,10 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
   // ==========================================
 
   const handleChangeText = (value) => {
-    setText(value);
+    const safeText = stripAsciiDigits(value);
+    setText(safeText);
 
-    onTyping?.(value.trim().length > 0);
+    onTyping?.(safeText.trim().length > 0);
   };
 
   // ==========================================
@@ -239,6 +248,23 @@ export default function ChatInputBar({ disabled, onSend, onTyping }) {
           { paddingBottom: Math.max(insets.bottom, hp(0.8)) },
         ]}
       >
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={[
+            styles.galleryButton,
+            disabled && styles.micButtonDisabled,
+          ]}
+          onPress={onSendImage}
+          disabled={disabled}
+          accessibilityLabel="Choose image from gallery"
+        >
+          <Ionicons
+            name="image-outline"
+            size={RF(21)}
+            color={Colors.primary}
+          />
+        </TouchableOpacity>
+
         <TextInput
           style={styles.input}
           placeholder={
@@ -339,6 +365,14 @@ const styles = StyleSheet.create({
     color: Colors.darkBrown,
 
     fontWeight: "700",
+  },
+
+  galleryButton: {
+    width: wp(9),
+    height: wp(10),
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: wp(1),
   },
 
   micBtn: {

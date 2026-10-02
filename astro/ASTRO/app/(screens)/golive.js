@@ -52,6 +52,36 @@ try {
 
 const ORANGE = "#ff6a00";
 const LOG_TAG = "[GoLiveHost]";
+const containsAsciiDigit = (value) => /[0-9]/.test(String(value ?? ""));
+const isGenericViewerName = (name) =>
+  ["viewer", "audience", "devotee", "user"].includes(
+    String(name || "").trim().toLowerCase(),
+  );
+const resolveLiveAuthor = (data, audienceNames) => {
+  const candidates = [
+    data?.user?.name,
+    data?.sender?.name,
+    data?.userName,
+    data?.senderName,
+    data?.displayName,
+    data?.name,
+  ].filter((name) => typeof name === "string" && name.trim());
+  const author = candidates.find((name) => !isGenericViewerName(name));
+  if (author) return author;
+
+  const senderId =
+    data?.user?.id ||
+    data?.user?._id ||
+    data?.sender?.id ||
+    data?.sender?._id ||
+    data?.senderId ||
+    data?.userId;
+  return (
+    (senderId && audienceNames.get(String(senderId))) ||
+    candidates[0] ||
+    "Devotee"
+  );
+};
 
 export default function GoLive() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -81,6 +111,7 @@ export default function GoLive() {
   const giftAnim = useRef(new Animated.Value(0)).current;
   const commentsListRef = useRef(null);
   const broadcastChannelRef = useRef(null);
+  const audienceNamesRef = useRef(new Map());
   const webStreamRef = useRef(null);
   const videoElementRef = useRef(null);
   const [localStream, setLocalStream] = useState(null);
@@ -299,12 +330,14 @@ export default function GoLive() {
           } else if (data?.type === "audience_left") {
             setViewersCount((prev) => Math.max(0, prev - 1));
           } else if (data?.type === "live_chat_message") {
+            const message = data?.message || "";
+            if (containsAsciiDigit(message)) return;
             setComments((prev) => [
               ...prev.slice(-40),
               {
                 id: data?.id || String(Date.now() + Math.random()),
-                userName: data?.user?.name || data?.userName || "Audience",
-                message: data?.message || "",
+                userName: resolveLiveAuthor(data, audienceNamesRef.current),
+                message,
               },
             ]);
           } else if (data?.type === "live_gift_received") {
@@ -460,6 +493,7 @@ export default function GoLive() {
   };
 
   const setupLiveSocket = async (sessionId) => {
+    audienceNamesRef.current.clear();
     const user = currentUser || (await getStoredUser());
     const socket = await connectSocket(user?.token);
 
@@ -510,6 +544,17 @@ export default function GoLive() {
       // Increment/decrement on join/leave events
       socket.on("user_joined_live", (data) => {
         console.log(LOG_TAG, "User joined live:", data);
+        const joinedUser = data?.user || data?.sender;
+        const joinedUserId = joinedUser?.id || joinedUser?._id || data?.userId;
+        const joinedUserName =
+          joinedUser?.name || data?.userName || data?.senderName;
+        if (
+          joinedUserId &&
+          joinedUserName &&
+          !isGenericViewerName(joinedUserName)
+        ) {
+          audienceNamesRef.current.set(String(joinedUserId), joinedUserName);
+        }
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
         }
@@ -517,6 +562,17 @@ export default function GoLive() {
 
       socket.on("audience_joined", (data) => {
         console.log(LOG_TAG, "Audience joined live:", data);
+        const joinedUser = data?.user || data?.sender;
+        const joinedUserId = joinedUser?.id || joinedUser?._id || data?.userId;
+        const joinedUserName =
+          joinedUser?.name || data?.userName || data?.senderName;
+        if (
+          joinedUserId &&
+          joinedUserName &&
+          !isGenericViewerName(joinedUserName)
+        ) {
+          audienceNamesRef.current.set(String(joinedUserId), joinedUserName);
+        }
         if (data?.viewersCount != null) {
           handleCount(data.viewersCount);
         }
@@ -553,19 +609,18 @@ export default function GoLive() {
          // If any gift is coming then it can't be re-use again (Gifts listener will be handle itself)
         if (data?.isGift || data?.gift) 
           return;
-        const author =
-          data?.user?.name ||
-          data?.userName ||
-          data?.sender?.name ||
-          data?.senderName ||
-          data?.name ||
-          "Devotee";
+        const author = resolveLiveAuthor(data, audienceNamesRef.current);
 
         const msg =
           data?.message ||
           data?.text ||
           data?.comment ||
           (typeof data === "string" ? data : "");
+
+        if (containsAsciiDigit(msg)) {
+          console.log(LOG_TAG, "Ignored live comment containing digits.");
+          return;
+        }
 
         // If comment carries gift payload, trigger gift toast animation
         // if (data?.isGift || data?.gift) {

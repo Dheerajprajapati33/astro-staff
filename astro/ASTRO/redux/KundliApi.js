@@ -8,7 +8,7 @@ import { BASE_URL } from "../config/api";
 
 // Expo automatically loads EXPO_PUBLIC_ variables from .env
 const ASTROLOGY_ENGINE_TOKEN =
-  process.env.EXPO_PUBLIC_ASTROLOGY_ENGINE_TOKEN;
+  process.env.EXPO_PUBLIC_ASTROLOGY_ENGINE_TOKEN || "d9b62fc075139e3f91a28ad5390f8d5a91999ef844c6f5c6ff836ea97d4d5b1e";
 
 export const kundliApi = createApi({
   reducerPath: "kundliApi",

@@ -39,6 +39,7 @@ import {
   AppState,
   BackHandler,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   PanResponder,
   Platform,
@@ -98,6 +99,165 @@ const LOG_TAG = "[ChatScreen]";
 const ROOM_POLL_INTERVAL_MS = 5000;
 const KUNDLI_DETAILS_PREFIX = "__VAVI_KUNDLI_DETAILS_V1__:";
 const KUNDLI_DETAILS_ACK_PREFIX = "__VAVI_KUNDLI_DETAILS_ACK_V1__:";
+const containsAsciiDigit = (value) =>
+  typeof value === "string" && /[0-9]/.test(value);
+const summarizeImagePayload = (message) => {
+  const fields = [
+    "message",
+    "imageUrl",
+    "image",
+    "url",
+    "content",
+    "text",
+    "data",
+    "payload",
+  ];
+
+  return {
+    keys: Object.keys(message || {}),
+    fields: fields.reduce((summary, field) => {
+      const value = message?.[field];
+      if (typeof value === "string") {
+        summary[field] = {
+          kind: value.startsWith("data:image/")
+            ? "data-uri"
+            : /^https?:\/\//i.test(value)
+              ? "url"
+              : /^[A-Za-z0-9+/]{256,}={0,2}$/.test(value)
+                ? "base64"
+                : "string",
+          length: value.length,
+        };
+      } else if (value && typeof value === "object") {
+        summary[field] = {
+          kind: "object",
+          keys: Object.keys(value),
+        };
+      }
+      return summary;
+    }, {}),
+  };
+};
+const getImageChatUri = (message) => {
+  const candidates = [
+    message?.message,
+    message?.imageUrl,
+    message?.image,
+    message?.url,
+    message?.content,
+    message?.text,
+    message?.message?.url,
+    message?.message?.uri,
+    message?.image?.url,
+    message?.image?.uri,
+    message?.content?.url,
+    message?.content?.uri,
+    message?.data?.url,
+    message?.data?.uri,
+    message?.payload?.imageUrl,
+    message?.payload?.url,
+  ];
+
+  const uri = candidates.find(
+    (value) =>
+      typeof value === "string" &&
+      /^(data:image\/|https?:\/\/|file:\/\/|content:\/\/|blob:)/i.test(value),
+  );
+  if (uri) return uri;
+
+  if (
+    String(message?.messageType || message?.type || "").toUpperCase() !==
+    "IMAGE"
+  ) {
+    return undefined;
+  }
+
+  const base64 = candidates.find(
+    (value) =>
+      typeof value === "string" &&
+      value.length > 256 &&
+      /^[A-Za-z0-9+/]+={0,2}$/.test(value),
+  );
+  if (!base64) return undefined;
+
+  const mimeType = base64.startsWith("iVBORw0KGgo")
+    ? "image/png"
+    : base64.startsWith("/9j/")
+      ? "image/jpeg"
+      : base64.startsWith("R0lGOD")
+        ? "image/gif"
+        : base64.startsWith("UklGR")
+          ? "image/webp"
+          : "image/jpeg";
+  return `data:${mimeType};base64,${base64}`;
+};
+const isImageChatMessage = (message) =>
+  String(message?.messageType || message?.type || "").toUpperCase() ===
+    "IMAGE" ||
+  Boolean(getImageChatUri(message));
+const sameImageChatMessage = (first, second) =>
+  isImageChatMessage(first) &&
+  isImageChatMessage(second) &&
+  first?.senderId === second?.senderId &&
+  Boolean(getImageChatUri(first)) &&
+  getImageChatUri(first) === getImageChatUri(second);
+const isDuplicateImageEvent = (first, second) => {
+  if (
+    !isImageChatMessage(first) ||
+    !isImageChatMessage(second) ||
+    first?.senderId !== second?.senderId
+  ) {
+    return false;
+  }
+
+  if (sameImageChatMessage(first, second)) return true;
+
+  const firstTime = Date.parse(first?.createdAt || "");
+  const secondTime = Date.parse(second?.createdAt || "");
+  return (
+    Number.isFinite(firstTime) &&
+    Number.isFinite(secondTime) &&
+    Math.abs(firstTime - secondTime) < 1000
+  );
+};
+const ChatImage = ({ uri }) => {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [uri]);
+
+  return failed ? (
+    <Text style={styles.msgText}>Could not load this image</Text>
+  ) : (
+    <Image
+      source={{ uri }}
+      style={styles.chatImage}
+      resizeMode="contain"
+      onError={(event) => {
+        console.warn(
+          LOG_TAG,
+          "Image renderer failed:",
+          event?.nativeEvent?.error || "unknown image decode/load error",
+        );
+        setFailed(true);
+      }}
+    />
+  );
+};
+const getChatMessageText = (message) =>
+  [message?.message, message?.content, message?.text].find(
+    (value) => typeof value === "string",
+  ) || "";
+const shouldHideChatMessage = (message) => {
+  if (isImageChatMessage(message)) return false;
+  const text = getChatMessageText(message);
+  return (
+    text.startsWith(KUNDLI_DETAILS_PREFIX) ||
+    text.startsWith(KUNDLI_DETAILS_ACK_PREFIX) ||
+    containsAsciiDigit(text)
+  );
+};
 
 const getKundliApiData = (response) => {
   if (
@@ -676,9 +836,11 @@ export default function Chat() {
   ========================================================= */
 
   const displayMessages =
-    isConsultationMode
+    (isConsultationMode
       ? messages
-      : historyData?.messages ?? [];
+      : historyData?.messages ?? []).filter(
+        (message) => !shouldHideChatMessage(message),
+      );
 
 
   const canMessage =
@@ -1193,7 +1355,9 @@ useEffect(() => {
     );
 
     setMessages(
-      historyData.messages,
+      historyData.messages.filter(
+        (message) => !shouldHideChatMessage(message),
+      ),
     );
   }
 }, [
@@ -1282,6 +1446,9 @@ useEffect(() => {
       eventName,
       containsPrivateKundliDetails
         ? "[private Kundli details omitted]"
+        : eventName === "new_chat_message" &&
+            args.some(isImageChatMessage)
+          ? "[image payload omitted]"
         : JSON.stringify(args),
     );
   };
@@ -2101,46 +2268,79 @@ useEffect(() => {
           return;
         }
 
+        if (
+          !isImageChatMessage(data) &&
+          containsAsciiDigit(incomingText)
+        ) {
+          console.log(
+            LOG_TAG,
+            "Ignored incoming chat message containing digits.",
+          );
+          return;
+        }
+
         console.log(
           LOG_TAG,
           "new_chat_message:",
-          JSON.stringify(
-            data,
-          ),
+          isImageChatMessage(data)
+            ? {
+                id: data?.id || data?._id || data?.messageId,
+                messageType: data?.messageType || data?.type,
+                imagePayload: summarizeImagePayload(data),
+              }
+              : JSON.stringify(data),
         );
 
         setMessages(
           (prev) => {
-            const pendingIndex =
-              data?.clientTempId
-                ? prev.findIndex(
-                    (m) =>
-                      m.clientTempId ===
-                      data.clientTempId,
+            const incomingId =
+              data?.id || data?._id || data?.messageId;
+            const duplicateIndex = incomingId
+              ? prev.findIndex(
+                  (message) =>
+                    String(
+                      message?.id ||
+                        message?._id ||
+                        message?.messageId ||
+                        "",
+                    ) === String(incomingId),
+                )
+              : isImageChatMessage(data)
+                ? prev.findIndex((message) =>
+                    isDuplicateImageEvent(message, data),
                   )
-                : prev.findIndex(
-                    (m) =>
-                      m.status ===
-                        "sending" &&
-                      m.senderId ===
-                        data?.senderId &&
-                      m.message ===
-                        data?.message,
-                  );
+                : -1;
+            const pendingIndex = data?.clientTempId
+              ? prev.findIndex(
+                  (message) =>
+                    message.clientTempId === data.clientTempId,
+                )
+              : prev.findIndex(
+                  (message) =>
+                    (message.status === "sending" ||
+                      message.status === "sent") &&
+                    message.senderId === data?.senderId &&
+                    (message.message === data?.message ||
+                      sameImageChatMessage(message, data)),
+                );
+            const matchIndex =
+              pendingIndex !== -1 ? pendingIndex : duplicateIndex;
 
-            if (
-              pendingIndex >
-              -1
-            ) {
+            if (matchIndex > -1) {
               const next =
                 [
                   ...prev,
                 ];
 
-              next[
-                pendingIndex
-              ] = {
+              next[matchIndex] = {
+                ...prev[matchIndex],
                 ...data,
+                message:
+                  data?.message ?? prev[matchIndex].message,
+                messageType:
+                  data?.messageType ?? prev[matchIndex].messageType,
+                clientTempId:
+                  data?.clientTempId ?? prev[matchIndex].clientTempId,
                 status:
                   "sent",
               };
@@ -2611,7 +2811,7 @@ useSpeechRecognitionEvent(
       null
     ) {
       setInputText(
-        transcript,
+        transcript.replace(/[0-9]/g, ""),
       );
     }
   },
@@ -2692,7 +2892,7 @@ const handleMicPress = async () => {
 ========================================================= */
 
 const handleChangeText = (text) => {
-  setInputText(text);
+  setInputText(text.replace(/[0-9]/g, ""));
 
   if (!isConsultationMode) {
     return;
@@ -2741,6 +2941,14 @@ const handleSend = async () => {
     !trimmed ||
     !canMessage
   ) {
+    return;
+  }
+
+  if (containsAsciiDigit(trimmed)) {
+    Alert.alert(
+      "Numbers not allowed",
+      "Chat messages cannot contain digits 0–9.",
+    );
     return;
   }
 
@@ -3127,6 +3335,9 @@ const renderMessage = ({
       "astrologer" ||
     item.senderId ===
       astrologer?.id;
+  const isImage = isImageChatMessage(item);
+  const imageUri =
+    getImageChatUri(item);
 
 
   return (
@@ -3145,14 +3356,23 @@ const renderMessage = ({
             : styles.leftBubble
         }
       >
-        <Text
-          style={styles.msgText}
-        >
-          {item.isDeleted ||
-          item.deleted
-            ? "This message was deleted"
-            : item.message}
-        </Text>
+        {item.isDeleted || item.deleted ? (
+          <Text style={styles.msgText}>
+            This message was deleted
+          </Text>
+        ) : isImage ? (
+          imageUri ? (
+            <ChatImage uri={imageUri} />
+          ) : (
+            <Text style={styles.msgText}>
+              Image data was not included in this message
+            </Text>
+          )
+        ) : (
+          <Text style={styles.msgText}>
+            {item.message}
+          </Text>
+        )}
 
 
         <Text
@@ -3315,20 +3535,23 @@ return (
                 : "Waiting for client birth details"
             }
           >
-            <Ionicons
-              name={
-                isGeneratingKundli
-                  ? "hourglass-outline"
-                  : "planet-outline"
-              }
-              size={RF(20)}
-              color={
-                isGeneratingKundli ||
-                !hasClientBirthDetails
-                  ? "#c9c9c9"
-                  : "#FFB380"
-              }
-            />
+            {isGeneratingKundli ? (
+              <Ionicons
+                name="hourglass-outline"
+                size={RF(26)}
+                color="#c9c9c9"
+              />
+            ) : (
+              <Image
+                source={require("../../assets/images/kundli.jpg")}
+                style={{
+                  width: RF(34),
+                  height: RF(34),
+                  opacity: hasClientBirthDetails ? 1 : 0.5,
+                }}
+                resizeMode="contain"
+              />
+            )}
           </TouchableOpacity>
 
 
@@ -3806,10 +4029,10 @@ return (
                 }
                 style={styles.kundliBubbleButton}
               >
-                <Ionicons
-                  name="planet-outline"
-                  size={RF(27)}
-                  color="#fff"
+                <Image
+                  source={require("../../assets/images/kundli.jpg")}
+                  style={{ width: RF(32), height: RF(32) }}
+                  resizeMode="contain"
                 />
               </TouchableOpacity>
             </View>
@@ -4081,6 +4304,13 @@ const styles =
       padding: wp(4),
       marginBottom:
         hp(2.5),
+    },
+
+    chatImage: {
+      width: 220,
+      height: 220,
+      borderRadius: wp(2),
+      backgroundColor: "#f3f4f6",
     },
 
     msgText: {

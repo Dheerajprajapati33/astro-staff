@@ -1221,11 +1221,19 @@ export default function CallScreen() {
               activeOpacity={0.8}
               accessibilityLabel="View client Kundli"
             >
-              <Ionicons
-                name={isLoadingClientKundli ? "hourglass-outline" : "planet-outline"}
-                size={RF(24)}
-                color="#fff"
-              />
+              {isLoadingClientKundli ? (
+                <Ionicons
+                  name="hourglass-outline"
+                  size={RF(28)}
+                  color="#fff"
+                />
+              ) : (
+                <Image
+                  source={require("../../assets/images/kundli.jpg")}
+                  style={{ width: RF(34), height: RF(34) }}
+                  resizeMode="contain"
+                />
+              )}
               <Text style={styles.controlBtnLabel}>Kundli</Text>
             </TouchableOpacity>
 
@@ -1402,10 +1410,10 @@ export default function CallScreen() {
                   onPress={() => setIsClientKundliMinimized(false)}
                   style={styles.kundliBubbleButton}
                 >
-                  <Ionicons
-                    name="planet-outline"
-                    size={RF(27)}
-                    color="#fff"
+                  <Image
+                    source={require("../../assets/images/kundli.jpg")}
+                    style={{ width: RF(32), height: RF(32) }}
+                    resizeMode="contain"
                   />
                 </TouchableOpacity>
               </View>

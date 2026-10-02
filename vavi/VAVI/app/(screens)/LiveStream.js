@@ -57,6 +57,7 @@ try {
 
 const ORANGE = "#ff6a00";
 const LOG_TAG = "[LiveAudience]";
+const containsAsciiDigit = (value) => /[0-9]/.test(String(value ?? ""));
 
 export default function LiveStream() {
   const params = useLocalSearchParams();
@@ -562,20 +563,23 @@ export default function LiveStream() {
 
   // Send Live Comment
   const handleSendMessage = () => {
-    if (!chatInput.trim()) return;
+    const commentMsg = chatInput.trim();
+    if (!commentMsg || containsAsciiDigit(commentMsg)) return;
 
     const socket = getChatSocket();
     const userObj = currentUser || { id: "user", name: "Devotee" };
-    const commentMsg = chatInput.trim();
+    const clientName = userObj?.name || "Devotee";
 
     const payload = {
       liveSessionId: String(liveSessionId),
       sessionId: String(liveSessionId),
       user: {
         id: userObj?.id || userObj?._id || "user",
-        name: userObj?.name || "Devotee",
+        name: clientName,
       },
-      userName: userObj?.name || "Devotee",
+      userName: clientName,
+      senderName: clientName,
+      displayName: clientName,
       message: commentMsg,
       text: commentMsg,
       comment: commentMsg,
@@ -592,8 +596,9 @@ export default function LiveStream() {
           type: "live_chat_message",
           user: {
             id: userObj?.id || userObj?._id || "user",
-            name: userObj?.name || "Devotee",
+            name: clientName,
           },
+          userName: clientName,
           message: commentMsg,
         });
       } catch (e) {}
@@ -1034,7 +1039,7 @@ export default function LiveStream() {
                 placeholder="Ask something..."
                 placeholderTextColor="rgba(255,255,255,0.7)"
                 value={chatInput}
-                onChangeText={setChatInput}
+                onChangeText={(text) => setChatInput(text.replace(/[0-9]/g, ""))}
                 onSubmitEditing={handleSendMessage}
                 returnKeyType="send"
               />

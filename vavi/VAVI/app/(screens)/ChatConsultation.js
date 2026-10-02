@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useLocalSearchParams, router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -64,6 +65,126 @@ const KUNDLI_DETAILS_PREFIX = "__VAVI_KUNDLI_DETAILS_V1__:";
 const KUNDLI_DETAILS_ACK_PREFIX = "__VAVI_KUNDLI_DETAILS_ACK_V1__:";
 const KUNDLI_DETAILS_RETRY_MS = 2000;
 const KUNDLI_DETAILS_MAX_ATTEMPTS = 5;
+const MAX_IMAGE_DATA_URI_LENGTH = 700 * 1024;
+const containsAsciiDigit = (value) =>
+  typeof value === "string" && /[0-9]/.test(value);
+const summarizeImagePayload = (message) => {
+  const fields = [
+    "message",
+    "imageUrl",
+    "image",
+    "url",
+    "content",
+    "text",
+    "data",
+    "payload",
+  ];
+
+  return {
+    keys: Object.keys(message || {}),
+    fields: fields.reduce((summary, field) => {
+      const value = message?.[field];
+      if (typeof value === "string") {
+        summary[field] = {
+          kind: value.startsWith("data:image/")
+            ? "data-uri"
+            : /^https?:\/\//i.test(value)
+              ? "url"
+              : /^[A-Za-z0-9+/]{256,}={0,2}$/.test(value)
+                ? "base64"
+                : "string",
+          length: value.length,
+        };
+      } else if (value && typeof value === "object") {
+        summary[field] = {
+          kind: "object",
+          keys: Object.keys(value),
+        };
+      }
+      return summary;
+    }, {}),
+  };
+};
+const isImageMessage = (message) =>
+  String(message?.messageType || message?.type || "").toUpperCase() ===
+    "IMAGE" ||
+  Boolean(getImageUri(message));
+const getImageUri = (message) => {
+  const candidates = [
+    message?.message,
+    message?.imageUrl,
+    message?.image,
+    message?.url,
+    message?.content,
+    message?.text,
+    message?.message?.url,
+    message?.message?.uri,
+    message?.image?.url,
+    message?.image?.uri,
+    message?.content?.url,
+    message?.content?.uri,
+    message?.data?.url,
+    message?.data?.uri,
+    message?.payload?.imageUrl,
+    message?.payload?.url,
+  ];
+
+  const uri = candidates.find(
+    (value) =>
+      typeof value === "string" &&
+      /^(data:image\/|https?:\/\/|file:\/\/|content:\/\/|blob:)/i.test(value),
+  );
+  if (uri) return uri;
+
+  if (
+    String(message?.messageType || message?.type || "").toUpperCase() !==
+    "IMAGE"
+  ) {
+    return undefined;
+  }
+
+  const base64 = candidates.find(
+    (value) =>
+      typeof value === "string" &&
+      value.length > 256 &&
+      /^[A-Za-z0-9+/]+={0,2}$/.test(value),
+  );
+  if (!base64) return undefined;
+
+  const mimeType = base64.startsWith("iVBORw0KGgo")
+    ? "image/png"
+    : base64.startsWith("/9j/")
+      ? "image/jpeg"
+      : base64.startsWith("R0lGOD")
+        ? "image/gif"
+        : base64.startsWith("UklGR")
+          ? "image/webp"
+          : "image/jpeg";
+  return `data:${mimeType};base64,${base64}`;
+};
+const sameImageMessage = (first, second) =>
+  isImageMessage(first) &&
+  isImageMessage(second) &&
+  first?.senderId === second?.senderId &&
+  Boolean(getImageUri(first)) &&
+  getImageUri(first) === getImageUri(second);
+const isRecentImageEcho = (first, second) => {
+  if (
+    !isImageMessage(first) ||
+    !isImageMessage(second) ||
+    first?.senderId !== second?.senderId
+  ) {
+    return false;
+  }
+
+  const firstTime = Date.parse(first?.createdAt || "");
+  const secondTime = Date.parse(second?.createdAt || "");
+  return (
+    Number.isFinite(firstTime) &&
+    Number.isFinite(secondTime) &&
+    Math.abs(firstTime - secondTime) < 30000
+  );
+};
 
 export default function ChatConsultation() {
   const params = useLocalSearchParams();
@@ -902,33 +1023,61 @@ export default function ChatConsultation() {
             return;
           }
 
+          if (
+            !isImageMessage(data) &&
+            containsAsciiDigit(receivedMessage)
+          ) {
+            console.log(
+              LOG_TAG,
+              "Ignored incoming chat message containing digits.",
+            );
+            return;
+          }
+
           console.log(
             LOG_TAG,
             "new_chat_message event:",
-            data,
+            isImageMessage(data)
+              ? {
+                  id: data?.id || data?._id || data?.messageId,
+                  messageType: data?.messageType || data?.type,
+                  imagePayload: summarizeImagePayload(data),
+                }
+              : data,
           );
 
           setMessages((prev) => {
-            const pendingIndex =
-              data?.clientTempId
-                ? prev.findIndex(
-                    (m) =>
-                      m.clientTempId ===
-                      data.clientTempId,
-                  )
-                : prev.findIndex(
-                    (m) =>
-                      m.status ===
-                        "sending" &&
-                      m.senderId ===
-                        data?.senderId &&
-                      m.message ===
-                        data?.message,
-                  );
+            const incomingId =
+              data?.id || data?._id || data?.messageId;
+            const duplicateIndex = incomingId
+              ? prev.findIndex(
+                  (message) =>
+                    String(
+                      message?.id ||
+                        message?._id ||
+                        message?.messageId ||
+                        "",
+                    ) === String(incomingId),
+                )
+              : -1;
+            const pendingIndex = data?.clientTempId
+              ? prev.findIndex(
+                  (message) =>
+                    message.clientTempId === data.clientTempId,
+                )
+              : prev.findIndex(
+                  (message) =>
+                    (message.status === "sending" ||
+                      message.status === "sent") &&
+                    message.senderId === data?.senderId &&
+                    (message.message === data?.message ||
+                      sameImageMessage(message, data) ||
+                      isRecentImageEcho(message, data)),
+                );
+            const matchIndex =
+              pendingIndex !== -1 ? pendingIndex : duplicateIndex;
 
-            if (
-              pendingIndex === -1
-            ) {
+            if (matchIndex === -1) {
               return [
                 ...prev,
                 data,
@@ -936,7 +1085,7 @@ export default function ChatConsultation() {
             }
 
             const clientTempId =
-              prev[pendingIndex]
+              prev[matchIndex]
                 .clientTempId;
 
             if (
@@ -963,8 +1112,16 @@ export default function ChatConsultation() {
               ...prev,
             ];
 
-            next[pendingIndex] =
-              data;
+            next[matchIndex] = {
+              ...prev[matchIndex],
+              ...data,
+              message: data?.message ?? prev[matchIndex].message,
+              messageType:
+                data?.messageType ?? prev[matchIndex].messageType,
+              clientTempId:
+                data?.clientTempId ?? prev[matchIndex].clientTempId,
+              status: "sent",
+            };
 
             return next;
           });
@@ -1348,6 +1505,14 @@ export default function ChatConsultation() {
   const handleSend =
     useCallback(
       (text) => {
+        if (containsAsciiDigit(text)) {
+          Alert.alert(
+            "Numbers not allowed",
+            "Chat messages cannot contain digits 0–9.",
+          );
+          return;
+        }
+
         if (
           !consultationId ||
           !currentUserId ||
@@ -1424,6 +1589,106 @@ export default function ChatConsultation() {
       ],
     );
 
+  const handleSendImage = useCallback(async () => {
+    if (
+      !consultationId ||
+      !currentUserId ||
+      isBlocked ||
+      isBlockedByOther
+    ) {
+      return;
+    }
+
+    try {
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Gallery permission needed",
+          "Allow photo access to send an image in chat.",
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled) return;
+
+      const asset = result.assets?.[0];
+      if (!asset?.base64) {
+        throw new Error("The selected image could not be read.");
+      }
+
+      const mimeType = asset.mimeType || "image/jpeg";
+      const imageData = `data:${mimeType};base64,${asset.base64}`;
+      if (imageData.length > MAX_IMAGE_DATA_URI_LENGTH) {
+        Alert.alert(
+          "Image too large",
+          "Please choose a smaller image (maximum 700 KB encoded size).",
+        );
+        return;
+      }
+
+      const clientTempId =
+        `${currentUserId}-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 8)}`;
+      const imageMessage = {
+        clientTempId,
+        senderId: currentUserId,
+        senderRole: "user",
+        message: imageData,
+        messageType: "IMAGE",
+        createdAt: new Date().toISOString(),
+        status: "sending",
+      };
+
+      setMessages((previous) => [...previous, imageMessage]);
+      const emitted = sendChatMessage({
+        consultationId,
+        senderId: currentUserId,
+        senderRole: "user",
+        message: imageData,
+        messageType: "IMAGE",
+        clientTempId,
+      });
+
+      if (!emitted) {
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.clientTempId === clientTempId
+              ? { ...message, status: "failed" }
+              : message,
+          ),
+        );
+        return;
+      }
+
+      setMessages((previous) =>
+        previous.map((message) =>
+          message.clientTempId === clientTempId
+            ? { ...message, status: "sent" }
+            : message,
+        ),
+      );
+    } catch (error) {
+      console.log(LOG_TAG, "Gallery image send failed:", error);
+      Alert.alert(
+        "Image send failed",
+        error?.message || "Unable to choose or send this image.",
+      );
+    }
+  }, [
+    consultationId,
+    currentUserId,
+    isBlocked,
+    isBlockedByOther,
+  ]);
+
   // ==========================
   // RETRY MESSAGE
   // ==========================
@@ -1431,6 +1696,20 @@ export default function ChatConsultation() {
   const handleRetrySend =
     useCallback(
       (message) => {
+        if (isImageMessage(message)) {
+          return;
+        }
+
+        if (
+          containsAsciiDigit(message?.message)
+        ) {
+          Alert.alert(
+            "Numbers not allowed",
+            "Chat messages cannot contain digits 0–9.",
+          );
+          return;
+        }
+
         if (
           !message?.clientTempId ||
           !consultationId ||
@@ -2019,6 +2298,9 @@ export default function ChatConsultation() {
           }
           onSend={
             handleSend
+          }
+          onSendImage={
+            handleSendImage
           }
           onTyping={
             handleTyping
