@@ -2238,7 +2238,7 @@ export default function ChatConsultation() {
                 !isHistoryLoading
               }
               onRefresh={
-                handleRefresh
+                safeRefetchHistory
               }
               colors={[
                 Colors.primary,

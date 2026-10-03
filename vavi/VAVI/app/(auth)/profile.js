@@ -32,9 +32,14 @@ export default function Profile() {
           <Text style={styles.headerTitle}>My Profile</Text>
 
           <TouchableOpacity>
-            <Ionicons size={RF(24)} color={Colors.primary} />
+            <Ionicons
+              size={RF(24)}
+              color={Colors.primary}
+            />
           </TouchableOpacity>
         </View>
+
+        {/* Our Services */}
 
         <TouchableOpacity
           activeOpacity={0.8}
@@ -50,11 +55,19 @@ export default function Profile() {
               />
             </View>
 
-            <Text style={styles.menuTitle}>Our Services</Text>
+            <Text style={styles.menuTitle}>
+              Our Services
+            </Text>
           </View>
 
-          <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+          <Ionicons
+            name="chevron-forward"
+            size={RF(20)}
+            color="#999"
+          />
         </TouchableOpacity>
+
+        {/* Following Astrologers */}
 
         <TouchableOpacity
           activeOpacity={0.8}
@@ -70,10 +83,16 @@ export default function Profile() {
               />
             </View>
 
-            <Text style={styles.menuTitle}>Following Astrologers</Text>
+            <Text style={styles.menuTitle}>
+              Following Astrologers
+            </Text>
           </View>
 
-          <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+          <Ionicons
+            name="chevron-forward"
+            size={RF(20)}
+            color="#999"
+          />
         </TouchableOpacity>
 
         {/* Notifications */}
@@ -92,10 +111,16 @@ export default function Profile() {
               />
             </View>
 
-            <Text style={styles.menuTitle}>Notifications</Text>
+            <Text style={styles.menuTitle}>
+              Notifications
+            </Text>
           </View>
 
-          <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+          <Ionicons
+            name="chevron-forward"
+            size={RF(20)}
+            color="#999"
+          />
         </TouchableOpacity>
 
         {/* Refer */}
@@ -114,13 +139,19 @@ export default function Profile() {
               />
             </View>
 
-            <Text style={styles.menuTitle}>Refer & Earn</Text>
+            <Text style={styles.menuTitle}>
+              Refer & Earn
+            </Text>
           </View>
 
-          <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+          <Ionicons
+            name="chevron-forward"
+            size={RF(20)}
+            color="#999"
+          />
         </TouchableOpacity>
 
-        {/* Free Kundli*/}
+        {/* Free Kundli */}
 
         <TouchableOpacity
           activeOpacity={0.8}
@@ -136,16 +167,28 @@ export default function Profile() {
               />
             </View>
 
-            <Text style={styles.menuTitle}>Free kundli</Text>
+            <Text style={styles.menuTitle}>
+              Free kundli
+            </Text>
           </View>
 
-          <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+          <Ionicons
+            name="chevron-forward"
+            size={RF(20)}
+            color="#999"
+          />
         </TouchableOpacity>
 
-        {/* Settings Section */}
+        {/* =========================================
+            SETTINGS SECTION
+        ========================================== */}
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Settings</Text>
+          <Text style={styles.sectionTitle}>
+            Settings
+          </Text>
+
+          {/* Privacy Policy */}
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -161,11 +204,19 @@ export default function Profile() {
                 />
               </View>
 
-              <Text style={styles.menuTitle}>Privacy Policy</Text>
+              <Text style={styles.menuTitle}>
+                Privacy Policy
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
+
+          {/* Refund Policy */}
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -181,11 +232,19 @@ export default function Profile() {
                 />
               </View>
 
-              <Text style={styles.menuTitle}>Refund Policy</Text>
+              <Text style={styles.menuTitle}>
+                Refund Policy
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
+
+          {/* Terms & Conditions */}
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -201,11 +260,167 @@ export default function Profile() {
                 />
               </View>
 
-              <Text style={styles.menuTitle}>Terms & Conditions</Text>
+              <Text style={styles.menuTitle}>
+                Terms & Conditions
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
+
+          {/* EULA */}
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.menuRow}
+            onPress={() => router.push("/EULA")}
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="document-outline"
+                  size={RF(20)}
+                  color={Colors.primary}
+                />
+              </View>
+
+              <Text style={styles.menuTitle}>
+                EULA
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
+          </TouchableOpacity>
+
+          {/* Contact Policy */}
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.menuRow}
+            onPress={() =>
+              router.push("/Contact_policy")
+            }
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="call-outline"
+                  size={RF(20)}
+                  color={Colors.primary}
+                />
+              </View>
+
+              <Text style={styles.menuTitle}>
+                Contact Policy
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
+          </TouchableOpacity>
+
+          {/* Community Guidelines */}
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.menuRow}
+            onPress={() =>
+              router.push("/Community_guidelines")
+            }
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="people-outline"
+                  size={RF(20)}
+                  color={Colors.primary}
+                />
+              </View>
+
+              <Text style={styles.menuTitle}>
+                Community Guidelines
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
+          </TouchableOpacity>
+
+          {/* Payout Policy */}
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.menuRow}
+            onPress={() =>
+              router.push("/Payout_policy")
+            }
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={RF(20)}
+                  color={Colors.primary}
+                />
+              </View>
+
+              <Text style={styles.menuTitle}>
+                Payout Policy
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
+          </TouchableOpacity>
+
+          {/* Partner Agreement */}
+
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={styles.menuRow}
+            onPress={() =>
+              router.push("/Partner_agreement")
+            }
+          >
+            <View style={styles.menuLeft}>
+              <View style={styles.iconBox}>
+                <Ionicons
+                  name="handshake-outline"
+                  size={RF(20)}
+                  color={Colors.primary}
+                />
+              </View>
+
+              <Text style={styles.menuTitle}>
+                Partner Agreement
+              </Text>
+            </View>
+
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
+          </TouchableOpacity>
+
+          {/* About App */}
 
           <TouchableOpacity
             activeOpacity={0.8}
@@ -220,21 +435,24 @@ export default function Profile() {
                   color={Colors.primary}
                 />
               </View>
-              <Text style={styles.menuTitle}>About App</Text>
+
+              <Text style={styles.menuTitle}>
+                About App
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
+
+          {/* FAQs */}
 
           <TouchableOpacity
             activeOpacity={0.8}
-            style={[
-              styles.menuRow,
-
-              {
-                borderBottomWidth: 0,
-              },
-            ]}
+            style={styles.menuRow}
             onPress={() => router.push("/FAQs")}
           >
             <View style={styles.menuLeft}>
@@ -246,22 +464,31 @@ export default function Profile() {
                 />
               </View>
 
-              <Text style={styles.menuTitle}>FAQs</Text>
+              <Text style={styles.menuTitle}>
+                FAQs
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
+
+          {/* Help & Support */}
 
           <TouchableOpacity
             activeOpacity={0.8}
             style={[
               styles.menuRow,
-
               {
                 borderBottomWidth: 0,
               },
             ]}
-            onPress={() => router.push("/HelpSupport")}
+            onPress={() =>
+              router.push("/HelpSupport")
+            }
           >
             <View style={styles.menuLeft}>
               <View style={styles.iconBox}>
@@ -272,10 +499,16 @@ export default function Profile() {
                 />
               </View>
 
-              <Text style={styles.menuTitle}>Help & Support</Text>
+              <Text style={styles.menuTitle}>
+                Help & Support
+              </Text>
             </View>
 
-            <Ionicons name="chevron-forward" size={RF(20)} color="#999" />
+            <Ionicons
+              name="chevron-forward"
+              size={RF(20)}
+              color="#999"
+            />
           </TouchableOpacity>
         </View>
       </KeyboardAwareScrollView>
@@ -405,6 +638,7 @@ const styles = StyleSheet.create({
     fontSize: RF(12),
     fontWeight: "600",
   },
+
   statsContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -515,6 +749,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
 
     alignItems: "center",
+
+    flex: 1,
   },
 
   iconBox: {
@@ -539,7 +775,10 @@ const styles = StyleSheet.create({
     color: Colors.darkBrown,
 
     fontWeight: "500",
+
+    flexShrink: 1,
   },
+
   logoutButton: {
     marginTop: hp(3),
 
