@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "944133604589",
+    "project_id": "ascendant-vavi-llp",
+    "storage_bucket": "ascendant-vavi-llp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:944133604589:android:425f592dee88c1d938f8e4",
+        "android_client_info": {
+          "package_name": "com.sandeepkumar90.Vavi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB-PBxbzxRlV7SpuWTAA55g8SRTHmXpygI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

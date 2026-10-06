@@ -1,10 +1,16 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useEffect, useState } from "react";
 
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
 
-function ChatImage({ uri }) {
+function ChatImage({ uri, onPress }) {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -14,16 +20,28 @@ function ChatImage({ uri }) {
   return failed ? (
     <Text style={styles.text}>Image unavailable</Text>
   ) : (
-    <Image
-      source={{ uri }}
-      style={styles.image}
-      resizeMode="contain"
-      onError={() => setFailed(true)}
-    />
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => onPress?.(uri)}
+      accessibilityRole="imagebutton"
+      accessibilityLabel="View image full screen"
+    >
+      <Image
+        source={{ uri }}
+        style={styles.image}
+        resizeMode="contain"
+        onError={() => setFailed(true)}
+      />
+    </TouchableOpacity>
   );
 }
 
-export default function MessageBubble({ message, isOwnMessage, onRetry }) {
+export default function MessageBubble({
+  message,
+  isOwnMessage,
+  onRetry,
+  onImagePress,
+}) {
   const status = message?.status;
   const isFailed = status === "failed";
   const isImageType =
@@ -86,7 +104,7 @@ export default function MessageBubble({ message, isOwnMessage, onRetry }) {
     >
       {isImage ? (
         imageUri ? (
-          <ChatImage uri={imageUri} />
+          <ChatImage uri={imageUri} onPress={onImagePress} />
         ) : (
           <Text style={styles.text}>Image unavailable</Text>
         )

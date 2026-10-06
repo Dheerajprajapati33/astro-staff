@@ -11,8 +11,7 @@ import { BASE_URL } from "../config/api";
 // 2. /chat/rooms* REST
 //    Persistent user <-> astrologer chat.
 //
-// Existing chat architecture remains unchanged.
-// Only delete message API has been added.
+// Persistent-room image uploads use multipart data; paid consultations use sockets.
 
 const LOG_TAG = "[ChatApi]";
 
@@ -22,9 +21,15 @@ export const chatApi = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: `${BASE_URL}/api`,
 
-    prepareHeaders: async (headers) => {
+    prepareHeaders: async (headers, { arg }) => {
       headers.set("Accept", "application/json");
-      headers.set("Content-Type", "application/json");
+      const isMultipartBody =
+        typeof FormData !== "undefined" && arg?.body instanceof FormData;
+      if (isMultipartBody) {
+        headers.delete("Content-Type");
+      } else {
+        headers.set("Content-Type", "application/json");
+      }
       headers.set(
         "ngrok-skip-browser-warning",
         "true",
@@ -288,6 +293,36 @@ export const chatApi = createApi({
       ],
     }),
 
+    sendChatImageMessage: builder.mutation({
+      query: ({ roomId, formData }) => ({
+        url: `/chat/rooms/${roomId}/messages`,
+        method: "POST",
+        body: formData,
+      }),
+
+      transformResponse: (response) => {
+        if (!response?.success) {
+          return null;
+        }
+        return response?.data ?? null;
+      },
+
+      transformErrorResponse: (error) => {
+        console.log(
+          LOG_TAG,
+          "sendChatImageMessage ERROR response:",
+          JSON.stringify(error),
+        );
+        return error;
+      },
+
+      invalidatesTags: (result, error, { roomId }) => [
+        { type: "ChatMessages", id: roomId },
+        { type: "ChatRooms", id: roomId },
+        { type: "ChatRooms", id: "LIST" },
+      ],
+    }),
+
     // ==========================
     // DELETE CHAT MESSAGE
     // ==========================
@@ -498,6 +533,7 @@ export const {
   useGetChatMessagesQuery,
   useLazyGetChatMessagesQuery,
   useSendChatMessageMutation,
+  useSendChatImageMessageMutation,
   useDeleteChatMessageMutation,
   useMarkRoomReadMutation,
   useGetConsultationHistoryQuery,

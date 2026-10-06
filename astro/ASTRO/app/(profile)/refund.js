@@ -19,176 +19,196 @@ const DARK = "#3b2418";
 const TEXT = "#374151";
 
 /* =========================================================
-   HARDCODED REFUND & CANCELLATION POLICY
+   VAVI REFUND & CANCELLATION POLICY
    ========================================================= */
 
 const REFUND_DATA = [
   {
     number: "1",
     title: "General Refund Principle",
-    content:
-      "Vavi facilitates astrology-related consultations between Users and independent Astrologers. Refunds are not automatically available for every completed or partially completed consultation. A refund may be considered where there is a genuine payment, technical, service-delivery or Platform-related issue covered by this Policy.",
+    content: `Vavi facilitates astrology-related consultations between Users and independent Astrologers. Refunds are not automatically available for every completed or partially completed consultation. A refund may be considered where there is a genuine payment, technical, service-delivery or Platform-related issue covered by this Policy.`,
   },
 
   {
     number: "2",
     title: "Astrology Results Are Not Refundable",
-    content:
-      "Astrology is interpretive and subjective. A refund will not ordinarily be provided simply because a User disagrees with an Astrologer's prediction or opinion, is dissatisfied with guidance, does not receive an expected result, disagrees with a horoscope or Kundli interpretation, believes a remedy was ineffective, or changes their mind after receiving the consultation.",
+    content: `Astrology is interpretive and subjective. A refund will not ordinarily be provided simply because a User disagrees with an Astrologer's prediction or opinion, is dissatisfied with guidance, does not receive an expected result, disagrees with a horoscope or Kundli interpretation, believes a remedy was ineffective, or changes their mind after receiving the consultation.`,
   },
 
   {
     number: "3",
     title: "When a Refund May Be Considered",
-    content:
-      "Subject to verification, a refund, payment reversal, Wallet restoration, Platform credit or another appropriate adjustment may be considered for duplicate payments, payment deducted but service not received, failed transactions not automatically reversed, verified Vavi technical failures, Astrologer-side failures, incorrect automatic deductions or situations where a remedy is required by applicable law.",
+    content: `Subject to verification, a refund, payment reversal, Wallet restoration, Platform credit or another appropriate adjustment may be considered for duplicate payments, payment deducted but service not received, failed transactions not automatically reversed, verified Vavi technical failures, Astrologer-side failures, incorrect automatic deductions or situations where a remedy is required by applicable law.`,
   },
 
   {
     number: "4",
     title: "Chat Consultations",
-    content:
-      "Where charges are calculated according to chat duration, applicable charges may be deducted based on the rate displayed on the Platform. A completed chat consultation is ordinarily treated as a consumed service. A refund will not ordinarily be provided merely because the User is dissatisfied with the content, opinion, prediction, advice, response style or outcome.",
+    content: `Where charges are calculated according to chat duration, applicable charges may be deducted based on the rate displayed on the Platform. A completed chat consultation is ordinarily treated as a consumed service. A refund will not ordinarily be provided merely because the User is dissatisfied with the content, opinion, prediction, advice, response style or outcome.`,
   },
 
   {
     number: "5",
     title: "Voice Consultations",
-    content:
-      "Voice consultation charges may be based on eligible connected consultation time and the rate displayed on the Platform. If a consultation is interrupted because of a verified Vavi Platform failure, Vavi may review call status, connection logs, session identifiers, timestamps and duration records and may restore or refund an eligible unconsumed amount.",
+    content: `Voice consultation charges may be based on eligible connected consultation time and the rate displayed on the Platform. If a consultation is interrupted because of a verified Vavi Platform failure, Vavi may review call status, connection logs, session identifiers, timestamps and duration records and may restore or refund an eligible unconsumed amount.`,
   },
 
   {
     number: "6",
     title: "User-Side Network or Device Issues",
-    content:
-      "A refund will not ordinarily be provided when a consultation fails or is interrupted solely because of User-side issues such as internet failure, poor mobile connectivity, Wi-Fi failure, device malfunction, low battery, incorrect permissions, microphone or speaker problems, closing the application, intentionally disconnecting or using an unsupported or improperly configured device.",
+    content: `A refund will not ordinarily be provided when a consultation fails or is interrupted solely because of User-side issues such as internet failure, poor mobile connectivity, Wi-Fi failure, device malfunction, low battery, incorrect permissions, microphone or speaker problems, closing the application, intentionally disconnecting or using an unsupported or improperly configured device.`,
   },
 
   {
     number: "7",
     title: "Astrologer-Side Failure",
-    content:
-      "If a paid consultation cannot reasonably be delivered because an Astrologer fails to participate, fails to connect, cancels after payment or otherwise does not provide the consultation, Vavi may provide an eligible refund, restore the Wallet amount, offer a replacement consultation, provide Platform credit where accepted or provide another reasonable remedy.",
+    content: `If a paid consultation cannot reasonably be delivered because an Astrologer fails to participate, fails to connect, cancels after payment or otherwise does not provide the consultation, Vavi may provide an eligible refund, restore the Wallet amount, offer a replacement consultation, provide Platform credit where accepted or provide another reasonable remedy.`,
   },
 
   {
     number: "8",
     title: "Cancellation by User",
-    content:
-      "Where the Platform allows cancellation before a consultation begins, cancellation will be processed according to the cancellation functionality displayed in the App. Once a paid consultation has started and service has been provided, cancellation will not ordinarily create an automatic right to a full refund. Any eligible unused or undelivered portion may be reviewed.",
+    content: `Where the Platform allows cancellation before a consultation begins, cancellation will be processed according to the cancellation functionality displayed in the App. Once a paid consultation has started and service has been provided, cancellation will not ordinarily create an automatic right to a full refund. Any eligible unused or undelivered portion may be reviewed.`,
   },
 
   {
     number: "9",
     title: "Cancellation by Astrologer",
-    content:
-      "If an Astrologer cancels or fails to provide a paid consultation before meaningful service is delivered, Vavi may reverse the eligible charge, restore the applicable Wallet amount, issue an eligible refund, allow the User to select another Astrologer or provide another appropriate remedy.",
+    content: `If an Astrologer cancels or fails to provide a paid consultation before meaningful service is delivered, Vavi may reverse the eligible charge, restore the applicable Wallet amount, issue an eligible refund, allow the User to select another Astrologer or provide another appropriate remedy.`,
   },
 
   {
     number: "10",
     title: "Wallet & Platform Credits",
-    content:
-      "Wallet balances, recharge balances, refund credits, promotional credits, cashback credits and bonus credits may be subject to different rules. Unless required by law or expressly permitted under this Policy, Wallet Credits are non-transferable and cannot ordinarily be withdrawn to a bank account, card, UPI account or other external payment method.",
+    content: `Wallet balances, recharge balances, refund credits, promotional credits, cashback credits and bonus credits may be subject to different rules. Unless required by law or expressly permitted under this Policy, Wallet Credits are non-transferable and cannot ordinarily be withdrawn to a bank account, card, UPI account or other external payment method.`,
   },
 
   {
     number: "11",
     title: "Paid Wallet Recharge",
-    content:
-      "A successfully completed Wallet recharge will ordinarily be non-refundable once the corresponding value has been correctly credited to the User's account. This does not prevent Vavi from correcting duplicate recharges, failed transactions, incorrect deductions, unauthorized transactions where legally required or other verified payment errors.",
+    content: `A successfully completed Wallet recharge will ordinarily be non-refundable once the corresponding value has been correctly credited to the User's account. This does not prevent Vavi from correcting duplicate recharges, failed transactions, incorrect deductions, unauthorized transactions where legally required or other verified payment errors.`,
   },
 
   {
     number: "12",
     title: "Promotional & Free Credits",
-    content:
-      "Promotional Credits, bonus Credits, complimentary Credits, free consultation minutes, coupons and rewards generally cannot be redeemed for cash, cannot ordinarily be refunded or transferred, and may have an expiry period or promotional conditions. Unused promotional benefits may expire when an account is permanently closed or deleted.",
+    content: `Promotional Credits, bonus Credits, complimentary Credits, free consultation minutes, coupons and rewards generally cannot be redeemed for cash, cannot ordinarily be refunded or transferred, and may have an expiry period or promotional conditions. Unused promotional benefits may expire when an account is permanently closed or deleted.`,
   },
 
   {
     number: "13",
     title: "Refund Request Process",
-    content:
-      "Where available, Users may submit refund requests through Vavi's in-app customer-support functionality. Alternatively, Users may contact info@theVavi.com. A request should ideally include the registered name, mobile number or email, Transaction ID, payment reference, Consultation ID, transaction date, amount, Astrologer name, issue description and relevant supporting screenshots or information.",
+    content: `Where available, Users may submit refund requests through Vavi's in-app customer-support functionality. Alternatively, Users may contact info@theVavi.com.
+
+A request should ideally include:
+
+• Registered name
+• Mobile number or email
+• Transaction ID
+• Payment reference
+• Consultation ID
+• Transaction date
+• Amount
+• Astrologer name
+• Issue description
+• Relevant supporting screenshots or information`,
   },
 
   {
     number: "14",
     title: "Refund Review",
-    content:
-      "Vavi may review payment records, transaction IDs, Wallet ledger records, consultation records, chat records, call logs, voice-call metadata, consultation duration, technical logs, customer-support communications, Astrologer responses and fraud or security indicators to determine refund eligibility.",
+    content: `Vavi may review payment records, transaction IDs, Wallet ledger records, consultation records, chat records, call logs, voice-call metadata, consultation duration, technical logs, customer-support communications, Astrologer responses and fraud or security indicators to determine refund eligibility.`,
   },
 
   {
     number: "15",
     title: "Refund Processing Timeline",
-    content:
-      "Where a refund is approved following verification, Vavi will ordinarily initiate or process the eligible refund within 7–10 working days from approval or verification of the relevant issue. The time for the amount to appear in the User's bank account, card, UPI account, Wallet or other payment instrument may depend on the relevant bank, gateway, card network, app store or payment provider.",
+    content: `Where a refund is approved following verification, Vavi will ordinarily initiate or process the eligible refund within 7–10 working days from approval or verification of the relevant issue.
+
+The time for the amount to appear in the User's bank account, card, UPI account, Wallet or other payment instrument may depend on the relevant bank, gateway, card network, app store or payment provider.`,
   },
 
   {
     number: "16",
     title: "Refund Method",
-    content:
-      "Where reasonably possible, an approved monetary refund will be processed to the original payment method. Depending on the circumstances, Vavi may also provide Wallet restoration, Platform credit, a replacement consultation or another reasonable remedy. Where applicable law requires a monetary refund, a Platform credit will not replace it without the required basis or agreement.",
+    content: `Where reasonably possible, an approved monetary refund will be processed to the original payment method.
+
+Depending on the circumstances, Vavi may also provide Wallet restoration, Platform credit, a replacement consultation or another reasonable remedy.
+
+Where applicable law requires a monetary refund, a Platform credit will not replace it without the required basis or agreement.`,
   },
 
   {
     number: "17",
     title: "Google Play & Apple App Store Purchases",
-    content:
-      "Where a purchase is processed directly through Google Play or Apple App Store, the applicable store's billing and refund policies may also apply. Where Google or Apple controls the relevant transaction or refund process, the User may need to submit the request through the applicable app store.",
+    content: `Where a purchase is processed directly through Google Play or Apple App Store, the applicable store's billing and refund policies may also apply.
+
+Where Google or Apple controls the relevant transaction or refund process, the User may need to submit the request through the applicable app store.`,
   },
 
   {
     number: "18",
     title: "Unauthorized Transactions",
-    content:
-      "Users should promptly report suspected unauthorized payments or account compromise. Vavi may investigate using account, transaction, device, security and Platform records. Users are responsible for protecting OTPs, passwords, UPI PINs, card PINs, banking credentials, account access and devices.",
+    content: `Users should promptly report suspected unauthorized payments or account compromise.
+
+Vavi may investigate using account, transaction, device, security and Platform records.
+
+Users are responsible for protecting OTPs, passwords, UPI PINs, card PINs, banking credentials, account access and devices.`,
   },
 
   {
     number: "19",
     title: "Chargebacks",
-    content:
-      "Users should contact Vavi regarding a genuine payment dispute before submitting a duplicate or fraudulent chargeback. Users must not knowingly claim an authorized transaction was unauthorized, seek both a Vavi refund and bank chargeback for the same amount, manipulate consultations for refunds or submit fabricated evidence.",
+    content: `Users should contact Vavi regarding a genuine payment dispute before submitting a duplicate or fraudulent chargeback.
+
+Users must not knowingly claim an authorized transaction was unauthorized, seek both a Vavi refund and bank chargeback for the same amount, manipulate consultations for refunds or submit fabricated evidence.`,
   },
 
   {
     number: "20",
     title: "Refund Abuse & Fraud",
-    content:
-      "Vavi may investigate suspected refund abuse, including repeated fraudulent refund claims, intentionally disconnecting consultations to obtain refunds, multiple accounts created for promotional abuse, fake consultations, manipulated transaction information, collusion, duplicate refund claims and fraudulent chargebacks. Good-faith refund requests are not treated as abuse merely because a refund is requested.",
+    content: `Vavi may investigate suspected refund abuse, including:
+
+• Repeated fraudulent refund claims
+• Intentionally disconnecting consultations to obtain refunds
+• Multiple accounts created for promotional abuse
+• Fake consultations
+• Manipulated transaction information
+• Collusion
+• Duplicate refund claims
+• Fraudulent chargebacks
+
+Good-faith refund requests are not treated as abuse merely because a refund is requested.`,
   },
 
   {
     number: "21",
     title: "Taxes & Fees",
-    content:
-      "Where a refund is approved, the treatment of taxes, convenience fees, Platform charges, processing charges and other fees depends on the nature of the charge, whether the service was consumed, payment-provider rules, applicable tax requirements and applicable law.",
+    content: `Where a refund is approved, the treatment of taxes, convenience fees, Platform charges, processing charges and other fees depends on the nature of the charge, whether the service was consumed, payment-provider rules, applicable tax requirements and applicable law.`,
   },
 
   {
     number: "22",
     title: "Third-Party Payment Providers",
-    content:
-      "Vavi may use payment gateways, banks, UPI providers, card networks, app stores and other payment processors. Vavi is not responsible for delays caused solely by an independent payment provider after an approved refund has been correctly initiated by Vavi.",
+    content: `Vavi may use payment gateways, banks, UPI providers, card networks, app stores and other payment processors.
+
+Vavi is not responsible for delays caused solely by an independent payment provider after an approved refund has been correctly initiated by Vavi.`,
   },
 
   {
     number: "23",
     title: "Policy Updates",
-    content:
-      "Vavi may update this Refund & Cancellation Policy to reflect Platform changes, new payment features, Wallet functionality, regulatory requirements, app-store requirements, fraud-prevention measures and operational improvements. Material changes may be communicated through the App, website, email or other reasonable means.",
+    content: `Vavi may update this Refund & Cancellation Policy to reflect Platform changes, new payment features, Wallet functionality, regulatory requirements, app-store requirements, fraud-prevention measures and operational improvements.
+
+Material changes may be communicated through the App, website, email or other reasonable means.`,
   },
 
   {
     number: "24",
     title: "Relationship with Other Policies",
-    content:
-      "This Policy should be read together with the Vavi Terms and Conditions, Privacy Policy, End User License Agreement (EULA), applicable Astrologer/Partner Agreement and other applicable Platform policies. Mandatory legal requirements will prevail where required by law.",
+    content: `This Policy should be read together with the Vavi Terms and Conditions, Privacy Policy, End User License Agreement (EULA), applicable Astrologer/Partner Agreement and other applicable Platform policies.
+
+Mandatory legal requirements will prevail where required by law.`,
   },
 ];
 
@@ -215,7 +235,7 @@ const parseRefundContent = (content) => {
   }
 
   /*
-   * Supports:
+   * Supports API content like:
    *
    * 1. General Refund Principle
    * Vavi facilitates...
@@ -262,7 +282,7 @@ export default function Refund() {
    *
    * API empty/error
    *      ↓
-   * Hardcoded content
+   * Hardcoded VAVI content
    */
 
   const refundSections = useMemo(() => {
@@ -352,7 +372,8 @@ export default function Refund() {
             />
 
             <Text style={styles.offlineText}>
-              Showing the latest available Refund & Cancellation Policy.
+              Showing the latest available Refund & Cancellation
+              Policy.
             </Text>
           </View>
         )}
@@ -499,6 +520,10 @@ export default function Refund() {
             </Text>
           </View>
         ))}
+
+        {/* =================================================
+            BOTTOM SPACE
+            ================================================= */}
 
         <View style={{ height: hp(4) }} />
       </ScrollView>

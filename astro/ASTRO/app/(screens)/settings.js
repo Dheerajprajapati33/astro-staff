@@ -26,6 +26,16 @@ const settingsData = [
   { title: "Refund Policy", icon: "refresh-circle-outline", route: "/refund" },
   // { title: "FAQs", icon: "help-circle-outline", route: "/faqs" },
   { title: "Contact Us", icon: "headset-outline", route: "/contact" },
+
+  { title: "EULA", icon: "document-outline", route: "/EULA"},
+
+  { title: "Contact Policy", icon: "call-outline", route: "/Contact_policy" },
+
+  { title: "Community Guidelines", icon: "people-outline", route: "/Community_guidelines" },
+
+  { title: "Payout Policy", icon: "wallet-outline", route: "/Payout_policy" },
+
+  { title: "Partner Agreement", icon: "business-outline", route: "/Partner_agreement" },
 ];
 const handleLogout = async () => {
   try {

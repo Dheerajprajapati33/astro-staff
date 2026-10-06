@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
 // expo-speech-recognition uses native modules — not available in Expo Go.
 // We wrap the import so the app degrades gracefully.
@@ -35,6 +36,7 @@ import {
 
 import {
   Animated,
+  ActivityIndicator,
   Alert,
   AppState,
   BackHandler,
@@ -57,10 +59,16 @@ import {
 } from "react-native-safe-area-context";
 
 import CountdownTimer from "../../components/chat/CountdownTimer";
+import ChatImagePreviewModal from "../../components/chat/ChatImagePreviewModal";
 import KundliScreen from "./Kundli";
 import Typography from "../../constants/Typography";
 import { hp, RF, wp } from "../../utils/responsive";
 import { getStoredUser } from "../../utils/auth";
+import {
+  getChatImageSizeBytes,
+  MAX_CHAT_IMAGE_SIZE_BYTES,
+  validateChatImage,
+} from "../../services/chatImageValidation";
 
 import {
   connectSocket,
@@ -82,6 +90,7 @@ import {
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useMarkRoomReadMutation,
+  useSendChatImageMessageMutation,
   useSendChatMessageMutation,
 } from "../../redux/ChatApi";
 
@@ -220,7 +229,7 @@ const isDuplicateImageEvent = (first, second) => {
     Math.abs(firstTime - secondTime) < 1000
   );
 };
-const ChatImage = ({ uri }) => {
+const ChatImage = ({ uri, onPress }) => {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
@@ -230,19 +239,26 @@ const ChatImage = ({ uri }) => {
   return failed ? (
     <Text style={styles.msgText}>Could not load this image</Text>
   ) : (
-    <Image
-      source={{ uri }}
-      style={styles.chatImage}
-      resizeMode="contain"
-      onError={(event) => {
-        console.warn(
-          LOG_TAG,
-          "Image renderer failed:",
-          event?.nativeEvent?.error || "unknown image decode/load error",
-        );
-        setFailed(true);
-      }}
-    />
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => onPress?.(uri)}
+      accessibilityRole="imagebutton"
+      accessibilityLabel="View image full screen"
+    >
+      <Image
+        source={{ uri }}
+        style={styles.chatImage}
+        resizeMode="contain"
+        onError={(event) => {
+          console.warn(
+            LOG_TAG,
+            "Image renderer failed:",
+            event?.nativeEvent?.error || "unknown image decode/load error",
+          );
+          setFailed(true);
+        }}
+      />
+    </TouchableOpacity>
   );
 };
 const getChatMessageText = (message) =>
@@ -455,6 +471,10 @@ export default function Chat() {
 
   const [messages, setMessages] =
     useState([]);
+  const [isSendingImage, setIsSendingImage] =
+    useState(false);
+  const [previewImageUri, setPreviewImageUri] =
+    useState(null);
 
   const [clientBirthDetails, setClientBirthDetails] =
     useState(null);
@@ -764,6 +784,10 @@ export default function Chat() {
   const [
     sendChatMessageMutation,
   ] = useSendChatMessageMutation();
+
+  const [
+    sendChatImageMessageMutation,
+  ] = useSendChatImageMessageMutation();
 
   const [
     deleteChatMessageMutation,
@@ -3103,6 +3127,186 @@ const handleSend = async () => {
   }
 };
 
+const pickAndSendImage = useCallback(
+  async (source) => {
+    if (
+      !canMessage ||
+      isSendingImage ||
+      (isConsultationMode && !astrologer?.id) ||
+      (!isConsultationMode && !effectiveRoomId)
+    ) {
+      return;
+    }
+
+    try {
+      const isCamera = source === "camera";
+      const permission = isCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          isCamera ? "Camera permission needed" : "Gallery permission needed",
+          isCamera
+            ? "Allow camera access to take a photo for chat."
+            : "Allow photo access to send an image in chat.",
+        );
+        return;
+      }
+
+      const picker = isCamera
+        ? ImagePicker.launchCameraAsync
+        : ImagePicker.launchImageLibraryAsync;
+      const result = await picker({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.7,
+        base64: true,
+      });
+      if (result.canceled) return;
+
+      const asset = result.assets?.[0];
+      if (!asset?.uri) {
+        throw new Error("The selected image could not be read.");
+      }
+
+      setIsSendingImage(true);
+      if (getChatImageSizeBytes(asset) > MAX_CHAT_IMAGE_SIZE_BYTES) {
+        Alert.alert(
+          "Image too large",
+          "Choose an image that is 8 MB or smaller to send in chat.",
+        );
+        return;
+      }
+
+      const validation = await validateChatImage(asset.uri);
+      if (!validation.isValid) {
+        Alert.alert(
+          "Hand or face not detected",
+          "Choose a clear photo showing a hand, palm, or person before sending.",
+        );
+        return;
+      }
+
+      const mimeType = asset.mimeType || "image/jpeg";
+
+      if (isConsultationMode) {
+        if (!asset.base64) {
+          throw new Error("The selected image could not be read.");
+        }
+
+        const imageData = `data:${mimeType};base64,${asset.base64}`;
+        const clientTempId =
+          `${astrologer.id}-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2, 8)}`;
+        const imageMessage = {
+          clientTempId,
+          senderId: astrologer.id,
+          senderRole: "astrologer",
+          message: imageData,
+          messageType: "IMAGE",
+          createdAt: new Date().toISOString(),
+          status: "sending",
+        };
+
+        setMessages((previous) => [...previous, imageMessage]);
+        const socket = getSocket();
+        const emitted = Boolean(socket?.connected);
+        if (emitted) {
+          socket.emit("send_chat_message", {
+            consultationId,
+            senderId: astrologer.id,
+            senderRole: "astrologer",
+            message: imageData,
+            messageType: "IMAGE",
+            clientTempId,
+          });
+        } else {
+          console.error(
+            LOG_TAG,
+            "Cannot send image while chat socket is disconnected.",
+          );
+        }
+
+        setMessages((previous) =>
+          previous.map((message) =>
+            message.clientTempId === clientTempId
+              ? { ...message, status: emitted ? "sent" : "failed" }
+              : message,
+          ),
+        );
+        if (!emitted) {
+          Alert.alert(
+            "Image send failed",
+            "The chat is disconnected. Please reconnect and try again.",
+          );
+          return;
+        }
+
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToEnd({ animated: true });
+        });
+        return;
+      }
+
+      const fileExtension = mimeType.split("/")[1]?.replace("jpeg", "jpg");
+      const fileName =
+        asset.fileName ||
+        asset.uri.split("/").pop() ||
+        `chat_image.${fileExtension || "jpg"}`;
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType,
+      });
+
+      const caption = inputText.trim();
+      if (caption) formData.append("message", caption);
+
+      await sendChatImageMessageMutation({
+        roomId: effectiveRoomId,
+        formData,
+      }).unwrap();
+      if (caption) setInputText("");
+    } catch (error) {
+      console.error(LOG_TAG, "Image send failed:", error);
+      Alert.alert(
+        "Image send failed",
+        error?.data?.message ||
+          error?.message ||
+          "Unable to choose or send this image.",
+      );
+    } finally {
+      setIsSendingImage(false);
+    }
+  },
+  [
+    canMessage,
+    consultationId,
+    astrologer,
+    effectiveRoomId,
+    inputText,
+    isConsultationMode,
+    isSendingImage,
+    sendChatImageMessageMutation,
+  ],
+);
+
+const handleSendImage = useCallback(() => {
+  Alert.alert("Send image", "Choose how you want to add a photo.", [
+    {
+      text: "Take photo",
+      onPress: () => pickAndSendImage("camera"),
+    },
+    {
+      text: "Choose from gallery",
+      onPress: () => pickAndSendImage("gallery"),
+    },
+    { text: "Cancel", style: "cancel" },
+  ]);
+}, [pickAndSendImage]);
+
 
 /* =========================================================
    END CHAT SESSION
@@ -3362,7 +3566,10 @@ const renderMessage = ({
           </Text>
         ) : isImage ? (
           imageUri ? (
-            <ChatImage uri={imageUri} />
+            <ChatImage
+              uri={imageUri}
+              onPress={setPreviewImageUri}
+            />
           ) : (
             <Text style={styles.msgText}>
               Image data was not included in this message
@@ -3794,6 +4001,15 @@ return (
           INPUT BAR
       ================================================= */}
 
+      {isSendingImage && (
+        <View style={styles.imageSendingIndicator}>
+          <ActivityIndicator size="small" color={ORANGE} />
+          <Text style={styles.imageSendingText}>
+            Checking and sending image...
+          </Text>
+        </View>
+      )}
+
       <View
         style={[
           styles.inputWrapper,
@@ -3806,6 +4022,26 @@ return (
           },
         ]}
       >
+        <TouchableOpacity
+          style={[
+            styles.imageButton,
+            (!canMessage || isSendingImage) && styles.disabledButton,
+          ]}
+          onPress={handleSendImage}
+          disabled={!canMessage || isSendingImage}
+          accessibilityRole="button"
+          accessibilityLabel="Send a chat image"
+        >
+          {isSendingImage ? (
+            <ActivityIndicator size="small" color={ORANGE} />
+          ) : (
+            <Ionicons
+              name="image-outline"
+              size={RF(20)}
+              color={ORANGE}
+            />
+          )}
+        </TouchableOpacity>
 
         {/* TEXT INPUT */}
 
@@ -4040,6 +4276,10 @@ return (
         </Animated.View>
       </View>
     )}
+    <ChatImagePreviewModal
+      imageUri={previewImageUri}
+      onClose={() => setPreviewImageUri(null)}
+    />
     </KeyboardAvoidingView>
   </SafeAreaView>
 );
@@ -4387,6 +4627,21 @@ const styles =
         Typography?.bold,
     },
 
+    imageSendingIndicator: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: hp(0.8),
+      gap: wp(2),
+      backgroundColor: "#fff8f3",
+    },
+
+    imageSendingText: {
+      color: "#607086",
+      fontSize: RF(11),
+      fontWeight: "700",
+      fontFamily: Typography?.bold,
+    },
 
     /* =====================================================
        INPUT
@@ -4408,6 +4663,20 @@ const styles =
         "center",
       backgroundColor:
         "#fff",
+    },
+
+    imageButton: {
+      width: wp(10),
+      height: wp(10),
+      borderRadius: wp(5),
+      backgroundColor: "#fff1e8",
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: wp(2),
+    },
+
+    disabledButton: {
+      opacity: 0.5,
     },
 
     input: {

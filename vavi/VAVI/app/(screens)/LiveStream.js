@@ -76,7 +76,7 @@ export default function LiveStream() {
   const [showGiftSheet, setShowGiftSheet] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
-  const [isMicMuted, setIsMicMuted] = useState(true);
+  // const [isMicMuted, setIsMicMuted] = useState(true);
   const [liveVideoFrame, setLiveVideoFrame] = useState(null);
   const [remoteUid, setRemoteUid] = useState(1); // 👈 Host astrologer ka UID
   const [imageLoadError, setImageLoadError] = useState(false); // 👈 Yeh new state added
@@ -742,69 +742,69 @@ export default function LiveStream() {
   };
 
   // Toggle Client Microphone (Talk to Astrologer)
-  const handleToggleMic = async () => {
-    const next = !isMicMuted;
+  // const handleToggleMic = async () => {
+  //   const next = !isMicMuted;
 
-    // 1. Agar Unmute kre toh Android Mic Permission ensure here
-    if (!next && Platform.OS === "android") {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert(
-            "Permission Required",
-            "Please allow microphone access to speak to the astrologer.",
-          );
-          return;
-        }
-      } catch (pErr) {}
-    }
+  //   // 1. Agar Unmute kre toh Android Mic Permission ensure here
+  //   if (!next && Platform.OS === "android") {
+  //     try {
+  //       const granted = await PermissionsAndroid.request(
+  //         PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+  //       );
+  //       if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+  //         Alert.alert(
+  //           "Permission Required",
+  //           "Please allow microphone access to speak to the astrologer.",
+  //         );
+  //         return;
+  //       }
+  //     } catch (pErr) {}
+  //   }
 
-    setIsMicMuted(next);
+  //   setIsMicMuted(next);
 
-    // 2. Agora RTC mein Role & Audio Track update here
-    if (agoraEngineRef.current) {
-      try {
-        if (!next) {
-          // UNMUTE: Switch to Broadcaster & Publish Mic
-          agoraEngineRef.current.setClientRole(
-            ClientRoleType.ClientRoleBroadcaster || 1,
-          );
-          agoraEngineRef.current.enableLocalAudio(true);
-          agoraEngineRef.current.muteLocalAudioStream(false);
-          if (agoraEngineRef.current.updateChannelMediaOptions) {
-            agoraEngineRef.current.updateChannelMediaOptions({
-              publishMicrophoneTrack: true,
-            });
-          }
-        } else {
-          // MUTE: Switch back to Audience & Stop Mic
-          agoraEngineRef.current.muteLocalAudioStream(true);
-          agoraEngineRef.current.setClientRole(
-            ClientRoleType.ClientRoleAudience || 2,
-          );
-          if (agoraEngineRef.current.updateChannelMediaOptions) {
-            agoraEngineRef.current.updateChannelMediaOptions({
-              publishMicrophoneTrack: false,
-            });
-          }
-        }
-      } catch (e) {
-        console.log(LOG_TAG, "Mic toggle error:", e);
-      }
-    }
+  //   // 2. Agora RTC mein Role & Audio Track update here
+  //   if (agoraEngineRef.current) {
+  //     try {
+  //       if (!next) {
+  //         // UNMUTE: Switch to Broadcaster & Publish Mic
+  //         agoraEngineRef.current.setClientRole(
+  //           ClientRoleType.ClientRoleBroadcaster || 1,
+  //         );
+  //         agoraEngineRef.current.enableLocalAudio(true);
+  //         agoraEngineRef.current.muteLocalAudioStream(false);
+  //         if (agoraEngineRef.current.updateChannelMediaOptions) {
+  //           agoraEngineRef.current.updateChannelMediaOptions({
+  //             publishMicrophoneTrack: true,
+  //           });
+  //         }
+  //       } else {
+  //         // MUTE: Switch back to Audience & Stop Mic
+  //         agoraEngineRef.current.muteLocalAudioStream(true);
+  //         agoraEngineRef.current.setClientRole(
+  //           ClientRoleType.ClientRoleAudience || 2,
+  //         );
+  //         if (agoraEngineRef.current.updateChannelMediaOptions) {
+  //           agoraEngineRef.current.updateChannelMediaOptions({
+  //             publishMicrophoneTrack: false,
+  //           });
+  //         }
+  //       }
+  //     } catch (e) {
+  //       console.log(LOG_TAG, "Mic toggle error:", e);
+  //     }
+  //   }
 
-    // 3. Socket State Emit
-    const socket = getChatSocket();
-    if (socket && liveSessionId) {
-      socket.emit("client_audio_state_change", {
-        liveSessionId: String(liveSessionId),
-        userId: currentUser?.id || "user",
-        isMuted: next,
-      });
-    }
-  };
+  //   // 3. Socket State Emit
+  //   const socket = getChatSocket();
+  //   if (socket && liveSessionId) {
+  //     socket.emit("client_audio_state_change", {
+  //       liveSessionId: String(liveSessionId),
+  //       userId: currentUser?.id || "user",
+  //       isMuted: next,
+  //     });
+  //   }
+  // };
 
   // Handle Close / Exit
   const handleClose = () => {
@@ -1056,7 +1056,7 @@ export default function LiveStream() {
             </View>
 
             {/* Mute/Unmute Mic Button to Talk to Astrologer */}
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[styles.micButton, !isMicMuted && styles.micButtonActive]}
               onPress={handleToggleMic}
               activeOpacity={0.85}
@@ -1066,7 +1066,7 @@ export default function LiveStream() {
                 size={RF(20)}
                 color="#fff"
               />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TouchableOpacity
               style={styles.giftButton}
@@ -1333,18 +1333,18 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  micButton: {
-    width: wp(11),
-    height: wp(11),
-    borderRadius: wp(5.5),
-    backgroundColor: "rgba(0,0,0,0.65)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  micButtonActive: {
-    backgroundColor: "#4CAF50",
-    borderColor: "#4CAF50",
-  },
+  // micButton: {
+  //   width: wp(11),
+  //   height: wp(11),
+  //   borderRadius: wp(5.5),
+  //   backgroundColor: "rgba(0,0,0,0.65)",
+  //   borderWidth: 1,
+  //   borderColor: "rgba(255,255,255,0.2)",
+  //   alignItems: "center",
+  //   justifyContent: "center",
+  // },
+  // micButtonActive: {
+  //   backgroundColor: "#4CAF50",
+  //   borderColor: "#4CAF50",
+  // },
 });

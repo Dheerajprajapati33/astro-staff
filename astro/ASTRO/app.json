@@ -22,6 +22,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -41,7 +42,9 @@
         "ACCESS_NETWORK_STATE",
         "android.permission.ACCESS_NETWORK_STATE",
         "BLUETOOTH_CONNECT",
-        "android.permission.BLUETOOTH_CONNECT"
+        "android.permission.BLUETOOTH_CONNECT",
+        "POST_NOTIFICATIONS",
+        "VIBRATE"
       ]
     },
     "web": {
@@ -55,7 +58,16 @@
       "expo-speech-recognition",
       "expo-build-properties",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Astrologer needs photo access to send images in chat.",
+          "cameraPermission": "Astrologer needs camera access to take photos for chat."
+        }
+      ],
+      "@react-native-firebase/app",
+      "./plugins/with-android-ringtone"
     ],
     "experiments": {
       "typedRoutes": true

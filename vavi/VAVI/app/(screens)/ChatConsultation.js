@@ -20,8 +20,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import ChatHeader from "../../components/chat/ChatHeader";
 import ChatInputBar from "../../components/chat/ChatInputBar";
+import ChatImagePreviewModal from "../../components/chat/ChatImagePreviewModal";
 import MessageBubble from "../../components/chat/MessageBubble";
 import TypingIndicator from "../../components/chat/TypingIndicator";
+import {
+  getChatImageSizeBytes,
+  MAX_CHAT_IMAGE_SIZE_BYTES,
+  validateChatImage,
+} from "../../services/chatImageValidation";
 
 import Colors from "../../constants/Colors";
 import { hp, RF, wp } from "../../utils/responsive";
@@ -65,7 +71,6 @@ const KUNDLI_DETAILS_PREFIX = "__VAVI_KUNDLI_DETAILS_V1__:";
 const KUNDLI_DETAILS_ACK_PREFIX = "__VAVI_KUNDLI_DETAILS_ACK_V1__:";
 const KUNDLI_DETAILS_RETRY_MS = 2000;
 const KUNDLI_DETAILS_MAX_ATTEMPTS = 5;
-const MAX_IMAGE_DATA_URI_LENGTH = 700 * 1024;
 const containsAsciiDigit = (value) =>
   typeof value === "string" && /[0-9]/.test(value);
 const summarizeImagePayload = (message) => {
@@ -231,6 +236,8 @@ export default function ChatConsultation() {
     useState(initialMaxDuration);
 
   const [messages, setMessages] = useState([]);
+  const [isSendingImage, setIsSendingImage] = useState(false);
+  const [previewImageUri, setPreviewImageUri] = useState(null);
   const kundliDetailsSentRef = useRef(false);
 
   const [isAstrologerTyping, setIsAstrologerTyping] =
@@ -1589,28 +1596,37 @@ export default function ChatConsultation() {
       ],
     );
 
-  const handleSendImage = useCallback(async () => {
+  const pickAndSendImage = useCallback(async (source) => {
     if (
       !consultationId ||
       !currentUserId ||
       isBlocked ||
-      isBlockedByOther
+      isBlockedByOther ||
+      isSendingImage
     ) {
       return;
     }
 
+    setIsSendingImage(true);
     try {
-      const permission =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const isCamera = source === "camera";
+      const permission = isCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
         Alert.alert(
-          "Gallery permission needed",
-          "Allow photo access to send an image in chat.",
+          isCamera ? "Camera permission needed" : "Gallery permission needed",
+          isCamera
+            ? "Allow camera access to take a photo for chat."
+            : "Allow photo access to send an image in chat.",
         );
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const picker = isCamera
+        ? ImagePicker.launchCameraAsync
+        : ImagePicker.launchImageLibraryAsync;
+      const result = await picker({
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.5,
@@ -1619,19 +1635,29 @@ export default function ChatConsultation() {
       if (result.canceled) return;
 
       const asset = result.assets?.[0];
-      if (!asset?.base64) {
+      if (!asset?.base64 || !asset?.uri) {
         throw new Error("The selected image could not be read.");
+      }
+
+      if (getChatImageSizeBytes(asset) > MAX_CHAT_IMAGE_SIZE_BYTES) {
+        Alert.alert(
+          "Image too large",
+          "Choose an image that is 8 MB or smaller to send in chat.",
+        );
+        return;
+      }
+
+      const validation = await validateChatImage(asset.uri);
+      if (!validation.isValid) {
+        Alert.alert(
+          "Hand or face not detected",
+          "Choose a clear photo showing a hand, palm, or person before sending.",
+        );
+        return;
       }
 
       const mimeType = asset.mimeType || "image/jpeg";
       const imageData = `data:${mimeType};base64,${asset.base64}`;
-      if (imageData.length > MAX_IMAGE_DATA_URI_LENGTH) {
-        Alert.alert(
-          "Image too large",
-          "Please choose a smaller image (maximum 700 KB encoded size).",
-        );
-        return;
-      }
 
       const clientTempId =
         `${currentUserId}-${Date.now()}-${Math.random()
@@ -1681,13 +1707,30 @@ export default function ChatConsultation() {
         "Image send failed",
         error?.message || "Unable to choose or send this image.",
       );
+    } finally {
+      setIsSendingImage(false);
     }
   }, [
     consultationId,
     currentUserId,
     isBlocked,
     isBlockedByOther,
+    isSendingImage,
   ]);
+
+  const handleSendImage = useCallback(() => {
+    Alert.alert("Send image", "Choose how you want to add a photo.", [
+      {
+        text: "Take photo",
+        onPress: () => pickAndSendImage("camera"),
+      },
+      {
+        text: "Choose from gallery",
+        onPress: () => pickAndSendImage("gallery"),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }, [pickAndSendImage]);
 
   // ==========================
   // RETRY MESSAGE
@@ -2215,6 +2258,9 @@ export default function ChatConsultation() {
                 onRetry={
                   handleRetrySend
                 }
+                onImagePress={
+                  setPreviewImageUri
+                }
               />
             </Pressable>
           )}
@@ -2302,6 +2348,9 @@ export default function ChatConsultation() {
           onSendImage={
             handleSendImage
           }
+          imageSending={
+            isSendingImage
+          }
           onTyping={
             handleTyping
           }
@@ -2349,6 +2398,10 @@ export default function ChatConsultation() {
 
           router.back();
         }}
+      />
+      <ChatImagePreviewModal
+        imageUri={previewImageUri}
+        onClose={() => setPreviewImageUri(null)}
       />
     </SafeAreaView>
   );

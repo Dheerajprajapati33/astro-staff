@@ -5,6 +5,7 @@ import {
 } from "expo-speech-recognition";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -19,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ChatInputBar({
   disabled,
+  imageSending = false,
   onSend,
   onSendImage,
   onTyping,
@@ -238,6 +240,15 @@ export default function ChatInputBar({
         </View>
       ) : null}
 
+      {imageSending ? (
+        <View style={styles.imageSendingRow}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.imageSendingText}>
+            Checking and sending image...
+          </Text>
+        </View>
+      ) : null}
+
       {/* ====================================== */}
       {/* INPUT BAR */}
       {/* ====================================== */}
@@ -252,17 +263,21 @@ export default function ChatInputBar({
           activeOpacity={0.8}
           style={[
             styles.galleryButton,
-            disabled && styles.micButtonDisabled,
+            (disabled || imageSending) && styles.micButtonDisabled,
           ]}
           onPress={onSendImage}
-          disabled={disabled}
-          accessibilityLabel="Choose image from gallery"
+          disabled={disabled || imageSending}
+          accessibilityLabel="Send a chat image"
         >
-          <Ionicons
-            name="image-outline"
-            size={RF(21)}
-            color={Colors.primary}
-          />
+          {imageSending ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <Ionicons
+              name="image-outline"
+              size={RF(21)}
+              color={Colors.primary}
+            />
+          )}
         </TouchableOpacity>
 
         <TextInput
@@ -373,6 +388,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: wp(1),
+  },
+
+  imageSendingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: hp(0.8),
+    gap: wp(2),
+    backgroundColor: "#fff8f3",
+  },
+
+  imageSendingText: {
+    color: Colors.textGray,
+    fontSize: RF(11),
+    fontWeight: "700",
   },
 
   micBtn: {
