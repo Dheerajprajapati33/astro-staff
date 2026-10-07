@@ -60,7 +60,12 @@ export default function ChatRequestProvider({ children }) {
   // which is confirmed working, and filter to chat consultations ourselves.
   const { data: waitingData, error: waitingError } =
     useGetConsultationHistoryQuery(
-      { page: 1, limit: 10, status: "waiting" },
+      {
+        page: 1,
+        limit: 10,
+        status: "waiting",
+        pollingKey: "incoming-chat-requests",
+      },
       { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
     );
 

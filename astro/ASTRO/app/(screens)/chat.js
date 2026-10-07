@@ -90,9 +90,10 @@ import {
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
   useMarkRoomReadMutation,
-  useSendChatImageMessageMutation,
   useSendChatMessageMutation,
+  useUploadChatImageMutation,
 } from "../../redux/ChatApi";
+import { resolveImageUri } from "../../config/api";
 
 // IMPORTANT: Client Kundli API
 import { useGetFullKundliMutation } from "../../redux/KundliApi";
@@ -110,6 +111,15 @@ const KUNDLI_DETAILS_PREFIX = "__VAVI_KUNDLI_DETAILS_V1__:";
 const KUNDLI_DETAILS_ACK_PREFIX = "__VAVI_KUNDLI_DETAILS_ACK_V1__:";
 const containsAsciiDigit = (value) =>
   typeof value === "string" && /[0-9]/.test(value);
+const normalizeChatImageUri = (uri) => {
+  if (
+    typeof uri !== "string" ||
+    /^(data:image\/|file:\/\/|content:\/\/|blob:)/i.test(uri)
+  ) {
+    return uri;
+  }
+  return resolveImageUri(uri)?.uri;
+};
 const summarizeImagePayload = (message) => {
   const fields = [
     "message",
@@ -149,6 +159,8 @@ const summarizeImagePayload = (message) => {
 };
 const getImageChatUri = (message) => {
   const candidates = [
+    message?.metadata?.imageUrl,
+    message?.metadata?.uri,
     message?.message,
     message?.imageUrl,
     message?.image,
@@ -172,7 +184,7 @@ const getImageChatUri = (message) => {
       typeof value === "string" &&
       /^(data:image\/|https?:\/\/|file:\/\/|content:\/\/|blob:)/i.test(value),
   );
-  if (uri) return uri;
+  if (uri) return normalizeChatImageUri(uri);
 
   if (
     String(message?.messageType || message?.type || "").toUpperCase() !==
@@ -187,18 +199,36 @@ const getImageChatUri = (message) => {
       value.length > 256 &&
       /^[A-Za-z0-9+/]+={0,2}$/.test(value),
   );
-  if (!base64) return undefined;
+  if (base64) {
+    const mimeType = base64.startsWith("iVBORw0KGgo")
+      ? "image/png"
+      : base64.startsWith("/9j/")
+        ? "image/jpeg"
+        : base64.startsWith("R0lGOD")
+          ? "image/gif"
+          : base64.startsWith("UklGR")
+            ? "image/webp"
+            : "image/jpeg";
+    return `data:${mimeType};base64,${base64}`;
+  }
 
-  const mimeType = base64.startsWith("iVBORw0KGgo")
-    ? "image/png"
-    : base64.startsWith("/9j/")
-      ? "image/jpeg"
-      : base64.startsWith("R0lGOD")
-        ? "image/gif"
-        : base64.startsWith("UklGR")
-          ? "image/webp"
-          : "image/jpeg";
-  return `data:${mimeType};base64,${base64}`;
+  const relativeUri = [
+    message?.metadata?.imageUrl,
+    message?.metadata?.uri,
+    message?.imageUrl,
+    message?.image?.url,
+    message?.image?.uri,
+    message?.url,
+    message?.content?.url,
+    message?.data?.url,
+    message?.payload?.imageUrl,
+    message?.message,
+  ].find(
+    (value) =>
+      typeof value === "string" &&
+      /^(\/|\.{1,2}\/|uploads\/|chat\/)/i.test(value),
+  );
+  return relativeUri ? normalizeChatImageUri(relativeUri) : undefined;
 };
 const isImageChatMessage = (message) =>
   String(message?.messageType || message?.type || "").toUpperCase() ===
@@ -786,8 +816,8 @@ export default function Chat() {
   ] = useSendChatMessageMutation();
 
   const [
-    sendChatImageMessageMutation,
-  ] = useSendChatImageMessageMutation();
+    uploadChatImageMutation,
+  ] = useUploadChatImageMutation();
 
   const [
     deleteChatMessageMutation,
@@ -3160,7 +3190,6 @@ const pickAndSendImage = useCallback(
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.7,
-        base64: true,
       });
       if (result.canceled) return;
 
@@ -3188,13 +3217,29 @@ const pickAndSendImage = useCallback(
       }
 
       const mimeType = asset.mimeType || "image/jpeg";
+      if (isConsultationMode && !getSocket()?.connected) {
+        throw new Error("The chat is disconnected. Please reconnect and retry.");
+      }
+      const fileExtension = mimeType.split("/")[1]?.replace("jpeg", "jpg");
+      const fileName =
+        asset.fileName ||
+        asset.uri.split("/").pop() ||
+        `chat_image.${fileExtension || "jpg"}`;
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType,
+      });
+
+      const uploadedImage =
+        await uploadChatImageMutation(formData).unwrap();
+      if (!uploadedImage?.imageUrl) {
+        throw new Error("Image upload did not return an image URL.");
+      }
+      const imageUrl = normalizeChatImageUri(uploadedImage.imageUrl);
 
       if (isConsultationMode) {
-        if (!asset.base64) {
-          throw new Error("The selected image could not be read.");
-        }
-
-        const imageData = `data:${mimeType};base64,${asset.base64}`;
         const clientTempId =
           `${astrologer.id}-${Date.now()}-${Math.random()
             .toString(36)
@@ -3203,8 +3248,12 @@ const pickAndSendImage = useCallback(
           clientTempId,
           senderId: astrologer.id,
           senderRole: "astrologer",
-          message: imageData,
+          message: imageUrl,
           messageType: "IMAGE",
+          metadata: {
+            ...uploadedImage,
+            imageUrl,
+          },
           createdAt: new Date().toISOString(),
           status: "sending",
         };
@@ -3217,8 +3266,12 @@ const pickAndSendImage = useCallback(
             consultationId,
             senderId: astrologer.id,
             senderRole: "astrologer",
-            message: imageData,
+            message: imageUrl,
             messageType: "IMAGE",
+            metadata: {
+              ...uploadedImage,
+              imageUrl,
+            },
             clientTempId,
           });
         } else {
@@ -3249,24 +3302,15 @@ const pickAndSendImage = useCallback(
         return;
       }
 
-      const fileExtension = mimeType.split("/")[1]?.replace("jpeg", "jpg");
-      const fileName =
-        asset.fileName ||
-        asset.uri.split("/").pop() ||
-        `chat_image.${fileExtension || "jpg"}`;
-      const formData = new FormData();
-      formData.append("image", {
-        uri: asset.uri,
-        name: fileName,
-        type: mimeType,
-      });
-
       const caption = inputText.trim();
-      if (caption) formData.append("message", caption);
-
-      await sendChatImageMessageMutation({
+      await sendChatMessageMutation({
         roomId: effectiveRoomId,
-        formData,
+        message: imageUrl,
+        messageType: "IMAGE",
+        metadata: {
+          ...uploadedImage,
+          caption: caption || null,
+        },
       }).unwrap();
       if (caption) setInputText("");
     } catch (error) {
@@ -3289,7 +3333,8 @@ const pickAndSendImage = useCallback(
     inputText,
     isConsultationMode,
     isSendingImage,
-    sendChatImageMessageMutation,
+    sendChatMessageMutation,
+    uploadChatImageMutation,
   ],
 );
 
@@ -3581,6 +3626,11 @@ const renderMessage = ({
           </Text>
         )}
 
+        {isImage && item.metadata?.caption ? (
+          <Text style={styles.msgText}>
+            {item.metadata.caption}
+          </Text>
+        ) : null}
 
         <Text
           style={

@@ -293,16 +293,16 @@ export const chatApi = createApi({
       ],
     }),
 
-    sendChatImageMessage: builder.mutation({
-      query: ({ roomId, formData }) => ({
-        url: `/chat/rooms/${roomId}/messages`,
+    uploadChatImage: builder.mutation({
+      query: (formData) => ({
+        url: "/chat/upload-image",
         method: "POST",
         body: formData,
       }),
 
       transformResponse: (response) => {
-        if (!response?.success) {
-          return null;
+        if (!response?.success && !response?.status) {
+          throw new Error(response?.message || "Image upload failed.");
         }
         return response?.data ?? null;
       },
@@ -310,17 +310,11 @@ export const chatApi = createApi({
       transformErrorResponse: (error) => {
         console.log(
           LOG_TAG,
-          "sendChatImageMessage ERROR response:",
+          "uploadChatImage ERROR response:",
           JSON.stringify(error),
         );
         return error;
       },
-
-      invalidatesTags: (result, error, { roomId }) => [
-        { type: "ChatMessages", id: roomId },
-        { type: "ChatRooms", id: roomId },
-        { type: "ChatRooms", id: "LIST" },
-      ],
     }),
 
     // ==========================
@@ -533,7 +527,7 @@ export const {
   useGetChatMessagesQuery,
   useLazyGetChatMessagesQuery,
   useSendChatMessageMutation,
-  useSendChatImageMessageMutation,
+  useUploadChatImageMutation,
   useDeleteChatMessageMutation,
   useMarkRoomReadMutation,
   useGetConsultationHistoryQuery,

@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 
 import Colors from "../../constants/Colors";
+import { resolveImageUri } from "../../config/api";
 import { hp, RF, wp } from "../../utils/responsive";
 
 function ChatImage({ uri, onPress }) {
@@ -48,6 +49,8 @@ export default function MessageBubble({
     String(message?.messageType || message?.type || "").toUpperCase() ===
     "IMAGE";
   const candidates = [
+    message?.metadata?.imageUrl,
+    message?.metadata?.uri,
     message?.imageUrl,
     message?.image?.url,
     message?.image?.uri,
@@ -64,11 +67,16 @@ export default function MessageBubble({
     message?.content,
     message?.text,
   ];
-  let imageUri = candidates.find(
+  const foundImageUri = candidates.find(
     (value) =>
       typeof value === "string" &&
       /^(data:image\/|https?:\/\/|file:\/\/|content:\/\/|blob:)/i.test(value),
   );
+  let imageUri =
+    typeof foundImageUri === "string" &&
+    !/^(data:image\/|file:\/\/|content:\/\/|blob:)/i.test(foundImageUri)
+      ? resolveImageUri(foundImageUri)?.uri
+      : foundImageUri;
 
   if (!imageUri && isImageType) {
     const base64 = candidates.find(
@@ -89,6 +97,27 @@ export default function MessageBubble({
               : "image/jpeg";
       imageUri = `data:${mimeType};base64,${base64}`;
     }
+  }
+  if (!imageUri && isImageType) {
+    const relativeUri = [
+      message?.metadata?.imageUrl,
+      message?.metadata?.uri,
+      message?.imageUrl,
+      message?.image?.url,
+      message?.image?.uri,
+      message?.url,
+      message?.content?.url,
+      message?.data?.url,
+      message?.payload?.imageUrl,
+      message?.message,
+    ].find(
+      (value) =>
+        typeof value === "string" &&
+        /^(\/|\.{1,2}\/|uploads\/|chat\/)/i.test(value),
+    );
+    imageUri = relativeUri
+      ? resolveImageUri(relativeUri)?.uri
+      : undefined;
   }
   const isImage = isImageType || Boolean(imageUri);
 
@@ -111,6 +140,10 @@ export default function MessageBubble({
       ) : (
         <Text style={styles.text}>{message?.message}</Text>
       )}
+
+      {isImage && message?.metadata?.caption ? (
+        <Text style={styles.text}>{message.metadata.caption}</Text>
+      ) : null}
 
       {isFailed ? (
         <Text style={styles.failedText}>

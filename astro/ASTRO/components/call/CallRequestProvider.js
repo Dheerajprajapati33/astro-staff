@@ -74,7 +74,12 @@ export default function CallRequestProvider({ children }) {
   // Working fallback: poll waiting consultations filtered by consultationType === "call"
   const { data: waitingData, error: waitingError } =
     useGetConsultationHistoryQuery(
-      { page: 1, limit: 10, status: "waiting" },
+      {
+        page: 1,
+        limit: 10,
+        status: "waiting",
+        pollingKey: "incoming-call-requests",
+      },
       { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
     );
 

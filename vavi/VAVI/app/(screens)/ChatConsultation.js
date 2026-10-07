@@ -36,7 +36,9 @@ import {
   useCreateReviewMutation,
   useDeleteChatMessageMutation,
   useGetConsultationHistoryQuery,
+  useUploadChatImageMutation,
 } from "../../redux/consultationApi";
+import { resolveImageUri } from "../../config/api";
 
 import PostConsultationReviewModal from "../../components/review/PostConsultationReviewModal";
 
@@ -73,6 +75,15 @@ const KUNDLI_DETAILS_RETRY_MS = 2000;
 const KUNDLI_DETAILS_MAX_ATTEMPTS = 5;
 const containsAsciiDigit = (value) =>
   typeof value === "string" && /[0-9]/.test(value);
+const normalizeChatImageUri = (uri) => {
+  if (
+    typeof uri !== "string" ||
+    /^(data:image\/|file:\/\/|content:\/\/|blob:)/i.test(uri)
+  ) {
+    return uri;
+  }
+  return resolveImageUri(uri)?.uri;
+};
 const summarizeImagePayload = (message) => {
   const fields = [
     "message",
@@ -116,6 +127,8 @@ const isImageMessage = (message) =>
   Boolean(getImageUri(message));
 const getImageUri = (message) => {
   const candidates = [
+    message?.metadata?.imageUrl,
+    message?.metadata?.uri,
     message?.message,
     message?.imageUrl,
     message?.image,
@@ -139,7 +152,7 @@ const getImageUri = (message) => {
       typeof value === "string" &&
       /^(data:image\/|https?:\/\/|file:\/\/|content:\/\/|blob:)/i.test(value),
   );
-  if (uri) return uri;
+  if (uri) return normalizeChatImageUri(uri);
 
   if (
     String(message?.messageType || message?.type || "").toUpperCase() !==
@@ -154,18 +167,36 @@ const getImageUri = (message) => {
       value.length > 256 &&
       /^[A-Za-z0-9+/]+={0,2}$/.test(value),
   );
-  if (!base64) return undefined;
+  if (base64) {
+    const mimeType = base64.startsWith("iVBORw0KGgo")
+      ? "image/png"
+      : base64.startsWith("/9j/")
+        ? "image/jpeg"
+        : base64.startsWith("R0lGOD")
+          ? "image/gif"
+          : base64.startsWith("UklGR")
+            ? "image/webp"
+            : "image/jpeg";
+    return `data:${mimeType};base64,${base64}`;
+  }
 
-  const mimeType = base64.startsWith("iVBORw0KGgo")
-    ? "image/png"
-    : base64.startsWith("/9j/")
-      ? "image/jpeg"
-      : base64.startsWith("R0lGOD")
-        ? "image/gif"
-        : base64.startsWith("UklGR")
-          ? "image/webp"
-          : "image/jpeg";
-  return `data:${mimeType};base64,${base64}`;
+  const relativeUri = [
+    message?.metadata?.imageUrl,
+    message?.metadata?.uri,
+    message?.imageUrl,
+    message?.image?.url,
+    message?.image?.uri,
+    message?.url,
+    message?.content?.url,
+    message?.data?.url,
+    message?.payload?.imageUrl,
+    message?.message,
+  ].find(
+    (value) =>
+      typeof value === "string" &&
+      /^(\/|\.{1,2}\/|uploads\/|chat\/)/i.test(value),
+  );
+  return relativeUri ? normalizeChatImageUri(relativeUri) : undefined;
 };
 const sameImageMessage = (first, second) =>
   isImageMessage(first) &&
@@ -270,6 +301,9 @@ export default function ChatConsultation() {
 
   const [deleteChatMessageMutation] =
     useDeleteChatMessageMutation();
+
+  const [uploadChatImageMutation] =
+    useUploadChatImageMutation();
 
   const [toggleBlockUserMutation] =
     useToggleBlockUserMutation();
@@ -969,13 +1003,6 @@ export default function ChatConsultation() {
         return;
       }
 
-      // Existing join flow
-      joinChatSession({
-        consultationId,
-        userId: currentUserId,
-        role: "user",
-      });
-
       // ==========================
       // CHAT STARTED
       // ==========================
@@ -1195,6 +1222,12 @@ export default function ChatConsultation() {
       unsubscribeDeletedMessage = onChatMessageDeleted(
         handleChatMessageDeleted,
       );
+
+      joinChatSession({
+        consultationId,
+        userId: currentUserId,
+        role: "user",
+      });
     };
 
     setup();
@@ -1630,12 +1663,11 @@ export default function ChatConsultation() {
         mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.5,
-        base64: true,
       });
       if (result.canceled) return;
 
       const asset = result.assets?.[0];
-      if (!asset?.base64 || !asset?.uri) {
+      if (!asset?.uri) {
         throw new Error("The selected image could not be read.");
       }
 
@@ -1657,7 +1689,27 @@ export default function ChatConsultation() {
       }
 
       const mimeType = asset.mimeType || "image/jpeg";
-      const imageData = `data:${mimeType};base64,${asset.base64}`;
+      if (!getChatSocket()?.connected) {
+        throw new Error("The chat is disconnected. Please reconnect and retry.");
+      }
+      const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg");
+      const fileName =
+        asset.fileName ||
+        asset.uri.split("/").pop() ||
+        `chat_image.${extension || "jpg"}`;
+      const formData = new FormData();
+      formData.append("image", {
+        uri: asset.uri,
+        name: fileName,
+        type: mimeType,
+      });
+
+      const uploadedImage =
+        await uploadChatImageMutation(formData).unwrap();
+      if (!uploadedImage?.imageUrl) {
+        throw new Error("Image upload did not return an image URL.");
+      }
+      const imageUrl = normalizeChatImageUri(uploadedImage.imageUrl);
 
       const clientTempId =
         `${currentUserId}-${Date.now()}-${Math.random()
@@ -1667,8 +1719,12 @@ export default function ChatConsultation() {
         clientTempId,
         senderId: currentUserId,
         senderRole: "user",
-        message: imageData,
+        message: imageUrl,
         messageType: "IMAGE",
+        metadata: {
+          ...uploadedImage,
+          imageUrl,
+        },
         createdAt: new Date().toISOString(),
         status: "sending",
       };
@@ -1678,8 +1734,12 @@ export default function ChatConsultation() {
         consultationId,
         senderId: currentUserId,
         senderRole: "user",
-        message: imageData,
+        message: imageUrl,
         messageType: "IMAGE",
+        metadata: {
+          ...uploadedImage,
+          imageUrl,
+        },
         clientTempId,
       });
 
@@ -1705,7 +1765,9 @@ export default function ChatConsultation() {
       console.log(LOG_TAG, "Gallery image send failed:", error);
       Alert.alert(
         "Image send failed",
-        error?.message || "Unable to choose or send this image.",
+        error?.data?.message ||
+          error?.message ||
+          "Unable to choose or send this image.",
       );
     } finally {
       setIsSendingImage(false);
@@ -1716,6 +1778,7 @@ export default function ChatConsultation() {
     isBlocked,
     isBlockedByOther,
     isSendingImage,
+    uploadChatImageMutation,
   ]);
 
   const handleSendImage = useCallback(() => {

@@ -5,6 +5,12 @@ export const BASE_URL =
 
 export const resolveImageUri = (uri) => {
   if (!uri) return null;
+  const localServerUrl = uri.match(
+    /^https?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(\/.*)?$/i,
+  );
+  if (localServerUrl) {
+    return { uri: `${BASE_URL}${localServerUrl[1] || ""}` };
+  }
   if (uri.startsWith("http://") || uri.startsWith("https://")) {
     return { uri };
   }

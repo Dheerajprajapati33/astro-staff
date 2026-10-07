@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import {
   getMessaging,
   getToken,
+  onMessage,
   onTokenRefresh,
 } from "@react-native-firebase/messaging";
 import notifee from "@notifee/react-native";
@@ -9,6 +10,8 @@ import { useSegments } from "expo-router";
 
 import { getStoredUser } from "../../utils/auth";
 import { BASE_URL } from "../../config/api";
+import { chatApi } from "../../redux/ChatApi";
+import { store } from "../../redux/store";
 import { setupNotificationChannels } from "../../services/notifications";
 
 const LOG_TAG = "[PushNotificationProvider]";
@@ -43,6 +46,30 @@ export default function PushNotificationProvider({ children }) {
 
   useEffect(() => {
     let unsubscribeTokenRefresh;
+    const unsubscribeForegroundMessage = onMessage(
+      messagingInstance,
+      async (remoteMessage) => {
+        const type = remoteMessage?.data?.type?.toUpperCase();
+        if (type !== "CALL_REQUEST" && type !== "CHAT_REQUEST") return;
+
+        try {
+          await store
+            .dispatch(
+              chatApi.endpoints.getConsultationHistory.initiate(
+                { page: 1, limit: 10, status: "waiting" },
+                { forceRefetch: true, subscribe: false },
+              ),
+            )
+            .unwrap();
+        } catch (error) {
+          console.error(
+            LOG_TAG,
+            "Could not refresh incoming requests after foreground push:",
+            error,
+          );
+        }
+      },
+    );
 
     setupPromiseRef.current = (async () => {
       await setupNotificationChannels();
@@ -75,6 +102,7 @@ export default function PushNotificationProvider({ children }) {
 
     return () => {
       unsubscribeTokenRefresh?.();
+      unsubscribeForegroundMessage();
     };
   }, []);
 

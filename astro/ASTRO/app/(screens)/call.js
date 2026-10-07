@@ -921,6 +921,8 @@ export default function CallScreen() {
     if (!consultationId || callStatusRef.current === "ended") return;
 
     let isMounted = true;
+    let offStart = () => {};
+    let offEnd = () => {};
 
     const setup = async () => {
       const astrologerUser = await getStoredUser();
@@ -928,6 +930,13 @@ export default function CallScreen() {
 
       await connectSocket(astrologerUser?.token);
       if (!isMounted || callStatusRef.current === "ended") return;
+
+      offStart = onEvent("call_started", (data) =>
+        handleCallStartedRef.current?.(data),
+      );
+      offEnd = onEvent("call_ended", (data) =>
+        handleCallEndedEventRef.current?.(data),
+      );
 
       joinCallConsultation({
         consultationId,
@@ -937,24 +946,14 @@ export default function CallScreen() {
 
       // Automatically join Agora RTC voice call session upon screen mount
       handleCallStartedRef.current?.({ maxDurationSeconds });
-
-      const offStart = onEvent("call_started", (data) =>
-        handleCallStartedRef.current?.(data),
-      );
-      const offEnd = onEvent("call_ended", (data) =>
-        handleCallEndedEventRef.current?.(data),
-      );
-
-      return () => {
-        offStart();
-        offEnd();
-      };
     };
 
     setup();
 
     return () => {
       isMounted = false;
+      offStart();
+      offEnd();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       if (durationIntervalRef.current)
         clearInterval(durationIntervalRef.current);

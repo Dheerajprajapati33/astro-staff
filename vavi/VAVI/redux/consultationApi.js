@@ -38,6 +38,21 @@ export const consultationApi = createApi({
   ],
 
   endpoints: (builder) => ({
+    uploadChatImage: builder.mutation({
+      query: (formData) => ({
+        url: "/chat/upload-image",
+        method: "POST",
+        body: formData,
+      }),
+
+      transformResponse: (response) => {
+        if (!response?.success && !response?.status) {
+          throw new Error(response?.message || "Image upload failed.");
+        }
+        return response?.data ?? null;
+      },
+    }),
+
     // ==========================
     // CREATE CHAT CONSULTATION
     // ==========================
@@ -199,6 +214,7 @@ export const consultationApi = createApi({
 });
 
 export const {
+  useUploadChatImageMutation,
   useCreateConsultationMutation,
   useGetChatMessagesQuery,
   useGetConsultationHistoryQuery,
