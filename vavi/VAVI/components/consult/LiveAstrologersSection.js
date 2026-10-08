@@ -14,6 +14,7 @@ import Colors from "../../constants/Colors";
 import { resolveImageUri } from "../../config/api";
 import { hp, RF, wp } from "../../utils/responsive";
 import { useGetLiveSessionsQuery } from "../../redux/liveApi";
+import { connectChatSocket } from "../../services/chatSocketService";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -22,6 +23,7 @@ const ORANGE = "#ff6a00";
 export default function LiveAstrologersSection() {
   const segments = useSegments();
   const [hasToken, setHasToken] = React.useState(false);
+  const [liveStreams, setLiveStreams] = React.useState([]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -40,14 +42,110 @@ export default function LiveAstrologersSection() {
     };
   }, [segments]);
 
-  const { data: liveData, refetch } = useGetLiveSessionsQuery(
+  // Initial fetch on mount (without polling intervals)
+  const { data: liveData } = useGetLiveSessionsQuery(
     { page: 1, limit: 10 },
     {
-      pollingInterval: 4000,
       refetchOnMountOrArgChange: true,
       refetchOnFocus: true,
     },
   );
+
+  // Sync initial API response to local state
+  React.useEffect(() => {
+    const rawSessions = Array.isArray(liveData?.data?.sessions)
+      ? liveData.data.sessions
+      : Array.isArray(liveData?.data?.liveSessions)
+        ? liveData.data.liveSessions
+        : Array.isArray(liveData?.data?.rows)
+          ? liveData.data.rows
+          : Array.isArray(liveData?.data)
+            ? liveData.data
+            : Array.isArray(liveData)
+              ? liveData
+              : [];
+
+    const activeSessions = rawSessions.filter(
+      (s) =>
+        s &&
+        s.status !== "ended" &&
+        s.status !== "completed" &&
+        s.isLive !== false,
+    );
+    setLiveStreams(activeSessions);
+  }, [liveData]);
+
+  // Real-time socket listeners for Live Streams
+  React.useEffect(() => {
+    let socketInstance = null;
+    let isMounted = true;
+
+    const initSocket = async () => {
+      try {
+        socketInstance = await connectChatSocket();
+        if (!socketInstance || !isMounted) return;
+
+        // 1. Koi Astrologer Live aaya -> Turant state me add karo bina API call ke
+        const handleLiveStarted = (newLive) => {
+          if (!newLive) return;
+          console.log("🔴 Live Stream Started:", newLive?.title || newLive?.liveSessionId);
+
+          const newId = String(
+            newLive?.liveSessionId || newLive?.id || newLive?._id || ""
+          );
+          if (!newId) return;
+
+          setLiveStreams((prev) => {
+            const exists = prev.some((item) => {
+              const itemId = String(
+                item?.liveSessionId || item?.id || item?._id || ""
+              );
+              return itemId === newId;
+            });
+            if (exists) return prev;
+            return [newLive, ...prev];
+          });
+        };
+
+        // 2. Astrologer Live se gaya -> Turant state se hata do
+        const handleLiveEnded = (data) => {
+          const endedId = String(
+            data?.liveSessionId ||
+              data?.id ||
+              data?.sessionId ||
+              data?._id ||
+              (typeof data === "string" ? data : "")
+          );
+          console.log("⚪ Live Stream Ended:", endedId);
+          if (!endedId) return;
+
+          setLiveStreams((prev) =>
+            prev.filter((item) => {
+              const itemId = String(
+                item?.liveSessionId || item?.id || item?._id || ""
+              );
+              return itemId !== endedId;
+            })
+          );
+        };
+
+        socketInstance.on("live_stream_started", handleLiveStarted);
+        socketInstance.on("live_stream_ended", handleLiveEnded);
+      } catch (e) {
+        console.log("[LiveAstrologersSection] Socket setup error:", e);
+      }
+    };
+
+    initSocket();
+
+    return () => {
+      isMounted = false;
+      if (socketInstance) {
+        socketInstance.off("live_stream_started");
+        socketInstance.off("live_stream_ended");
+      }
+    };
+  }, []);
 
   // Multi-tab sync on Web
   React.useEffect(() => {
@@ -55,42 +153,49 @@ export default function LiveAstrologersSection() {
       try {
         const channel = new window.BroadcastChannel("vavi_live_stream_sync");
         channel.onmessage = (event) => {
-          if (
-            event.data?.type === "live_stream_started" ||
-            event.data?.type === "live_stream_ended" ||
-            event.data?.type === "live_video_frame"
-          ) {
-            refetch();
+          if (event.data?.type === "live_stream_started") {
+            const newLive = event.data;
+            const newId = String(
+              newLive?.liveSessionId || newLive?.id || newLive?._id || ""
+            );
+            if (newId) {
+              setLiveStreams((prev) => {
+                const exists = prev.some((item) => {
+                  const itemId = String(
+                    item?.liveSessionId || item?.id || item?._id || ""
+                  );
+                  return itemId === newId;
+                });
+                if (exists) return prev;
+                return [newLive, ...prev];
+              });
+            }
+          } else if (event.data?.type === "live_stream_ended") {
+            const endedId = String(
+              event.data?.liveSessionId ||
+                event.data?.id ||
+                event.data?.sessionId ||
+                ""
+            );
+            if (endedId) {
+              setLiveStreams((prev) =>
+                prev.filter((item) => {
+                  const itemId = String(
+                    item?.liveSessionId || item?.id || item?._id || ""
+                  );
+                  return itemId !== endedId;
+                })
+              );
+            }
           }
         };
         return () => channel.close();
       } catch (e) {}
     }
-  }, [refetch]);
-
-  const rawSessions = Array.isArray(liveData?.data?.sessions)
-    ? liveData.data.sessions
-    : Array.isArray(liveData?.data?.liveSessions)
-      ? liveData.data.liveSessions
-      : Array.isArray(liveData?.data?.rows)
-        ? liveData.data.rows
-        : Array.isArray(liveData?.data)
-          ? liveData.data
-          : Array.isArray(liveData)
-            ? liveData
-            : [];
-
-  // Filter out any ended sessions
-  const sessions = rawSessions.filter(
-    (s) =>
-      s &&
-      s.status !== "ended" &&
-      s.status !== "completed" &&
-      s.isLive !== false,
-  );
+  }, []);
 
   // Only show when there is an active live stream; remove completely when ended
-  if (!sessions || sessions.length === 0) {
+  if (!liveStreams || liveStreams.length === 0) {
     return null;
   }
 
@@ -130,7 +235,7 @@ export default function LiveAstrologersSection() {
       </View>
 
       <FlatList
-        data={sessions}
+        data={liveStreams}
         horizontal
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item) =>

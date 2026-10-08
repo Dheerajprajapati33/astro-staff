@@ -182,10 +182,14 @@ export const endCallConsultation = (params, defaultReason = "completed") => {
 export const removeCallListeners = () => {
   if (!socket) return;
   console.log(LOG_TAG, "Removing call listeners");
-  socket.off("call_started");
-  socket.off("consultation_started");
-  socket.off("call_accepted");
-  socket.off("call_ended");
+  try {
+    socket.off("call_started");
+    socket.off("consultation_started");
+    socket.off("call_accepted");
+    socket.off("call_ended");
+    socket.off("consultation_ended");
+    socket.off("call_cancelled");
+  } catch (_e) {}
 };
 
 /**

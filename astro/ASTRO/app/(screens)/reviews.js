@@ -31,9 +31,7 @@ export default function Reviews() {
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [showInfo, setShowInfo] = useState(false);
 
-  const { data, isLoading, refetch } = useGetReviewsQuery(undefined, {
-    pollingInterval: 10000,
-  });
+  const { data, isLoading, refetch } = useGetReviewsQuery();
 
   useFocusEffect(
     useCallback(() => {

@@ -266,13 +266,17 @@ export const removeChatListeners = () => {
     "Removing chat event listeners",
   );
 
-  socket.off("chat_session_joined");
-  socket.off("chat_started");
-  socket.off("new_chat_message");
-  socket.off("user_typing");
-  socket.off("chat_ended");
-  socket.off("chat_error");
-  socket.off("chat_message_deleted");
+  try {
+    socket.off("chat_session_joined");
+    socket.off("chat_started");
+    socket.off("new_chat_message");
+    socket.off("user_typing");
+    socket.off("chat_ended");
+    socket.off("consultation_ended");
+    socket.off("chat_cancelled");
+    socket.off("chat_error");
+    socket.off("chat_message_deleted");
+  } catch (_e) {}
 };
 
 // ==========================

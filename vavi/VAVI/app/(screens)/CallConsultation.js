@@ -553,6 +553,19 @@ export default function CallConsultation() {
               if (engine.muteRemoteAudioStream)
                 engine.muteRemoteAudioStream(remoteUid, false);
             },
+            onUserOffline: (connection, remoteUid, reason) => {
+              console.log(
+                LOG_TAG,
+                "Agora User onUserOffline remoteUid:",
+                remoteUid,
+                "reason:",
+                reason,
+              );
+              handleCallEndedEventRef.current?.({
+                reason: "astrologer_hung_up",
+                message: "Astrologer ended the call.",
+              });
+            },
             onRemoteAudioStateChanged: (
               connection,
               remoteUid,
@@ -616,10 +629,8 @@ export default function CallConsultation() {
         engine.joinChannel(targetToken, targetChannelName, targetUid, {
           clientRoleType: 1,
           publishMicrophoneTrack: true,
-          publishCameraTrack: true,
           publishCameraTrack: false,
           autoSubscribeAudio: true,
-          autoSubscribeVideo: true,
           autoSubscribeVideo: false,
         });
       }
@@ -703,10 +714,10 @@ export default function CallConsultation() {
   const callStatusRef = useRef(callStatus);
   callStatusRef.current = callStatus;
 
-  // Fallback Polling / History Sync
+  // Fallback Polling / History Sync (Polling disabled - 100% real-time socket driven)
   const { data: consultationHistoryData } = useGetConsultationHistoryQuery(
     { page: 1, limit: 10 },
-    { pollingInterval: 2500, skip: !consultationId || callStatus === "ended" },
+    { pollingInterval: 0, skip: !consultationId || callStatus === "ended" },
   );
 
   useEffect(() => {
@@ -748,12 +759,7 @@ export default function CallConsultation() {
 
   // Step 2: Setup Socket
   useEffect(() => {
-    if (
-      !consultationId ||
-      !currentUser?.id ||
-      callStatusRef.current === "ended"
-    )
-      return;
+    if (!consultationId || callStatusRef.current === "ended") return;
 
     let isMounted = true;
     const setup = async () => {
@@ -768,10 +774,23 @@ export default function CallConsultation() {
       socket.on("consultation_started", onStarted);
       socket.on("call_accepted", onStarted);
       socket.on("call_ended", onEnded);
+      socket.on("consultation_ended", onEnded);
+      socket.on("call_cancelled", onEnded);
+
+      let effectiveUserId = currentUser?.id;
+      if (!effectiveUserId) {
+        try {
+          const raw = await AsyncStorage.getItem("userData");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            effectiveUserId = parsed?.user?.id || parsed?.id;
+          }
+        } catch (_e) {}
+      }
 
       joinCallConsultation({
         consultationId,
-        userId: currentUser.id,
+        userId: effectiveUserId,
         role: "user",
       });
     };
@@ -852,20 +871,20 @@ export default function CallConsultation() {
       } catch (e) {}
     }
 
-    try {
-      await endConsultationCall({
-        consultationId,
-        reason: "user_disconnected",
-      }).unwrap();
-    } catch (e) {
-      console.log("End call API error:", e);
-    }
-
+    // 1. Immediately emit socket end call so astrologer gets it instantly
     endCallConsultation({ consultationId, reason });
+
+    // 2. Call backend REST API in background (non-blocking)
+    endConsultationCall({
+      consultationId,
+      reason: "user_disconnected",
+    }).catch((e) => {
+      console.log("End call API error:", e);
+    });
+
     cleanupAgora();
     setCallStatus("ended");
 
-    
     const mins = Math.max(1, Math.ceil(callDurationSeconds / 60));
     const rate = Number(ratePerMinute) || 25;
     setAmountDeducted(mins * rate);

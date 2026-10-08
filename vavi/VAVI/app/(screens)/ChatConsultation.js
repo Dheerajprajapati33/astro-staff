@@ -1186,33 +1186,45 @@ export default function ChatConsultation() {
       // CHAT ENDED
       // ==========================
 
+      const handleEndChatEvent = (data) => {
+        console.log(
+          LOG_TAG,
+          "chat_ended / consultation_ended event:",
+          data,
+        );
+
+        setIsChatActive(false);
+        setChatEnded(true);
+
+        endAlertShownRef.current =
+          true;
+
+        if (
+          timerIntervalRef.current
+        ) {
+          clearInterval(
+            timerIntervalRef.current,
+          );
+        }
+
+        setShowReviewModal(
+          true,
+        );
+      };
+
       socket.on(
         "chat_ended",
-        (data) => {
-          console.log(
-            LOG_TAG,
-            "chat_ended event:",
-            data,
-          );
+        handleEndChatEvent,
+      );
 
-          setIsChatActive(false);
-          setChatEnded(true);
+      socket.on(
+        "consultation_ended",
+        handleEndChatEvent,
+      );
 
-          endAlertShownRef.current =
-            true;
-
-          if (
-            timerIntervalRef.current
-          ) {
-            clearInterval(
-              timerIntervalRef.current,
-            );
-          }
-
-          setShowReviewModal(
-            true,
-          );
-        },
+      socket.on(
+        "chat_cancelled",
+        handleEndChatEvent,
       );
 
       // ==========================

@@ -31,17 +31,17 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.sandeepkumar90.Vavi",
       "permissions": [
-        "CAMERA",
         "android.permission.CAMERA",
-        "RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.INTERNET",
-        "ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
-        "BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.BLUETOOTH_CONNECT",
         "android.permission.BLUETOOTH_CONNECT"
       ]
     },
@@ -70,9 +70,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "616c78a0-6ac8-4eb2-b253-4f3afc07fb3d"
+        "projectId": "ef7e5a9b-ef14-4412-b2a7-420acadf1d1f"
       }
     },
-    "owner": "vill_am"
+    "owner": "dheerajprajapati12"
   }
 }

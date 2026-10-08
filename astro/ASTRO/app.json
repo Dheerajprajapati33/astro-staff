@@ -31,20 +31,20 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.sandeepkumar90.Astrologer",
       "permissions": [
-        "CAMERA",
         "android.permission.CAMERA",
-        "RECORD_AUDIO",
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.INTERNET",
-        "ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
-        "BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.BLUETOOTH_CONNECT",
-        "POST_NOTIFICATIONS",
-        "VIBRATE"
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -75,9 +75,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "b13786db-8473-4751-823b-cf034e6fec68"
+        "projectId": "ef1d0b58-b753-4696-a324-c2f6c5949c17"
       }
     },
-    "owner": "vill_am"
+    "owner": "dheerajprajapati12"
   }
 }

@@ -330,12 +330,12 @@ const styles = StyleSheet.create({
     gap: wp(1),
   },
   name: {
-    fontSize: RF(14),
+    fontSize: RF(22),
     fontWeight: "700",
     color: "#222",
   },
   problemText: {
-    fontSize: RF(11),
+    fontSize: RF(16),
     color: "#777",
     marginTop: hp(0.2),
   },
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     gap: wp(1),
   },
   statusText: {
-    fontSize: RF(10),
+    fontSize: RF(14),
     fontWeight: "700",
   },
   divider: {
@@ -378,12 +378,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   statLabel: {
-    fontSize: RF(9),
+    fontSize: RF(13),
     color: "#888",
     fontWeight: "500",
   },
   statValue: {
-    fontSize: RF(11.5),
+    fontSize: RF(17),
     fontWeight: "700",
     color: "#333",
     marginTop: hp(0.1),
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
     marginTop: hp(1.2),
   },
   dateText: {
-    fontSize: RF(10.5),
+    fontSize: RF(14),
     color: "#888",
     fontWeight: "500",
   },
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     gap: wp(1),
   },
   detailsBtnText: {
-    fontSize: RF(11),
+    fontSize: RF(16),
     color: "#444",
     fontWeight: "600",
   },
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     gap: wp(1),
   },
   consultAgainText: {
-    fontSize: RF(11),
+    fontSize: RF(16),
     color: "#fff",
     fontWeight: "700",
   },

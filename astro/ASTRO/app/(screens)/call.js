@@ -664,6 +664,19 @@ export default function CallScreen() {
                 if (engine.muteRemoteAudioStream)
                   engine.muteRemoteAudioStream(remoteUid, false);
               },
+              onUserOffline: (connection, remoteUid, reason) => {
+                console.log(
+                  LOG_TAG,
+                  "Agora Host onUserOffline remoteUid:",
+                  remoteUid,
+                  "reason:",
+                  reason,
+                );
+                handleCallEndedEventRef.current?.({
+                  reason: "user_hung_up",
+                  message: "Client ended the call.",
+                });
+              },
               onRemoteAudioStateChanged: (
                 connection,
                 remoteUid,
@@ -923,6 +936,8 @@ export default function CallScreen() {
     let isMounted = true;
     let offStart = () => {};
     let offEnd = () => {};
+    let offConsultationEnd = () => {};
+    let offCancelled = () => {};
 
     const setup = async () => {
       const astrologerUser = await getStoredUser();
@@ -935,6 +950,12 @@ export default function CallScreen() {
         handleCallStartedRef.current?.(data),
       );
       offEnd = onEvent("call_ended", (data) =>
+        handleCallEndedEventRef.current?.(data),
+      );
+      offConsultationEnd = onEvent("consultation_ended", (data) =>
+        handleCallEndedEventRef.current?.(data),
+      );
+      offCancelled = onEvent("call_cancelled", (data) =>
         handleCallEndedEventRef.current?.(data),
       );
 
@@ -954,6 +975,8 @@ export default function CallScreen() {
       isMounted = false;
       offStart();
       offEnd();
+      offConsultationEnd();
+      offCancelled();
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       if (durationIntervalRef.current)
         clearInterval(durationIntervalRef.current);

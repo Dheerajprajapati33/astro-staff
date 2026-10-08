@@ -22,17 +22,15 @@ import { router, useSegments } from "expo-router";
 
 import IncomingChatModal from "./IncomingChatModal";
 import { getStoredUser } from "../../utils/auth";
-import { emitEvent } from "../../utils/socket";
-import { useGetConsultationHistoryQuery } from "../../redux/ChatApi";
+import { connectSocket, emitEvent, getSocket } from "../../utils/socket";
 import useIncomingRequestRingtone from "../../hooks/useIncomingRequestRingtone";
 
 const LOG_TAG = "[ChatRequestProvider]";
-const POLL_INTERVAL_MS = 8000;
 
 export default function ChatRequestProvider({ children }) {
   const segments = useSegments();
   const [incomingRequest, setIncomingRequest] = useState(null);
-  const [hasToken, setHasToken] = useState(false);
+  const listenerAttachedRef = useRef(false);
   const dismissedIdsRef = useRef(new Set());
 
   useIncomingRequestRingtone(!!incomingRequest);
@@ -40,90 +38,84 @@ export default function ChatRequestProvider({ children }) {
   useEffect(() => {
     let isMounted = true;
 
-    const checkToken = async () => {
+    const setupChatSocket = async () => {
       const user = await getStoredUser();
-      if (isMounted) setHasToken(!!user?.token);
+
+      if (!user?.token) {
+        console.log(LOG_TAG, "No token found, skipping chat socket setup");
+        return;
+      }
+
+      let socket = getSocket();
+      if (!socket?.connected) {
+        socket = await connectSocket(user.token);
+      }
+
+      if (listenerAttachedRef.current) return;
+      listenerAttachedRef.current = true;
+
+      const handleIncomingChat = (data) => {
+        console.log(
+          LOG_TAG,
+          "Incoming chat socket event received:",
+          JSON.stringify(data),
+        );
+
+        if (!data) return;
+
+        // Agar unified incoming_consultation_request hai aur call hai, toh ignore karein
+        const type = data.consultationType || data.type || "chat";
+        if (type !== "chat" && type !== "CHAT") return;
+
+        const consultationId = data.consultationId || data.id;
+        if (!consultationId || dismissedIdsRef.current.has(consultationId)) return;
+
+        // Agar astrologer live broadcast ya call/chat screen par hai toh popup na dikhaye
+        const isBusyOnScreen = segments.some(
+          (s) => s === "golive" || s === "call" || s === "chat",
+        );
+        if (isBusyOnScreen) return;
+
+        if (isMounted) {
+          setIncomingRequest({
+            consultationId,
+            roomId: data.roomId || consultationId,
+            userId: data.userId,
+            userName: data.userName || data?.user?.name || "Client",
+            birthDetails:
+              data.birthDetails ||
+              data.clientBirthDetails ||
+              data?.user?.birthDetails ||
+              null,
+            gender: data?.gender || data?.user?.gender,
+            dob: data?.dob || data?.user?.dob,
+            tob: data?.tob || data?.user?.tob,
+            pob:
+              data?.pob ||
+              data?.birthPlace ||
+              data?.user?.pob ||
+              data?.user?.birthPlace ||
+              data?.user?.city,
+            lat: data?.lat || data?.user?.lat,
+            lon: data?.lon || data?.user?.lon,
+            timezone: data?.timezone || data?.user?.timezone,
+            problem: data.problem || "Chat Consultation",
+            maxDurationSeconds: data.maxDurationSeconds || data.maxDuration || 900,
+          });
+        }
+      };
+
+      // Listen for both unified event and specific chat event
+      socket.on("incoming_chat_request", handleIncomingChat);
+      socket.on("incoming_consultation_request", handleIncomingChat);
     };
 
-    checkToken();
+    setupChatSocket();
 
     return () => {
       isMounted = false;
     };
   }, [segments]);
-
-  // Working fallback: poll for "waiting" chat consultations since no live
-  // push event has been confirmed. See file header note.
-  // NOTE: the backend's `type` query param on /consultation/history 500s
-  // (confirmed live: "Unknown column 'Consultation.type' in 'where clause'"
-  // - the DB column is actually `consultationType`). Only pass `status`,
-  // which is confirmed working, and filter to chat consultations ourselves.
-  const { data: waitingData, error: waitingError } =
-    useGetConsultationHistoryQuery(
-      {
-        page: 1,
-        limit: 10,
-        status: "waiting",
-        pollingKey: "incoming-chat-requests",
-      },
-      { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
-    );
-
-  useEffect(() => {
-    if (waitingError) {
-      console.log(
-        LOG_TAG,
-        "waiting-requests poll error:",
-        JSON.stringify(waitingError),
-      );
-      return;
-    }
-
-    const waitingList = (waitingData?.consultations ?? []).filter(
-      (c) => c.consultationType === "chat",
-    );
-
-    // Agar astrologer live broadcast ya call par hai toh chat popup block karein
-    const isBusyOnScreen = segments.some(
-      (s) => s === "golive" || s === "call" || s === "chat",
-    );
-    if (isBusyOnScreen || incomingRequest) return;
-
-    const next = waitingList.find((c) => !dismissedIdsRef.current.has(c.id));
-
-    if (next) {
-      console.log(
-        LOG_TAG,
-        "surfacing waiting consultation as incoming request:",
-        next.id,
-      );
-
-      setIncomingRequest({
-        consultationId: next.id,
-        roomId: next.id,
-        userId: next.userId,
-        userName: next?.user?.name || "Client",
-        birthDetails:
-          next?.birthDetails ||
-          next?.clientBirthDetails ||
-          next?.user?.birthDetails ||
-          null,
-        gender: next?.user?.gender || next?.gender,
-        dob: next?.user?.dob || next?.dob,
-        tob: next?.user?.tob || next?.tob,
-        pob:
-          next?.user?.pob ||
-          next?.user?.birthPlace ||
-          next?.pob ||
-          next?.user?.city,
-        lat: next?.user?.lat || next?.lat,
-        lon: next?.user?.lon || next?.lon,
-        timezone: next?.user?.timezone || next?.timezone,
-        problem: next.problem,
-        maxDurationSeconds: next.maxDuration,
-      });
-    }
-  }, [waitingData, waitingError, incomingRequest]);
 
   const handleAccept = () => {
     if (!incomingRequest) return;

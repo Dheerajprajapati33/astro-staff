@@ -48,10 +48,7 @@ export default function CallHistory() {
     isFetching,
     error,
     refetch,
-  } = useGetConsultationHistoryQuery(
-    { page: 1, limit: 50, type: "call" },
-    { pollingInterval: 10000 },
-  );
+  } = useGetConsultationHistoryQuery({ page: 1, limit: 50, type: "call" });
 
   const consultationsList = useMemo(() => {
     if (Array.isArray(historyData?.consultations)) {

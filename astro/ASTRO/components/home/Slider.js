@@ -38,7 +38,7 @@ useEffect(() => {
       });
       return nextIndex;
     });
-  }, 3500); // 3.5 seconds mein auto-slide will be done
+  }, 5000); // 5 seconds mein auto-slide will be done
 
   return () => clearInterval(timer);
 }, [sliderData]);

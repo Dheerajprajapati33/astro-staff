@@ -6,11 +6,13 @@ import { router } from "expo-router";
 import { store } from "../redux/store";
 import { disconnectSocket } from "./socket";
 
+import { blockReportApi } from "../redux/blockReportApi";
 import { chatApi } from "../redux/ChatApi";
 import { contentApi } from "../redux/contentApi";
 import { expertiseApi } from "../redux/expertiseApi";
 import { followerApi } from "../redux/FollowerApi";
 import { galleryApi } from "../redux/GalleryApi";
+import { kundliApi } from "../redux/KundliApi";
 import { languageApi } from "../redux/languageApi";
 import { liveApi } from "../redux/LiveApi";
 import { loginApi } from "../redux/LoginApi";
@@ -21,6 +23,7 @@ import { profileApi } from "../redux/ProfileApi";
 import { registerApi } from "../redux/registerApi";
 import { reviewApi } from "../redux/ReviewApi";
 import { walletApi } from "../redux/walletApi";
+import { warningApi } from "../redux/warningApi";
 
 let isLoggingOut = false;
 
@@ -54,12 +57,13 @@ export const performClientLogout = async () => {
     await AsyncStorage.clear();
 
     // Step 3: Reset all RTK Query / Redux State Cache from memory
+    store.dispatch(blockReportApi.util.resetApiState());
     store.dispatch(chatApi.util.resetApiState());
     store.dispatch(contentApi.util.resetApiState());
     store.dispatch(expertiseApi.util.resetApiState());
     store.dispatch(followerApi.util.resetApiState());
-    store.dispatch(followerApi.util.resetApiState());
     store.dispatch(galleryApi.util.resetApiState());
+    store.dispatch(kundliApi.util.resetApiState());
     store.dispatch(languageApi.util.resetApiState());
     store.dispatch(liveApi.util.resetApiState());
     store.dispatch(loginApi.util.resetApiState());
@@ -70,6 +74,7 @@ export const performClientLogout = async () => {
     store.dispatch(registerApi.util.resetApiState());
     store.dispatch(reviewApi.util.resetApiState());
     store.dispatch(walletApi.util.resetApiState());
+    store.dispatch(warningApi.util.resetApiState());
 
     // Step 4: Navigate to Login Screen
     router.replace("/(auth)/login");

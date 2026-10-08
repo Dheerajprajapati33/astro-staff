@@ -9,16 +9,13 @@ import { router, useSegments } from "expo-router";
 import IncomingCallModal from "./IncomingCallModal";
 import { getStoredUser } from "../../utils/auth";
 import { connectSocket, emitEvent, getSocket } from "../../utils/socket";
-import { useGetConsultationHistoryQuery } from "../../redux/ChatApi";
 import useIncomingRequestRingtone from "../../hooks/useIncomingRequestRingtone";
 
 const LOG_TAG = "[CallRequestProvider]";
-const POLL_INTERVAL_MS = 6000;
 
 export default function CallRequestProvider({ children }) {
   const segments = useSegments();
   const [incomingCall, setIncomingCall] = useState(null);
-  const [hasToken, setHasToken] = useState(false);
   const listenerAttachedRef = useRef(false);
   const dismissedIdsRef = useRef(new Set());
 
@@ -29,8 +26,6 @@ export default function CallRequestProvider({ children }) {
 
     const setupCallSocket = async () => {
       const user = await getStoredUser();
-
-      if (isMounted) setHasToken(!!user?.token);
 
       if (!user?.token) {
         console.log(LOG_TAG, "No token found, skipping call socket setup");
@@ -45,23 +40,42 @@ export default function CallRequestProvider({ children }) {
       if (listenerAttachedRef.current) return;
       listenerAttachedRef.current = true;
 
-      // Listen for socket push event if pushed directly from backend
-      socket.on("incoming_call_request", (data) => {
+      const handleIncomingCall = (data) => {
         console.log(
           LOG_TAG,
-          "incoming_call_request RECEIVED:",
+          "Incoming call socket event received:",
           JSON.stringify(data),
         );
+
+        if (!data) return;
+
+        // Agar unified incoming_consultation_request hai aur chat hai, toh ignore karein
+        const type = data.consultationType || data.type || "call";
+        if (type !== "call" && type !== "CALL" && type !== "voice" && type !== "video") return;
+
+        const consultationId = data.consultationId || data.id;
+        if (!consultationId || dismissedIdsRef.current.has(consultationId)) return;
+
+        // Agar astrologer live broadcast ya kisi call/chat screen par hai toh incoming call popup na dikhaye
+        const isBusyOnScreen = segments.some(
+          (s) => s === "golive" || s === "call" || s === "chat",
+        );
+        if (isBusyOnScreen) return;
+
         if (isMounted) {
           setIncomingCall({
-            consultationId: data?.consultationId,
+            consultationId,
             userId: data?.userId,
-            userName: data?.userName || "Client",
+            userName: data?.userName || data?.user?.name || "Client",
             problem: data?.problem || "Voice Call Consultation",
-            maxDurationSeconds: data?.maxDurationSeconds || 1500,
+            maxDurationSeconds: data?.maxDurationSeconds || data?.maxDuration || 1500,
           });
         }
-      });
+      };
+
+      // Listen for socket push events
+      socket.on("incoming_call_request", handleIncomingCall);
+      socket.on("incoming_consultation_request", handleIncomingCall);
     };
 
     setupCallSocket();
@@ -70,47 +84,6 @@ export default function CallRequestProvider({ children }) {
       isMounted = false;
     };
   }, [segments]);
-
-  // Working fallback: poll waiting consultations filtered by consultationType === "call"
-  const { data: waitingData, error: waitingError } =
-    useGetConsultationHistoryQuery(
-      {
-        page: 1,
-        limit: 10,
-        status: "waiting",
-        pollingKey: "incoming-call-requests",
-      },
-      { pollingInterval: POLL_INTERVAL_MS, skip: !hasToken },
-    );
-
-  useEffect(() => {
-    if (waitingError) return;
-
-    const waitingCalls = (waitingData?.consultations ?? []).filter(
-      (c) => c.consultationType === "call",
-    );
-
-    // Agar astrologer live broadcast ya kisi call/chat screen par hai toh incoming call popup na dikhaye
-    const isBusyOnScreen = segments.some(
-      (s) => s === "golive" || s === "call" || s === "chat",
-    );
-    if (isBusyOnScreen || incomingCall) return;
-
-    const nextCall = waitingCalls.find(
-      (c) => !dismissedIdsRef.current.has(c.id),
-    );
-
-    if (nextCall) {
-      console.log(LOG_TAG, "Surfacing incoming call request:", nextCall.id);
-      setIncomingCall({
-        consultationId: nextCall.id,
-        userId: nextCall.userId,
-        userName: nextCall?.user?.name || "Client",
-        problem: nextCall.problem || "Voice Call Consultation",
-        maxDurationSeconds: nextCall.maxDuration || 1500,
-      });
-    }
-  }, [waitingData, waitingError, incomingCall]);
 
   const handleAccept = () => {
     if (!incomingCall) return;

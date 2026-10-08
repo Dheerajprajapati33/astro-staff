@@ -723,13 +723,18 @@ export default function Chat() {
   const [socketConnected, setSocketConnected] =
     useState(
       () =>
+        !!getSocket()?.connected ||
         getConnectionStatus() ===
         "connected",
     );
 
   const [connStatus, setConnStatus] =
     useState(
-      () => getConnectionStatus(),
+      () =>
+        getSocket()?.connected ||
+        getConnectionStatus() === "connected"
+          ? "connected"
+          : getConnectionStatus(),
     );
 
 
@@ -793,10 +798,7 @@ export default function Chat() {
         !roomId ||
         isConsultationMode,
 
-      pollingInterval:
-        isConsultationMode
-          ? 0
-          : ROOM_POLL_INTERVAL_MS,
+      pollingInterval: 0,
     },
   );
 
@@ -1539,11 +1541,7 @@ const {
       skip:
         !isConsultationMode,
 
-      pollingInterval:
-        isConsultationMode &&
-        !historyResolved
-          ? 3000
-          : 0,
+      pollingInterval: 0,
     },
   );
 
@@ -2206,6 +2204,11 @@ useEffect(() => {
     }
 
 
+    if (socket?.connected) {
+      setConnStatus("connected");
+      setSocketConnected(true);
+    }
+
     /* ===================================================
        CONNECTION STATUS
     =================================================== */
@@ -2566,6 +2569,16 @@ useEffect(() => {
     );
 
     socket.on(
+      "consultation_ended",
+      onChatEnded,
+    );
+
+    socket.on(
+      "chat_cancelled",
+      onChatEnded,
+    );
+
+    socket.on(
       "chat_message_deleted",
       handleChatMessageDeleted,
     );
@@ -2697,41 +2710,77 @@ useEffect(() => {
     =================================================== */
 
     unsubscribers.push(
-      () =>
-        socket.off(
-          "chat_session_joined",
-          onSessionJoined,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "chat_session_joined",
+            onSessionJoined,
+          );
+        } catch (_e) {}
+      },
 
-      () =>
-        socket.off(
-          "chat_started",
-          onChatStarted,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "chat_started",
+            onChatStarted,
+          );
+        } catch (_e) {}
+      },
 
-      () =>
-        socket.off(
-          "new_chat_message",
-          onNewMessage,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "new_chat_message",
+            onNewMessage,
+          );
+        } catch (_e) {}
+      },
 
-      () =>
-        socket.off(
-          "user_typing",
-          onTyping,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "user_typing",
+            onTyping,
+          );
+        } catch (_e) {}
+      },
 
-      () =>
-        socket.off(
-          "chat_ended",
-          onChatEnded,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "chat_ended",
+            onChatEnded,
+          );
+        } catch (_e) {}
+      },
 
-      () =>
-        socket.off(
-          "chat_message_deleted",
-          handleChatMessageDeleted,
-        ),
+      () => {
+        try {
+          socket?.off(
+            "consultation_ended",
+            onChatEnded,
+          );
+        } catch (_e) {}
+      },
+
+      () => {
+        try {
+          socket?.off(
+            "chat_cancelled",
+            onChatEnded,
+          );
+        } catch (_e) {}
+      },
+
+      () => {
+        try {
+          socket?.off(
+            "chat_message_deleted",
+            handleChatMessageDeleted,
+          );
+        } catch (_e) {}
+      },
 
       () =>
         appStateSub.remove(),
@@ -3353,10 +3402,6 @@ const handleSendImage = useCallback(() => {
 }, [pickAndSendImage]);
 
 
-/* =========================================================
-   END CHAT SESSION
-========================================================= */
-
 const endChatSession =
   (reason = "completed") => {
     const socket =
@@ -3364,7 +3409,6 @@ const endChatSession =
 
     const connected =
       !!socket?.connected;
-
 
     console.log(
       LOG_TAG,
@@ -3377,37 +3421,6 @@ const endChatSession =
       },
     );
 
-
-    if (!connected) {
-      console.log(
-        LOG_TAG,
-        `end_chat_session NOT SENT (${reason}) - socket disconnected`,
-      );
-
-
-      Alert.alert(
-        "Connection Issue",
-
-        "Couldn't reach the server to end this chat (no connection). The session may still be running on the server - please check your connection and try again.",
-
-        [
-          {
-            text: "OK",
-
-            onPress: () => {
-              router.replace(
-                "/(home)",
-              );
-            },
-          },
-        ],
-      );
-
-
-      return false;
-    }
-
-
     emitEvent(
       "end_chat_session",
       {
@@ -3415,7 +3428,6 @@ const endChatSession =
         reason,
       },
     );
-
 
     return true;
   };

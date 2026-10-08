@@ -19,7 +19,7 @@ let currentJoinedConsultationId = null;
 // CONNECTION STATUS
 // ==========================
 
-const setConnectionStatus = (
+export const setConnectionStatus = (
   status,
 ) => {
   if (
@@ -309,6 +309,14 @@ export const getSocket = () =>
   socket;
 
 // ==========================
+// SET SOCKET
+// ==========================
+
+export const setSocket = (instance) => {
+  socket = instance;
+};
+
+// ==========================
 // DISCONNECT SOCKET
 // ==========================
 
@@ -503,11 +511,16 @@ export const onEvent = (
     wrapped,
   );
 
-  return () =>
-    socket.off(
-      eventName,
-      wrapped,
-    );
+  return () => {
+    try {
+      if (socket && typeof socket.off === "function") {
+        socket.off(
+          eventName,
+          wrapped,
+        );
+      }
+    } catch (_e) {}
+  };
 };
 
 // ==========================
@@ -692,10 +705,14 @@ export const onChatMessageDeleted =
     );
 
     return () => {
-      socket.off(
-        "chat_message_deleted",
-        wrapped,
-      );
+      try {
+        if (socket && typeof socket.off === "function") {
+          socket.off(
+            "chat_message_deleted",
+            wrapped,
+          );
+        }
+      } catch (_e) {}
     };
   };
 
