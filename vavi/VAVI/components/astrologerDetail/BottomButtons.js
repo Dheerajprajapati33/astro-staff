@@ -6,7 +6,12 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 
 import Colors from "../../constants/Colors";
 import { useCreateConsultationMutation } from "../../redux/consultationApi";
+import { useGetProfileQuery } from "../../redux/updateApi";
 import { hp, RF, wp } from "../../utils/responsive";
+import {
+  isProfileComplete,
+  showProfileIncompleteAlert,
+} from "../../utils/validation";
 import CallInputModal from "../call/callInputModal";
 
 const LOG_TAG = "[BottomButtons]";
@@ -14,6 +19,10 @@ const LOG_TAG = "[BottomButtons]";
 export default function BottomButtons({ astrologer = {} }) {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [showCallInputModal, setShowCallInputModal] = useState(false);
+
+  const { data: profileResponse } = useGetProfileQuery();
+  const userProfile =
+    profileResponse?.data || profileResponse?.user || profileResponse;
 
   const [createConsultation] = useCreateConsultationMutation();
   const callPrice =
@@ -89,6 +98,11 @@ export default function BottomButtons({ astrologer = {} }) {
       return;
     }
 
+    if (!isProfileComplete(userProfile)) {
+      showProfileIncompleteAlert(userProfile);
+      return;
+    }
+
     if (isStartingCall) return;
     setShowCallInputModal(true);
   };
@@ -157,6 +171,11 @@ export default function BottomButtons({ astrologer = {} }) {
     if (!isChatOnline) {
       showUnavailableAlert("chat");
 
+      return;
+    }
+
+    if (!isProfileComplete(userProfile)) {
+      showProfileIncompleteAlert(userProfile);
       return;
     }
 

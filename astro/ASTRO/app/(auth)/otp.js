@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import {
   Alert,
   ImageBackground,
+  Keyboard,
   StyleSheet,
   Text,
   TextInput,
@@ -32,26 +33,65 @@ const Otp = () => {
   const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
 
   const handleOtpChange = (value, index) => {
-    if (!/^\d*$/.test(value)) return;
+    const numericValue = value.replace(/[^0-9]/g, "");
 
+    // Handle Autofill or Paste with multiple digits (> 1)
+    if (numericValue.length > 1) {
+      const pastedOtp = numericValue.slice(0, 6).split("");
+      const updatedOtp = ["", "", "", "", "", ""];
+
+      pastedOtp.forEach((digit, otpIndex) => {
+        updatedOtp[otpIndex] = digit;
+        if (inputRefs.current[otpIndex]) {
+          inputRefs.current[otpIndex].setNativeProps({ text: digit });
+        }
+      });
+
+      setOtp(updatedOtp);
+
+      setTimeout(() => {
+        pastedOtp.forEach((digit, otpIndex) => {
+          if (inputRefs.current[otpIndex]) {
+            inputRefs.current[otpIndex].setNativeProps({ text: digit });
+          }
+        });
+        const nextIndex = Math.min(pastedOtp.length - 1, 5);
+        inputRefs.current[nextIndex]?.focus();
+
+        if (pastedOtp.length === 6) {
+          Keyboard.dismiss();
+        }
+      }, 50);
+
+      return;
+    }
+
+    const singleDigit = numericValue.slice(-1);
     const newOtp = [...otp];
-
-    newOtp[index] = value.slice(-1);
-
+    newOtp[index] = singleDigit;
     setOtp(newOtp);
 
-    if (value && index < 5) {
+    if (singleDigit && index < 5) {
       inputRefs.current[index + 1]?.focus();
+    }
+
+    if (singleDigit && index === 5) {
+      Keyboard.dismiss();
     }
   };
 
   const handleKeyPress = (e, index) => {
     if (e.nativeEvent.key === "Backspace" && !otp[index] && index > 0) {
+      const newOtp = [...otp];
+      newOtp[index - 1] = "";
+      setOtp(newOtp);
+      inputRefs.current[index - 1]?.setNativeProps({ text: "" });
       inputRefs.current[index - 1]?.focus();
     }
   };
 
   const handleVerify = async () => {
+    Keyboard.dismiss();
     const otpValue = otp.join("");
 
     if (otpValue.length !== 6) {
@@ -153,7 +193,11 @@ const Otp = () => {
                 onChangeText={(value) => handleOtpChange(value, index)}
                 onKeyPress={(e) => handleKeyPress(e, index)}
                 keyboardType="number-pad"
-                maxLength={1}
+                maxLength={index === 0 ? 6 : 1}
+                textContentType={index === 0 ? "oneTimeCode" : "none"}
+                autoComplete={index === 0 ? "sms-otp" : "off"}
+                autoFocus={index === 0}
+                selectTextOnFocus
                 style={styles.otpInput}
                 textAlign="center"
                 placeholder="-"

@@ -59,7 +59,7 @@ export default function BookingDetailsSheet({
     booking?.pricePerMinute ||
     astrologer?.chatPrice ||
     astrologer?.callPrice ||
-    25;
+    20;
   const problem =
     booking?.problem ||
     booking?.topic ||
@@ -70,15 +70,13 @@ export default function BookingDetailsSheet({
     booking?.consultationId ||
     `VAVI-${Date.now().toString().slice(-6)}`;
 
-  const formatDuration = (secs) => {
-    if (!secs || isNaN(secs)) return "0 mins";
-    const num = Number(secs);
-    if (num <= 0) return "0 mins";
-    if (num < 60) return `${num} secs`;
-    const m = Math.floor(num / 60);
-    const s = num % 60;
-    return `${m} mins ${s > 0 ? `${s} secs` : ""}`;
-  };
+const formatDuration = (secs) => {
+  if (!secs || isNaN(secs)) return "0 min";
+  const num = Number(secs);
+  if (num <= 0) return "0 min";
+  const m = num >= 60 ? Math.ceil(num / 60) : num;
+  return `${m} min`;
+};
 
   const imageSource =
     resolveImageUri(imageUri) ||

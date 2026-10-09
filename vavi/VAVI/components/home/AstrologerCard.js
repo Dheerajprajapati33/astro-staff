@@ -14,8 +14,13 @@ import {
 import { resolveImageUri } from "../../config/api";
 import Colors from "../../constants/Colors";
 import { useCreateConsultationMutation } from "../../redux/consultationApi";
+import { useGetProfileQuery } from "../../redux/updateApi";
 import { hp, RF, wp } from "../../utils/responsive";
 import Shadows from "../../utils/shadows";
+import {
+  isProfileComplete,
+  showProfileIncompleteAlert,
+} from "../../utils/validation";
 
 // IMPORTANT:
 // Apne project ke existing path ke according ye path rakho.
@@ -29,6 +34,10 @@ const LOG_TAG = "[AstrologerCard]";
 export default function AstrologerCard({ item = {} }) {
   const [isStartingChat, setIsStartingChat] = useState(false);
   const [showChatInputModal, setShowChatInputModal] = useState(false);
+
+  const { data: profileResponse } = useGetProfileQuery();
+  const userProfile =
+    profileResponse?.data || profileResponse?.user || profileResponse;
 
   const [createConsultation] = useCreateConsultationMutation();
 
@@ -104,6 +113,11 @@ export default function AstrologerCard({ item = {} }) {
         "Astrologer is currently not available for call. Please try again later.",
         [{ text: "OK" }],
       );
+      return;
+    }
+
+    if (!isProfileComplete(userProfile)) {
+      showProfileIncompleteAlert(userProfile);
       return;
     }
 
@@ -206,6 +220,11 @@ export default function AstrologerCard({ item = {} }) {
       return;
     }
 
+    if (!isProfileComplete(userProfile)) {
+      showProfileIncompleteAlert(userProfile);
+      return;
+    }
+
     if (isStartingChat) {
       return;
     }
@@ -292,6 +311,7 @@ export default function AstrologerCard({ item = {} }) {
             latitude: birthDetails?.latitude ?? null,
             longitude: birthDetails?.longitude ?? null,
             timezone: birthDetails?.timezone || "Asia/Kolkata",
+            asOf: birthDetails?.asOf || "",
           }),
         },
       });

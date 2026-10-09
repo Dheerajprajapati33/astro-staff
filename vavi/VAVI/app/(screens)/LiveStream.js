@@ -27,11 +27,13 @@ import { AGORA_APP_ID } from "../../constants/AgoraConfig";
 import { resolveImageUri } from "../../config/api";
 import { hp, RF, wp } from "../../utils/responsive";
 import GiftBottomSheet from "../../components/live/GiftBottomSheet";
+import { useDispatch } from "react-redux";
 import {
   connectChatSocket,
   getChatSocket,
 } from "../../services/chatSocketService";
 import {
+  liveApi,
   useJoinLiveSessionMutation,
   useLeaveLiveSessionMutation,
 } from "../../redux/liveApi";
@@ -60,6 +62,7 @@ const LOG_TAG = "[LiveAudience]";
 const containsAsciiDigit = (value) => /[0-9]/.test(String(value ?? ""));
 
 export default function LiveStream() {
+  const dispatch = useDispatch();
   const params = useLocalSearchParams();
   const {
     liveSessionId,
@@ -506,6 +509,9 @@ export default function LiveStream() {
           socket.on("live_stream_ended", () => {
             if (sessionEndedRef.current) return;
             sessionEndedRef.current = true;
+            try {
+              dispatch(liveApi.util.invalidateTags(["LiveSession"]));
+            } catch (_e) {}
             if (Platform.OS === "web") {
               if (typeof window !== "undefined") {
                 window.alert(
@@ -872,7 +878,7 @@ export default function LiveStream() {
           />
         ) : null}
 
-        <View style={styles.darkTint} pointerEvents="none" />
+        {/* <View style={styles.darkTint} pointerEvents="none" /> */}
       </View>
 
       <SafeAreaView style={styles.safeArea}>
@@ -1103,10 +1109,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "#161022",
   },
-  darkTint: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
+  
+  // darkTint: {
+  //   ...StyleSheet.absoluteFillObject,
+  //   backgroundColor: "rgba(0,0,0,0.45)",
+  // },
+
   safeArea: {
     flex: 1,
     justifyContent: "space-between",

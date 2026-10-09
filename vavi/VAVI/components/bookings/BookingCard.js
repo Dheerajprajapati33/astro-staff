@@ -68,22 +68,16 @@ export default function BookingCard({ item, onSelectDetails, onRate }) {
   };
 
   // Format Duration (e.g. 5m 30s or 15m)
-  const formatDuration = (val) => {
-    if (!val || isNaN(val)) return "0m";
-    const num = Number(val);
-    if (num <= 0) return "0m";
-    if (num < 60) {
-      return `${num}s`;
-    }
-    const mins = Math.floor(num / 60);
-    const secs = num % 60;
-    if (secs > 0 && mins < 60) {
-      return `${mins}m ${secs}s`;
-    }
-    return `${mins}m`;
-  };
+  // Format Duration strictly in Minutes
+const formatDuration = (val) => {
+  if (!val || isNaN(val)) return "0 min";
+  const num = Number(val);
+  if (num <= 0) return "0 min";
+  const mins = num >= 60 ? Math.ceil(num / 60) : num;
+  return `${mins} min`;
+};
 
-  // Status Styling
+// Status Styling
   const getStatusBadge = () => {
     switch (status) {
       case "completed":

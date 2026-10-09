@@ -468,6 +468,17 @@ const DashaTab = ({
     [data, fullData]
   );
 
+  const asOfText = useMemo(() => {
+    const raw =
+      apiRoot?.user_details?.asOf ||
+      apiRoot?.userDetails?.asOf ||
+      apiRoot?.asOf ||
+      fullData?.asOf ||
+      fullData?.user_details?.asOf ||
+      fullData?.userDetails?.asOf;
+    return raw ? formatDashaDate(raw) : null;
+  }, [apiRoot, fullData]);
+
   // =====================================================
   // MAHADASHA
   // =====================================================
@@ -847,12 +858,19 @@ const DashaTab = ({
       {/* MAJOR DASHA TAB */}
 
       <View
-        style={styles.switchRow}
+        style={[
+          styles.switchRow,
+          {
+            alignItems: "center",
+            justifyContent: "space-between",
+          },
+        ]}
       >
         <View
           style={[
             styles.switchBtn,
             styles.activeSwitchBtn,
+            { flex: 0, paddingHorizontal: wp(4) },
           ]}
         >
           <Text
@@ -864,6 +882,18 @@ const DashaTab = ({
             Major dasha
           </Text>
         </View>
+
+        {asOfText ? (
+          <Text
+            style={{
+              fontSize: RF(12),
+              color: "#777",
+              fontWeight: "500",
+            }}
+          >
+            Calculated as of: {asOfText}
+          </Text>
+        ) : null}
       </View>
 
       {/* BREADCRUMB */}

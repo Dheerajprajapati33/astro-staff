@@ -34,6 +34,7 @@ export default function DatePickerModal({
   onSelectDate,
   initialDate,
   maxDate = new Date(),
+  title = "Select Date of Birth",
 }) {
   const [selectedDate, setSelectedDate] = useState(new Date(2000, 0, 1));
   const [viewYear, setViewYear] = useState(2000);
@@ -57,7 +58,7 @@ export default function DatePickerModal({
     setViewMonth(0);
   }, [visible, initialDate]);
 
-  const currentMaxYear = maxDate.getFullYear();
+  const currentMaxYear = maxDate ? maxDate.getFullYear() : 2030;
   const years = [];
   for (let y = currentMaxYear; y >= 1940; y--) {
     years.push(y);
@@ -73,10 +74,11 @@ export default function DatePickerModal({
   };
 
   const handleNextMonth = () => {
-    if (viewYear === currentMaxYear && viewMonth >= maxDate.getMonth()) {
-      return; // Cannot go to future month
+    if (maxDate && viewYear === currentMaxYear && viewMonth >= maxDate.getMonth()) {
+      return; // Cannot go to future month beyond maxDate
     }
     if (viewMonth === 11) {
+      if (maxDate && viewYear + 1 > currentMaxYear) return;
       setViewMonth(0);
       setViewYear((prev) => prev + 1);
     } else {
@@ -89,7 +91,7 @@ export default function DatePickerModal({
 
   const handleSelectDay = (day) => {
     const newDate = new Date(viewYear, viewMonth, day);
-    if (newDate > maxDate) return;
+    if (maxDate && newDate > maxDate) return;
     setSelectedDate(newDate);
   };
 
@@ -112,7 +114,7 @@ export default function DatePickerModal({
         <View style={styles.container}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Select Date of Birth</Text>
+            <Text style={styles.headerTitle}>{title}</Text>
             <TouchableOpacity
               onPress={onClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

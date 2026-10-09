@@ -227,8 +227,14 @@ export default function Profile() {
       return false;
     }
 
-    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      Alert.alert("Invalid Email", "Please enter a valid email address.");
+    if (!username.trim()) {
+      Alert.alert("Username Required", "Please enter your username.");
+
+      return false;
+    }
+
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert("Valid Email Required", "Please enter a valid email address.");
 
       return false;
     }
@@ -242,10 +248,10 @@ export default function Profile() {
       return false;
     }
 
-    if (dob.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(dob.trim())) {
+    if (!dob.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(dob.trim())) {
       Alert.alert(
-        "Invalid Date",
-        "Date of birth YYYY-MM-DD format me enter karein.",
+        "Date of Birth Required",
+        "Please select your date of birth (YYYY-MM-DD).",
       );
 
       return false;

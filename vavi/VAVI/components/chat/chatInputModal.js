@@ -75,6 +75,12 @@ export default function ChatInputModal({
   const [showPlacePicker, setShowPlacePicker] =
     useState(false);
 
+  const [asOfDate, setAsOfDate] =
+    useState("");
+
+  const [showAsOfPicker, setShowAsOfPicker] =
+    useState(false);
+
   const [submitting, setSubmitting] =
     useState(false);
 
@@ -92,9 +98,11 @@ export default function ChatInputModal({
       DEFAULT_COORDINATES,
     );
     setUnknownTime(false);
+    setAsOfDate("");
     setShowDobPicker(false);
     setShowTimePicker(false);
     setShowPlacePicker(false);
+    setShowAsOfPicker(false);
     setSubmitting(false);
   };
 
@@ -280,6 +288,30 @@ export default function ChatInputModal({
     }
 
     return value;
+  };
+
+  const getCurrentAsOf = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}+05:30`;
+  };
+
+  const formatAsOfForApi = (dateValue) => {
+    if (!dateValue) return getCurrentAsOf();
+    const formattedDate = formatDobForApi(dateValue);
+    if (!formattedDate) return getCurrentAsOf();
+
+    const now = new Date();
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+
+    return `${formattedDate}T${hours}:${minutes}:${seconds}+05:30`;
   };
 
   // ==================================================
@@ -494,6 +526,8 @@ export default function ChatInputModal({
 
         timezone:
           "Asia/Kolkata",
+
+        asOf: asOfDate ? formatAsOfForApi(asOfDate) : getCurrentAsOf(),
       };
 
       if (!isCall) {
@@ -1085,6 +1119,81 @@ export default function ChatInputModal({
             </TouchableOpacity>
 
             {/* ==================================================
+                CALCULATION / AS OF DATE
+            ================================================== */}
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: hp(1.4),
+                marginBottom: hp(0.8),
+              }}
+            >
+              <Text
+                style={{
+                  color: Colors.darkBrown,
+                  fontSize: RF(13),
+                  fontWeight: "500",
+                }}
+              >
+                Calculation Date (asOf)
+              </Text>
+
+              {asOfDate ? (
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setAsOfDate("")}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text
+                    style={{
+                      fontSize: RF(11),
+                      color: Colors.primary,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Reset to Today
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              style={styles.pickerInputContainer}
+              onPress={() => setShowAsOfPicker(true)}
+              disabled={submitting || loading}
+            >
+              <View style={styles.pickerInputLeft}>
+                <Ionicons
+                  name="calendar-outline"
+                  size={RF(18)}
+                  color={Colors.primary}
+                />
+
+                <Text
+                  style={[
+                    styles.pickerInputText,
+                    !asOfDate && styles.placeholderText,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {asOfDate
+                    ? formatDobForUI(asOfDate)
+                    : "Today (Present / Current Date)"}
+                </Text>
+              </View>
+
+              <Ionicons
+                name="chevron-down"
+                size={RF(16)}
+                color="#888"
+              />
+            </TouchableOpacity>
+
+            {/* ==================================================
                 CHAT BUTTON
             ================================================== */}
 
@@ -1182,6 +1291,23 @@ export default function ChatInputModal({
             handleDateSelect
           }
           initialDate={dob}
+        />
+
+        {/* ==================================================
+            AS OF / CALCULATION DATE PICKER
+        ================================================== */}
+
+        <DatePickerModal
+          visible={showAsOfPicker}
+          title="Select Calculation Date (asOf)"
+          maxDate={new Date(2030, 11, 31)}
+          onClose={() => setShowAsOfPicker(false)}
+          onSelectDate={(date) => {
+            const apiDate = formatDobForApi(date);
+            setAsOfDate(apiDate);
+            setShowAsOfPicker(false);
+          }}
+          initialDate={asOfDate || new Date().toISOString().split("T")[0]}
         />
 
         {/* ==================================================
